@@ -1,0 +1,2254 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>单页布局图谱 · consulting deck</title>
+<link rel="stylesheet" href="fonts/deck-fonts.css">
+<style>
+/* ══════════════════════════════════════════════════════════════
+   单页布局图谱 —— Report Forge「页面蓝图」阶段的可视辅助。
+   舞台内的几何与排印常量逐字对齐成稿：assets/consulting-layouts.css
+   的 .slide.reading / .layout-* / .evidence-grid，以及
+   assets/deck-typography.js 的 serif-report-bold 角色 token。
+   改动其中任何一处都应同步这里，并在实际页面中复核。
+   图谱自身界面（导航 / 工具栏）用中性灰，刻意不用 brand 蓝，
+   避免与舞台内页面主体的强调色混淆。
+   ══════════════════════════════════════════════════════════════ */
+:root{
+  /* —— 主题 token：assets/deck-themes.js 的 mckinsey，静态复制 —— */
+  --brand:#000080;--accent:#000080;--accent-vivid:#D9D9EC;--ink:#172C3B;
+  --gray-1:#445563;--gray-2:#50606E;--gray-3:#BFCBD2;--gray-4:#F2F5F7;
+  --selected:#D9D9EC;
+  --cat-1:#000080;--cat-2:#007A78;--cat-3:#8652A0;--cat-4:#9C5C14;--cat-5:#667586;--cat-6:#9B4566;
+  --seq-1:#D9D9EC;--seq-2:#A3A3D1;--seq-3:#6D6DB6;--seq-4:#36369B;--seq-5:#000080;
+  --good:#276749;--risk:#A3313C;--caution:#805B18;
+  --page-bg:#FFFFFF;--surface:#F2F5F7;--neutral:#50606E;
+  /* —— 排印：deck-typography.js 的 serif-report-bold —— */
+  --font-title:'Deck Playfair Display','Deck Noto Serif SC',serif;
+  --font-body:'Deck Inter','Deck Noto Sans SC',sans-serif;
+  --fs-title:32px;--lh-title:1.28;--fs-body:17px;--fs-data:16px;--fs-table-head:15px;
+  --fs-subtitle:15px;--fs-exhibit-title:19px;--fs-annotation:15px;--fs-note:12px;
+  /* —— 图谱界面（中性灰）—— */
+  --ui-bg:#F4F5F6;--ui-panel:#FFFFFF;--ui-line:#DCE0E3;--ui-line-soft:#E9ECEE;
+  --ui-ink:#252E36;--ui-muted:#6C7780;--ui-hi:#E7EBEE;--ui-sel:#DDE3E7;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{
+  font-family:var(--font-body);color:var(--ui-ink);background:var(--ui-bg);
+  display:grid;grid-template-columns:266px minmax(0,1fr);overflow:hidden;
+}
+button{font:inherit;color:inherit}
+
+/* ══════════ 左：导航 ══════════ */
+.nav{background:var(--ui-panel);border-right:1px solid var(--ui-line);display:flex;flex-direction:column;min-height:0}
+.nav__head{padding:14px 16px 10px;border-bottom:1px solid var(--ui-line-soft)}
+.nav__title{font-size:13px;font-weight:700;letter-spacing:.02em}
+.nav__sub{font-size:11px;color:var(--ui-muted);margin-top:3px;line-height:1.5}
+.nav__list{overflow:auto;padding:6px 8px 24px;min-height:0}
+.nav__fam{font-size:10px;color:var(--ui-muted);letter-spacing:.1em;padding:12px 8px 5px;font-weight:600}
+.nav__item{display:grid;grid-template-columns:44px minmax(0,1fr);gap:9px;align-items:center;
+  width:100%;text-align:left;background:none;border:0;padding:6px 8px;border-radius:5px;cursor:pointer}
+.nav__item:hover{background:var(--ui-hi)}
+.nav__item[aria-current="true"]{background:var(--ui-sel)}
+.nav__name{font-size:12.5px;line-height:1.35}
+.nav__id{font-size:10px;color:var(--ui-muted);margin-right:5px}
+
+/* ══════════ 右：主区 ══════════ */
+.main{display:flex;flex-direction:column;min-width:0;min-height:0}
+.bar{display:flex;flex-wrap:wrap;gap:16px;align-items:center;padding:11px 20px;
+  background:var(--ui-panel);border-bottom:1px solid var(--ui-line);flex:0 0 auto}
+.bar__id{font-size:15px;font-weight:700}
+.bar__name{font-size:13px;color:var(--ui-muted)}
+.bar__sp{flex:1 1 auto}
+.grp{display:flex;align-items:center;gap:0;border:1px solid var(--ui-line);border-radius:5px;overflow:hidden}
+.grp button{background:var(--ui-panel);border:0;border-right:1px solid var(--ui-line);
+  padding:5px 11px;font-size:12px;cursor:pointer}
+.grp button:last-child{border-right:0}
+.grp button[aria-pressed="true"]{background:var(--ui-sel);font-weight:600}
+.grp__lab{font-size:10px;color:var(--ui-muted);letter-spacing:.08em;margin-right:7px}
+.tog{display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;user-select:none}
+.tog input{margin:0}
+.budget{font-size:11.5px;color:var(--ui-muted);font-variant-numeric:tabular-nums}
+.budget b{color:var(--ui-ink);font-weight:600}
+
+/* ══════════ 舞台 ══════════ */
+.wrap{flex:1 1 auto;min-height:0;overflow:auto;padding:20px;display:flex;justify-content:center;align-items:flex-start}
+.stager{position:relative;width:100%;max-width:1280px}
+.stage{position:relative;width:1280px;height:720px;background:var(--page-bg);
+  transform-origin:top left;box-shadow:0 1px 3px rgba(23,44,59,.14),0 8px 28px rgba(23,44,59,.10)}
+body.overview .wrap{align-items:flex-start}
+body.overview .stager{max-width:none}
+.grid-ov{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px}
+.ovcard{background:var(--ui-panel);border:1px solid var(--ui-line);border-radius:6px;padding:10px;cursor:pointer;text-align:left}
+.ovcard:hover{border-color:var(--ui-muted)}
+.ovcard__t{font-size:12.5px;font-weight:600;margin:8px 0 2px}
+.ovcard__s{font-size:10.5px;color:var(--ui-muted)}
+.ovcard__box{position:relative;width:100%;aspect-ratio:16/9;background:var(--page-bg);border:1px solid var(--ui-line-soft);overflow:hidden}
+
+/* ══════════ 页面本体（几何对齐成稿）══════════ */
+.slide{position:relative;width:1280px;height:720px;display:flex;flex-direction:column;
+  padding:32px 40px 26px;background:var(--page-bg);overflow:hidden;isolation:isolate}
+.slide__tracker{position:absolute;top:12px;left:40px;font-size:12px;color:var(--gray-2);letter-spacing:.08em}
+.slide__page{position:absolute;bottom:10px;right:40px;font:12px/1 var(--font-body);color:var(--gray-2)}
+.slide__header{display:flex;flex-direction:column;flex:0 0 auto}
+.slide__title{font-family:var(--font-title);font-weight:700;font-size:var(--fs-title);
+  line-height:var(--lh-title);color:var(--brand);margin:0 0 8px;max-width:1180px;letter-spacing:.01em}
+.slide__lead{font-size:var(--fs-subtitle);color:var(--gray-1);line-height:1.45;margin:0}
+.slide__body{flex:1;min-height:0;margin-top:16px;display:grid;gap:20px}
+.slide__body.source-in{grid-template-rows:minmax(0,1fr) auto}
+.source{font-size:var(--fs-note);color:var(--gray-2);line-height:1.35;margin-top:12px}
+.source b{color:var(--gray-1);font-weight:600}
+.rows{display:grid;gap:20px;min-height:0;height:100%}
+.row{display:grid;gap:24px;min-height:0;min-width:0}
+.row--tight{gap:20px}
+.region{min-width:0;min-height:0;position:relative;display:flex;flex-direction:column;overflow:hidden}
+.region__h{font-size:var(--fs-exhibit-title);font-weight:600;line-height:1.3;color:var(--ink);margin-bottom:8px}
+
+/* 内容模式：正文与图注 */
+.p{font-size:var(--fs-body);line-height:1.5;color:var(--gray-1);margin:0 0 7px}
+.p:last-child{margin-bottom:0}
+.cap{font-size:var(--fs-note);line-height:1.4;color:var(--gray-2);margin-top:auto;padding-top:8px}
+.glyph{flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center}
+.glyph svg{width:100%;height:100%;max-height:100%;display:block}
+.inner{flex:1 1 auto;min-height:0;display:grid;gap:10px}
+.inner--quad{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr))}
+.inner--grid9{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr))}
+.inner--stack2{grid-template-rows:repeat(2,minmax(0,1fr))}
+.inner--stack3{grid-template-rows:repeat(3,minmax(0,1fr))}
+.inner--sm{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));gap:16px}
+.ibox{background:var(--surface);border:1px solid var(--ui-line-soft);border-radius:2px;
+  display:flex;align-items:center;justify-content:center;min-height:0;overflow:hidden;padding:6px}
+.ibox svg{width:100%;height:100%}
+.ibox--txt{align-items:flex-start;justify-content:flex-start;padding:10px 12px}
+.ibox--txt .p{font-size:var(--fs-annotation)}
+
+/* 线框模式 */
+.wire .region{border:1.5px solid var(--brand);background:rgba(217,217,236,.20);padding:9px 11px}
+.wire .region[data-role="evidence"]{border-color:var(--cat-2);background:rgba(0,122,120,.07)}
+.wire .region[data-role="support"]{border-color:var(--cat-3);background:rgba(134,82,160,.07)}
+.wire .region[data-role="context"]{border-color:var(--cat-4);background:rgba(156,92,20,.07)}
+.wire__tag{font-size:12.5px;font-weight:600;color:var(--ink)}
+.wire__tag em{font-style:normal;font-family:var(--font-body);font-variant-numeric:tabular-nums}
+.wire__meta{font-size:11.5px;color:var(--ui-muted);margin-top:5px;line-height:1.5;word-break:break-all}
+.wire__form{font-size:11.5px;color:var(--brand);margin-top:4px;word-break:break-all}
+.wire__inner{flex:1 1 auto;min-height:0;margin-top:8px;display:grid;gap:8px;
+  grid-template-columns:repeat(auto-fit,minmax(80px,1fr))}
+.wire__slot{border:1px dashed var(--ui-line);border-radius:2px;min-height:22px}
+
+/* 契模式 */
+.contract{padding:22px 26px;overflow:auto;height:100%;background:var(--page-bg)}
+.contract h4{font-size:12px;letter-spacing:.1em;color:var(--ui-muted);margin:0 0 7px;font-weight:600}
+.contract pre{font:12.5px/1.62 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--surface);
+  border:1px solid var(--ui-line-soft);border-radius:4px;padding:12px 14px;margin:0 0 18px;
+  white-space:pre-wrap;word-break:break-word;color:var(--ink);user-select:text}
+
+/* 叠加层 */
+.ov{position:absolute;inset:0;z-index:6;pointer-events:none}
+.ov__safe{position:absolute;left:40px;top:32px;width:1200px;height:662px;
+  outline:1px dashed rgba(0,0,128,.42);outline-offset:0}
+.ov__pad{position:absolute;border:1px dashed rgba(156,92,20,.40)}
+.ov__col{position:absolute;top:32px;bottom:26px;background:rgba(0,122,120,.055);
+  border-left:1px dashed rgba(0,122,120,.35)}
+/* 顶栏注释靠右：左上角是 .slide__tracker 的位置，靠左会与页面眉标叠字 */
+.ov__note{position:absolute;right:44px;top:8px;text-align:right;font-size:10.5px;color:rgba(0,0,128,.75);letter-spacing:.04em}
+.ov__lbl{position:absolute;font-size:10.5px;color:var(--ui-muted);background:rgba(255,255,255,.86);padding:0 3px}
+.stage.lines-on .region__h,.stage.lines-on .p,.stage.lines-on .slide__title,.stage.lines-on .slide__lead{
+  background-image:repeating-linear-gradient(to bottom,rgba(0,122,120,.28) 0 1px,transparent 1px var(--lineh))}
+.stage.lines-on .region__cnt{display:block}
+.region__cnt{display:none;position:absolute;right:4px;top:2px;font-size:10px;color:var(--cat-2);
+  background:rgba(255,255,255,.9);padding:0 3px;font-variant-numeric:tabular-nums;z-index:7}
+.hint{font-size:11.5px;color:var(--ui-muted);margin-top:8px}
+.hint b{color:var(--ui-ink)}
+
+/* 说明区 */
+.notes{flex:0 0 auto;background:var(--ui-panel);border-top:1px solid var(--ui-line);
+  padding:11px 20px 13px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px}
+.notes dl{margin:0}
+.notes dt{font-size:10px;letter-spacing:.1em;color:var(--ui-muted);margin-bottom:3px;font-weight:600}
+.notes dd{margin:0;font-size:12.5px;line-height:1.5;color:var(--ui-ink)}
+.notes dd.no{color:var(--risk)}
+@media (max-width:1180px){.notes{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+</head>
+<body>
+
+<aside class="nav">
+  <div class="nav__head">
+    <div class="nav__title">单页布局图谱</div>
+    <div class="nav__sub">页面蓝图的可视图 · 1280×720<br>结构与类名随运行时更新，不单独维护</div>
+  </div>
+  <div class="nav__list" id="navlist"></div>
+</aside>
+
+<main class="main">
+  <div class="bar">
+    <div>
+      <span class="bar__id" id="bid"></span>
+      <span class="bar__name" id="bname"></span>
+    </div>
+    <div class="bar__sp"></div>
+    <span class="grp__lab">模式</span>
+    <div class="grp" id="modes">
+      <button data-mode="wire" aria-pressed="false">结构线框 · 1</button>
+      <button data-mode="content" aria-pressed="true">内容示例 · 2</button>
+      <button data-mode="contract" aria-pressed="false">契约 · 3</button>
+    </div>
+    <span class="grp__lab">标题</span>
+    <div class="grp" id="tlines">
+      <button data-lines="1" aria-pressed="false">1 行</button>
+      <button data-lines="2" aria-pressed="true">2 行</button>
+    </div>
+    <label class="tog"><input type="checkbox" id="togSafe" checked>安全区</label>
+    <label class="tog"><input type="checkbox" id="togLines">行盒标尺</label>
+    <label class="tog"><input type="checkbox" id="togTracks">栏轨道</label>
+    <label class="tog"><input type="checkbox" id="togSrc" checked>来源放 body 内</label>
+    <span class="budget" id="budget"></span>
+    <div class="grp">
+      <button id="btnOverview" aria-pressed="false">总览 · 0</button>
+      <button id="btnPrev">← 上一条</button>
+      <button id="btnNext">下一条 →</button>
+    </div>
+  </div>
+
+  <div class="wrap" id="wrap">
+    <div class="stager" id="stager"><div class="stage" id="stage"></div></div>
+  </div>
+
+  <div class="notes" id="notes"></div>
+</main>
+
+<script type="application/json" id="layout-catalog">[
+ {
+  "id": "甲-1",
+  "name": "主图＋侧栏解读",
+  "family": "甲 单证据统领",
+  "use": "一个核心图表已能承担证明，另有两三个解释点要贴着它说。",
+  "path": "判断标题 → 主图 → 侧栏解释 → 来源。",
+  "trade": "侧栏**不要再开一个同等复杂的新议题**；窄于 4fr 时只放短判断，不放表。",
+  "avoid": "主图需要 >9fr 才读得清（长序列、宽散点）→ 改甲-2。",
+  "build": {
+   "kind": "class",
+   "cls": "layout-split",
+   "grid": "minmax(0,8fr) minmax(0,4fr)",
+   "gap": 24
+  },
+  "regions": [
+   {
+    "slot": "main",
+    "span": 8,
+    "form": "<本页 form>",
+    "role": "primary"
+   },
+   {
+    "slot": "aside",
+    "span": 4,
+    "form": "html.text",
+    "role": "support"
+   }
+  ],
+  "forms": [
+   {
+    "name": "recipe.timeSeries",
+    "dagger": true
+   },
+   {
+    "name": "kit.waterfall",
+    "dagger": true
+   },
+   {
+    "name": "recipe.rankedBar",
+    "dagger": true
+   },
+   {
+    "name": "html.text",
+    "dagger": false
+   }
+  ],
+  "rows": [
+   [
+    0,
+    1
+   ]
+  ]
+ },
+ {
+  "id": "甲-2",
+  "name": "全幅主图＋底部解读",
+  "family": "甲 单证据统领",
+  "use": "主图的**宽度本身**就是证明力（横向趋势、长序列、宽比较）。",
+  "path": "标题 → 通栏图 → 左下事实 → 右下含义。",
+  "trade": "底部只在图**说不完**时出现；图自己能说完就整页给图。",
+  "avoid": "短宽比图通栏后更空；需要精确读数的散点被压到一窄条后读不出 → 改甲-1。",
+  "build": {
+   "kind": "inline",
+   "grid": "minmax(0,8fr) minmax(0,4fr)",
+   "gap": 20
+  },
+  "regions": [
+   {
+    "slot": "top",
+    "span": 12,
+    "form": "<本页 form>",
+    "role": "primary"
+   },
+   {
+    "slot": "bottom",
+    "span": 8,
+    "form": "html.text",
+    "role": "evidence"
+   },
+   {
+    "slot": "bottom",
+    "span": 4,
+    "form": "html.text",
+    "role": "context"
+   }
+  ],
+  "forms": [
+   {
+    "name": "recipe.timeSeries",
+    "dagger": true
+   },
+   {
+    "name": "kit.stacked",
+    "dagger": true
+   },
+   {
+    "name": "recipe.histogram",
+    "dagger": true
+   },
+   {
+    "name": "html.text",
+    "dagger": false
+   }
+  ],
+  "rows": [
+   [
+    0
+   ],
+   [
+    1,
+    2
+   ]
+  ],
+  "rowFr": [
+   3,
+   1
+  ]
+ },
+ {
+  "id": "甲-3",
+  "name": "结论横带＋三项支撑",
+  "family": "甲 单证据统领",
+  "use": "一个综合判断由三个同级维度共同支持（执行摘要、阶段复盘）。",
+  "path": "横带结论 → 三项从左到右 → 回到结论。",
+  "trade": "三项**必须真的同级**；横带里不要塞第二层论证，否则会被读成标题。",
+  "avoid": "三项之间没有共同结论、只是三个并列事实 → 改乙-2。",
+  "build": {
+   "kind": "class",
+   "cls": "layout-three",
+   "grid": "repeat(3,minmax(0,1fr))",
+   "gap": 24
+  },
+  "regions": [
+   {
+    "slot": "top",
+    "span": 12,
+    "form": "html.text",
+    "role": "primary"
+   },
+   {
+    "slot": "bottom",
+    "span": 4,
+    "form": "html.kpi",
+    "role": "support"
+   },
+   {
+    "slot": "bottom",
+    "span": 4,
+    "form": "kit.bullet",
+    "role": "evidence"
+   },
+   {
+    "slot": "bottom",
+    "span": 4,
+    "form": "kit.bullet",
+    "role": "evidence"
+   }
+  ],
+  "forms": [
+   {
+    "name": "html.kpi",
+    "dagger": false
+   },
+   {
+    "name": "precision.columns",
+    "dagger": true
+   },
+   {
+    "name": "html.text",
+    "dagger": false
+   }
+  ],
+  "rows": [
+   [
+    0
+   ],
+   [
+    1,
+    2,
+    3
+   ]
+  ],
+  "rowFr": [
+   1,
+   2
+  ]
+ },
+ {
+  "id": "乙-1",
+  "name": "双栏对照",
+  "family": "乙 并列与对照",
+  "use": "两个方案／群体／时期在**同一组维度**上的取舍。",
+  "path": "标题 → 左右同序比较 → 每栏结论。",
+  "trade": "两栏**维度和口径必须一致**，不能各写各的问题；对称不等于相等面积。",
+  "avoid": "两侧不是同一维度的对照（如\"现状\"对\"建议\"）→ 改己-2 或己-3。",
+  "build": {
+   "kind": "class",
+   "cls": "layout-paired",
+   "grid": "repeat(2,minmax(0,1fr))",
+   "gap": 24
+  },
+  "regions": [
+   {
+    "slot": "left",
+    "span": 6,
+    "form": "<本页 form>",
+    "role": "primary"
+   },
+   {
+    "slot": "right",
+    "span": 6,
+    "form": "kit.comparisonTable",
+    "role": "support"
+   }
+  ],
+  "forms": [
+   {
+    "name": "kit.comparisonTable",
+    "dagger": false
+   },
+   {
+    "name": "html.table",
+    "dagger": false
+   },
+   {
+    "name": "kit.dumbbell",
+    "dagger": true
+   },
+   {
+    "name": "kit.slope",
+    "dagger": true
+   }
+  ],
+  "rows": [
+   [
+    0,
+    1
+   ]
+  ]
+ },
+ {
+  "id": "乙-2",
+  "name": "三栏／四栏并列",
+  "family": "乙 并列与对照",
+  "use": "三到四个同级主题或短信息单元（分群、能力、选项、原则）。",
+  "path": "标题 → 逐栏 → 横向比较各栏的相同字段。",
+  "trade": "每栏 4fr ≈ 372px 正文宽，**只适合短段落**；四栏只放短句。",
+  "avoid": "每项超过四个字段或需要长论述 → 改辛-2 或拆页。**\"相邻页重复三栏段落\"是本技能点名的过度摘要信号**，出现时回原材料找还没表达的关联，而不是换外观。",
+  "build": {
+   "kind": "class",
+   "cls": "layout-three",
+   "grid": "repeat(3,minmax(0,1fr))",
+   "gap": 24
+  },
+  "regions": [
+   {
+    "slot": "left",
+    "span": 4,
+    "form": "html.text",
+    "role": "primary"
+   },
+   {
+    "slot": "main",
+    "span": 4,
+    "form": "html.text",
+    "role": "support"
+   },
+   {
+    "slot": "right",
+    "span": 4,
+    "form": "html.text",
+    "role": "evidence"
+   }
+  ],
+  "forms": [
+   {
+    "name": "html.text",
+    "dagger": false
+   },
+   {
+    "name": "kit.bullet",
+    "dagger": true
+   },
+   {
+    "name": "kit.processFlow",
+    "dagger": false
+   },
+   {
+    "name": "html.kpi",
+    "dagger": false
+   }
+  ],
+  "rows": [
+   [
+    0,
+    1,
+    2
+   ]
+  ]
+ },
+ {
+  "id": "丙-1",
+  "name": "四格矩阵",
+  "family": "丙 矩阵与分面",
+  "use": "两个维度交叉出四种处理策略（优先级、机会分层、组合判断）。",
+  "path": "先读行列语义 → 左上优先项 → 其余三种策略 → 右侧收束。",
+  "trade": "**两轴必须有名称和方向**；只把四段话放进四个框不算矩阵。",
+  "avoid": "两个维度在材料里高度共线（如\"重要性\"与\"紧急度\"）→ 拆成一维排序。",
+  "build": {
+   "kind": "inline",
+   "grid": "minmax(0,7fr) minmax(0,5fr)",
+   "gap": 24
+  },
+  "regions": [
+   {
+    "slot": "left",
+    "span": 7,
+    "form": "html.matrix",
+    "role": "primary"
+   },
+   {
+    "slot": "right",
+    "span": 5,
+    "form": "html.text",
+    "role": "support"
+   }
+  ],
+  "forms": [
+   {
+    "name": "html.matrix",
+    "dagger": false
+   },
+   {
+    "name": "kit.heatmap",
+    "dagger": true
+   },
+   {
+    "name": "html.text",
+    "dagger": false
+   }
+  ],
+  "rows": [
+   [
+    0,
+    1
+   ]
+  ],
+  "inner": {
+   "0": "quad"
+  }
+ },
+ {
+  "id": "丙-2",
+  "name": "三对象×三维度九格",
+  "family": "丙 矩阵与分面",
+  "use": "三个对象在三个维度上的定性比较（供应商、技术方案、进入路径）。",
+  "path": "第一行识别对象 → 同行比较 → 沿列汇总取舍。",
+  "trade": "单格只放短判断；需要长论证时减少维度，不是缩小字号。",
+  "avoid": "三个对象在不同维度上不可比 → 改辛-2 明细表。",
+  "build": {
+   "kind": "class",
+   "cls": "evidence-grid",
+   "grid": "repeat(12,minmax(0,1fr))",
+   "gap": 20
+  },
+  "regions": [
+   {
+    "slot": "full",
+    "span": 12,
+    "form": "html.matrix",
+    "role": "primary"
+   },
+   {
+    "slot": "bottom",
+    "span": 12,
+    "form": "html.text",
+    "role": "context"
+   }
+  ],
+  "forms": [
+   {
+    "name": "html.matrix",
+    "dagger": false
+   },
+   {
+    "name": "html.table",
+    "dagger": false
+   },
+   {
+    "name": "html.text",
+    "dagger": false
+   }
+  ],
+  "rows": [
+   [
+    0
+   ],
+   [
+    1
+   ]
+  ],
+  "rowFr": [
+   5,
+   1
+  ],
+  "inner": {
+   "0": "grid9"
+  }
+ },
+ {
+  "id": "丙-3",
+  "name": "同尺度小多图",
+  "family": "丙 矩阵与分面",
+  "use": "多个同口径序列并行比较（区域、产品线、客户分群）。",
+  "path": "逐行扫描变化 → 定位差异单元 → 读对应解释。",
+  "trade": "**必须共用同一量尺**，否则图形会夸大差异；带面积填充时**基准线要画在填充之上**，否则基期那条线被填充吃掉，六张图就没有共同参照了。刻度只在首列出现，每张只标自己的变化量，绝对值交给公共刻度——六张各标一套绝对值等于六套坐标。用 `svg.custom` 时 `visual` 必填，成稿要带同名 `data-visual`。每格只有 384 宽，图内标签实际落在 12–13px，这是这一条的固有代价。",
+  "avoid": "序列超过 6 个，或读者要看的是时间趋势而非横向差异 → 减少小图或改分面。",
+  "build": {
+   "kind": "inline",
+   "grid": "minmax(0,1fr)",
+   "gap": 24
+  },
+  "regions": [
+   {
+    "slot": "main",
+    "span": 12,
+    "form": "svg.custom",
+    "visual": "small-multiples",
+    "role": "primary"
+   }
+  ],
+  "forms": [
+   {
+    "name": "svg.custom",
+    "dagger": false
+   },
+   {
+    "name": "recipe.timeSeries",
+    "dagger": true
+   },
+   {
+    "name": "kit.bullet",
+    "dagger": true
+   }
+  ],
+  "rows": [
+   [
+    0
+   ]
+  ],
+  "inner": {
+   "0": "smallmultiples"
+  }
+ },
+ {
+  "id": "丁-1",
+  "name": "横向阶段＋共同条件",
+  "family": "丁 递进与拆解",
+  "use": "三到五个顺序明确的阶段，且跨阶段有共同门槛。",
+  "path": "左 → 右读阶段 → 底部读共同约束。",
+  "trade": "**等宽不表示等时长**，**顺序不冒充因果**；真实时长差异明显时改用有刻度的形式。",
+  "avoid": "阶段超过 5 个，或阶段之间有交叉依赖 → 改泳道或拆页。",
+  "build": {
+   "kind": "inline",
+   "grid": "repeat(4,minmax(0,1fr))",
+   "gap": 24
+  },
+  "regions": [
+   {
+    "slot": "top",
+    "span": 3,
+    "form": "kit.processFlow",
+    "role": "primary"
+   },
+   {
+    "slot": "top",
+    "span": 3,
+    "form": "html.text",
+    "role": "support"
+   },
+   {
+    "slot": "top",
+    "span": 3,
+    "form": "html.text",
+    "role": "support"
+   },
+   {
+    "slot": "top",
+    "span": 3,
+    "form": "html.text",
+    "role": "support"
+   },
+   {
+    "slot": "bottom",
+    "span": 12,
+    "form": "html.text",
+    "role": "context"
+   }
+  ],
+  "forms": [
+   {
+    "name": "kit.processFlow",
+    "dagger": false
+   },
+   {
+    "name": "diagram.process",
+    "dagger": false
+   },
+   {
+    "name": "diagram.swimlane",
+    "dagger": false
+   }
+  ],
+  "rows": [
+   [
+    0,
+    1,
+    2,
+    3
+   ],
+   [
+    4
+   ]
+  ],
+  "rowFr": [
+   2,
+   1
+  ]
+ },
+ {
+  "id": "丁-2",
+  "name": "阶梯推进",
+  "family": "丁 递进与拆解",
+  "use": "阶段之间有先决条件或成熟度递进，且必须**看见依赖**。",
+  "path": "左上 → 中 → 右下；空白本身表示推进方向。",
+  "trade": "底部空白必须是**方向**而不是\"没做完\"——两者在截图里长得一样，只有在有明显台阶时才成立。",
+  "avoid": "阶段之间其实没有先决关系（那只是并列）→ 改丁-1 或乙-2。",
+  "build": {
+   "kind": "inline",
+   "grid": "repeat(4,minmax(0,1fr))",
+   "gap": 24
+  },
+  "regions": [
+   {
+    "slot": "left",
+    "span": 3,
+    "form": "html.text",
+    "role": "primary"
+   },
+   {
+    "slot": "main",
+    "span": 3,
+    "form": "html.text",
+    "role": "support"
+   },
+   {
+    "slot": "right",
+    "span": 3,
+    "form": "html.text",
+    "role": "support"
+   },
+   {
+    "slot": "right",
+    "span": 3,
+    "form": "html.text",
+    "role": "evidence"
+   }
+  ],
+  "forms": [
+   {
+    "name": "diagram.hierarchy",
+    "dagger": false
+   },
+   {
+    "name": "kit.processFlow",
+    "dagger": false
+   },
+   {
+    "name": "html.text",
+    "dagger": false
+   }
+  ],
+  "place": {
+   "0": {
+    "col": 1,
+    "row": 1
+   },
+   "1": {
+    "col": 2,
+    "row": 2
+   },
+   "2": {
+    "col": 3,
+    "row": 3
+   },
+   "3": {
+    "col": 4,
+    "row": 4
+   }
+  },
+  "flat": true,
+  "cols": "repeat(4,minmax(0,1fr))",
+  "rowCount": 4
+ },
+ {
+  "id": "丁-3",
+  "name": "逻辑拆解树",
+  "family": "丁 递进与拆解",
+  "use": "从整体拆到驱动因素或根因（指标拆解、问题诊断）。",
+  "path": "左侧总指标 → 中间一级驱动 → 右侧计算口径。",
+  "trade": "**每层必须同一拆分逻辑**（都加法或都乘法），混用会让读者算不通。",
+  "avoid": "叶子超过 5 个 → 改两层或拆页。",
+  "build": {
+   "kind": "inline",
+   "grid": "3fr 4fr 5fr",
+   "gap": 24
+  },
+  "regions": [
+   {
+    "slot": "left",
+    "span": 3,
+    "form": "kit.tree",
+    "role": "primary"
+   },
+   {
+    "slot": "main",
+    "span": 4,
+    "form": "html.text",
+    "role": "support"
+   },
+   {
+    "slot": "right",
+    "span": 5,
+    "form": "html.text",
+    "role": "evidence"
+   }
+  ],
+  "forms": [
+   {
+    "name": "kit.tree",
+    "dagger": false
+   },
+   {
+    "name": "diagram.hierarchy",
+    "dagger": false
+   },
+   {
+    "name": "kit.waterfall",
+    "dagger": true
+   }
+  ],
+  "rows": [
+   [
+    0,
+    1,
+    2
+   ]
+  ]
+ },
+ {
+  "id": "丁-4",
+  "name": "分层结构＋逐层释义",
+  "family": "丁 递进与拆解",
+  "use": "抽象目标逐级落到动作（战略解码、能力层次、治理结构）。",
+  "path": "左侧自上而下理解层级 → 右侧读层间如何传递与验证。",
+  "trade": "**空间分层优先于装饰性金字塔**；只画金字塔不作层间释义，属于用形状代替论证。",
+  "avoid": "层级之间没有传递关系（只是三个并列项）→ 改乙-2。",
+  "build": {
+   "kind": "class",
+   "cls": "layout-paired",
+   "grid": "repeat(2,minmax(0,1fr))",
+   "gap": 24
+  },
+  "regions": [
+   {
+    "slot": "left",
+    "span": 6,
+    "form": "diagram.hierarchy",
+    "role": "primary"
+   },
+   {
+    "slot": "right",
+    "span": 6,
+    "form": "html.text",
+    "role": "context"
+   }
+  ],
+  "forms": [
+   {
+    "name": "diagram.hierarchy",
+    "dagger": false
+   },
+   {
+    "name": "html.text",
+    "dagger": false
+   },
+   {
+    "name": "kit.bullet",
+    "dagger": true
+   }
+  ],
+  "rows": [
+   [
+    0,
+    1
+   ]
+  ],
+  "inner": {
+   "0": "stack3"
+  }
+ },
+ {
+  "id": "戊-1",
+  "name": "指标概览＋证据组合",
+  "family": "戊 主辅互补",
+  "use": "同一主题同时需要 KPI、局部证据和管理解读。",
+  "path": "左上指标 → 左下两组证据 → 右侧综合判断。",
+  "trade": "指标不先被看见就失去概览作用；解读区不要变成第二组证据。`html.kpi` 上限 5 张卡，且**每张要有比较基准**。",
+  "avoid": "指标之间没有可比基准（只是几个孤立的数）→ 改甲-3。",
+  "build": {
+   "kind": "inline",
+   "grid": "minmax(0,8fr) minmax(0,4fr)",
+   "gap": 24
+  },
+  "regions": [
+   {
+    "slot": "top",
+    "span": 8,
+    "form": "html.kpi",
+    "role": "primary"
+   },
+   {
+    "slot": "main",
+    "span": 8,
+    "form": "kit.bullet",
+    "role": "evidence"
+   },
+   {
+    "slot": "aside",
+    "span": 4,
+    "form": "html.text",
+    "role": "context"
+   }
+  ],
+  "forms": [
+   {
+    "name": "html.kpi",
+    "dagger": false
+   },
+   {
+    "name": "kit.bullet",
+    "dagger": true
+   },
+   {
+    "name": "kit.dumbbell",
+    "dagger": true
+   },
+   {
+    "name": "html.text",
+    "dagger": false
+   }
+  ],
+  "rowFr": [
+   1,
+   2
+  ],
+  "place": {
+   "0": {
+    "col": 1,
+    "row": 1
+   },
+   "1": {
+    "col": 1,
+    "row": 2
+   },
+   "2": {
+    "col": 2,
+    "row": 1,
+    "rowSpan": 2
+   }
+  },
+  "flat": true,
+  "cols": "minmax(0,8fr) minmax(0,4fr)",
+  "rowCount": 2
+ },
+ {
+  "id": "戊-2",
+  "name": "主图＋四项辅助证据",
+  "family": "戊 主辅互补",
+  "use": "一个主问题需要四个局部切片解释。",
+  "path": "主图 → 四格证据 → 检查解释是否与主图一致。",
+  "trade": "主图**必须保住坐标空间**；小格只承载短证据。",
+  "avoid": "把主图塞不下的东西挪进小格——那是改分工，不是改布局。",
+  "build": {
+   "kind": "inline",
+   "grid": "minmax(0,6fr) minmax(0,6fr)",
+   "gap": 24
+  },
+  "regions": [
+   {
+    "slot": "main",
+    "span": 6,
+    "form": "<本页 form>",
+    "role": "primary"
+   },
+   {
+    "slot": "aside",
+    "span": 6,
+    "form": "kit.bullet",
+    "role": "evidence"
+   }
+  ],
+  "forms": [
+   {
+    "name": "recipe.timeSeries",
+    "dagger": true
+   },
+   {
+    "name": "kit.bullet",
+    "dagger": true
+   },
+   {
+    "name": "precision.columns",
+    "dagger": true
+   }
+  ],
+  "rows": [
+   [
+    0,
+    1
+   ]
+  ],
+  "inner": {
+   "1": "quad"
+  }
+ },
+ {
+  "id": "戊-3",
+  "name": "完整表格＋决策栏",
+  "family": "戊 主辅互补",
+  "use": "比较维度多、要保留可复核细节，同时要给出判断。",
+  "path": "判断 → 表格逐项核对 → 侧栏确认成立条件。",
+  "trade": "3fr ≈ 285px，**侧栏只放短判断，不放第二张表**。",
+  "avoid": "侧栏内容本身需要横向比较 → 改戊-4 或拆页。",
+  "build": {
+   "kind": "class",
+   "cls": "layout-split",
+   "grid": "minmax(0,8fr) minmax(0,4fr)",
+   "gap": 24
+  },
+  "regions": [
+   {
+    "slot": "main",
+    "span": 8,
+    "form": "html.table",
+    "role": "primary"
+   },
+   {
+    "slot": "aside",
+    "span": 4,
+    "form": "html.text",
+    "role": "support"
+   }
+  ],
+  "forms": [
+   {
+    "name": "html.table",
+    "dagger": false
+   },
+   {
+    "name": "kit.comparisonTable",
+    "dagger": false
+   },
+   {
+    "name": "html.matrix",
+    "dagger": false
+   },
+   {
+    "name": "html.text",
+    "dagger": false
+   }
+  ],
+  "rows": [
+   [
+    0,
+    1
+   ]
+  ]
+ },
+ {
+  "id": "戊-4",
+  "name": "双明细表＋共通判断",
+  "family": "戊 主辅互补",
+  "use": "两组明细要并读，但塞不进同一张宽表（成本/收益、供需、前后期）。",
+  "path": "左表 → 右表 → 底部共同判断。",
+  "trade": "左右并排**只表示阅读节奏，不表示一一因果对应**——必须在图注写明，否则读者会误读成配对。",
+  "avoid": "两组明细本来就有共同主键 → 合成一张表（改辛-2）。",
+  "build": {
+   "kind": "class",
+   "cls": "layout-stack",
+   "grid": "minmax(0,1fr) auto",
+   "gap": 18,
+   "axis": "rows"
+  },
+  "regions": [
+   {
+    "slot": "top",
+    "span": 6,
+    "form": "html.table",
+    "role": "primary"
+   },
+   {
+    "slot": "top",
+    "span": 6,
+    "form": "html.table",
+    "role": "evidence"
+   },
+   {
+    "slot": "bottom",
+    "span": 12,
+    "form": "html.text",
+    "role": "context"
+   }
+  ],
+  "forms": [
+   {
+    "name": "html.table",
+    "dagger": false
+   },
+   {
+    "name": "kit.comparisonTable",
+    "dagger": false
+   },
+   {
+    "name": "html.text",
+    "dagger": false
+   }
+  ],
+  "rows": [
+   [
+    0,
+    1
+   ],
+   [
+    2
+   ]
+  ],
+  "rowFr": [
+   2,
+   1
+  ]
+ },
+ {
+  "id": "己-1",
+  "name": "中轴结论＋四侧条件",
+  "family": "己 综合与研判",
+  "use": "一个综合结论受四项条件共同约束（可行性研判、决策门槛）。",
+  "path": "先看中轴判断 → 四侧条件 → 回中轴做决策。",
+  "trade": "**只适用于汇聚关系，不适用于时间顺序**。条件必须真的会改变结论；凑数的\"条件\"应删。",
+  "avoid": "条件之间有权重差异（那就不是\"共同满足\"）→ 改丙-1 或戊-3。",
+  "build": {
+   "kind": "inline",
+   "grid": "repeat(3,minmax(0,1fr))",
+   "gap": 24
+  },
+  "regions": [
+   {
+    "slot": "main",
+    "span": 4,
+    "form": "html.text",
+    "role": "primary"
+   },
+   {
+    "slot": "left",
+    "span": 4,
+    "form": "kit.bullet",
+    "role": "evidence"
+   },
+   {
+    "slot": "right",
+    "span": 4,
+    "form": "kit.bullet",
+    "role": "evidence"
+   }
+  ],
+  "forms": [
+   {
+    "name": "html.text",
+    "dagger": false
+   },
+   {
+    "name": "kit.bullet",
+    "dagger": true
+   },
+   {
+    "name": "diagram.condition",
+    "dagger": false
+   }
+  ],
+  "rows": [
+   [
+    0,
+    1,
+    2
+   ]
+  ],
+  "place": {
+   "0": {
+    "col": 2
+   },
+   "1": {
+    "col": 1
+   },
+   "2": {
+    "col": 3
+   }
+  },
+  "inner": {
+   "1": "stack2",
+   "2": "stack2"
+  }
+ },
+ {
+  "id": "己-2",
+  "name": "决策摘要＋证据与异议",
+  "family": "己 综合与研判",
+  "use": "决策者要快速读结论，同时能核对主要依据与**反对意见**。",
+  "path": "顶部状态 → 左侧证据 → 右侧异议与成立条件。",
+  "trade": "状态条只是入口，正文必须保留判断依据；**保留意见不能写成一行免责**。",
+  "avoid": "没有真实异议（那应改甲-3）；两侧其实不是同一维度的对照（→ 乙-1）。",
+  "build": {
+   "kind": "inline",
+   "grid": "minmax(0,8fr) minmax(0,4fr)",
+   "gap": 24
+  },
+  "regions": [
+   {
+    "slot": "top",
+    "span": 12,
+    "form": "html.text",
+    "role": "primary"
+   },
+   {
+    "slot": "bottom",
+    "span": 8,
+    "form": "html.table",
+    "role": "evidence"
+   },
+   {
+    "slot": "bottom",
+    "span": 4,
+    "form": "html.text",
+    "role": "context"
+   }
+  ],
+  "forms": [
+   {
+    "name": "html.text",
+    "dagger": false
+   },
+   {
+    "name": "html.table",
+    "dagger": false
+   }
+  ],
+  "rows": [
+   [
+    0
+   ],
+   [
+    1,
+    2
+   ]
+  ],
+  "rowFr": [
+   1,
+   3
+  ]
+ },
+ {
+  "id": "己-3",
+  "name": "顶层命题＋双支柱",
+  "family": "己 综合与研判",
+  "use": "一个目标依赖两项**互补**机制（获客与留存、供给与需求）。",
+  "path": "顶层目标 → 左右两条路径 → 各自的验证方法。",
+  "trade": "**左右是互补关系，要区别于二选一**；两条支柱必须能被同一套指标检验。",
+  "avoid": "两条其实是备选方案 → 改乙-1。",
+  "build": {
+   "kind": "inline",
+   "grid": "repeat(2,minmax(0,1fr))",
+   "gap": 24
+  },
+  "regions": [
+   {
+    "slot": "top",
+    "span": 12,
+    "form": "html.text",
+    "role": "primary"
+   },
+   {
+    "slot": "left",
+    "span": 6,
+    "form": "kit.bullet",
+    "role": "support"
+   },
+   {
+    "slot": "right",
+    "span": 6,
+    "form": "kit.bullet",
+    "role": "support"
+   }
+  ],
+  "forms": [
+   {
+    "name": "html.text",
+    "dagger": false
+   },
+   {
+    "name": "kit.bullet",
+    "dagger": true
+   },
+   {
+    "name": "html.table",
+    "dagger": false
+   }
+  ],
+  "rows": [
+   [
+    0
+   ],
+   [
+    1,
+    2
+   ]
+  ],
+  "rowFr": [
+   1,
+   3
+  ]
+ },
+ {
+  "id": "庚-1",
+  "name": "工作包×责任矩阵",
+  "family": "庚 执行与治理",
+  "use": "多角色参与多工作包，需要明确最终责任。",
+  "path": "工作包 → 最终批准者 → 执行者 → 协作与知会。",
+  "trade": "**矩阵表达职责，不表达先后**；角色超过 5 个时按阶段拆分。`html.matrix` 要求权重与评分锚点透明。",
+  "avoid": "要表达的是时间顺序 → 改丁-1 或庚-2。",
+  "build": {
+   "kind": "inline",
+   "grid": "minmax(0,1fr)",
+   "gap": 24
+  },
+  "regions": [
+   {
+    "slot": "main",
+    "span": 12,
+    "form": "html.matrix",
+    "role": "primary"
+   }
+  ],
+  "forms": [
+   {
+    "name": "html.matrix",
+    "dagger": false
+   },
+   {
+    "name": "html.table",
+    "dagger": false
+   }
+  ],
+  "rows": [
+   [
+    0
+   ]
+  ]
+ },
+ {
+  "id": "庚-2",
+  "name": "路线图＋风险门槛",
+  "family": "庚 执行与治理",
+  "use": "计划、风险与\"进入下一阶段的门槛\"要同页管理。",
+  "path": "左上目标 → 左下阶段 → 右上风险 → 右下门槛。",
+  "trade": "**风险不是额外的流程节点**，保持独立归属；门槛必须是可判断的条件，不是\"加强沟通\"。",
+  "avoid": "没有真实门槛，只是时间表 → 改丁-1（或结-1）。",
+  "build": {
+   "kind": "inline",
+   "grid": "minmax(0,8fr) minmax(0,4fr)",
+   "gap": 24
+  },
+  "regions": [
+   {
+    "slot": "main",
+    "span": 8,
+    "form": "html.table",
+    "role": "primary"
+   },
+   {
+    "slot": "aside",
+    "span": 4,
+    "form": "kit.bullet",
+    "role": "evidence"
+   }
+  ],
+  "forms": [
+   {
+    "name": "html.table",
+    "dagger": false
+   },
+   {
+    "name": "kit.processFlow",
+    "dagger": false
+   },
+   {
+    "name": "html.text",
+    "dagger": false
+   }
+  ],
+  "rows": [
+   [
+    0,
+    1
+   ]
+  ],
+  "inner": {
+   "0": "stack2",
+   "1": "stack2"
+  }
+ },
+ {
+  "id": "庚-3",
+  "name": "行动台账＋双侧约束",
+  "family": "庚 执行与治理",
+  "use": "多项短行动要责任与时限，同时保留共同约束。",
+  "path": "左侧排序依据 → 中部逐项 → 右侧升级规则。",
+  "trade": "明细长句改用全幅表格，**不靠压缩字号承载**。",
+  "avoid": "行动少于 5 项（三栏会显空）→ 改乙-2 或戊-3。",
+  "build": {
+   "kind": "inline",
+   "grid": "3fr 6fr 3fr",
+   "gap": 24
+  },
+  "regions": [
+   {
+    "slot": "main",
+    "span": 6,
+    "form": "html.table",
+    "role": "primary"
+   },
+   {
+    "slot": "left",
+    "span": 3,
+    "form": "html.text",
+    "role": "context"
+   },
+   {
+    "slot": "right",
+    "span": 3,
+    "form": "html.text",
+    "role": "evidence"
+   }
+  ],
+  "forms": [
+   {
+    "name": "html.table",
+    "dagger": false
+   },
+   {
+    "name": "html.text",
+    "dagger": false
+   }
+  ],
+  "rows": [
+   [
+    0,
+    1,
+    2
+   ]
+  ],
+  "place": {
+   "0": {
+    "col": 2
+   },
+   "1": {
+    "col": 1
+   },
+   "2": {
+    "col": 3
+   }
+  }
+ },
+ {
+  "id": "辛-1",
+  "name": "三栏研究论述",
+  "family": "辛 论述与查证",
+  "use": "文字论述多于数值比较（研究发现、访谈归纳、政策解读、方法说明）。",
+  "path": "左现象 → 中解释 → 右边界与待验证。",
+  "trade": "**不逐条切成卡片**，段落内部要连续；4fr 栏约 20 余中文字/行，接近可读下限。",
+  "avoid": "材料其实有数值比较 → 那是选错结构，不是选错栏数。",
+  "build": {
+   "kind": "class",
+   "cls": "layout-three",
+   "grid": "repeat(3,minmax(0,1fr))",
+   "gap": 24
+  },
+  "regions": [
+   {
+    "slot": "left",
+    "span": 4,
+    "form": "html.text",
+    "role": "primary"
+   },
+   {
+    "slot": "main",
+    "span": 4,
+    "form": "html.text",
+    "role": "support"
+   },
+   {
+    "slot": "right",
+    "span": 4,
+    "form": "html.text",
+    "role": "context"
+   }
+  ],
+  "forms": [
+   {
+    "name": "html.text",
+    "dagger": false
+   }
+  ],
+  "rows": [
+   [
+    0,
+    1,
+    2
+   ]
+  ]
+ },
+ {
+  "id": "辛-2",
+  "name": "多对象×多指标总表",
+  "family": "辛 论述与查证",
+  "use": "对象与指标都多，读者要**交叉查阅并逐格查数**。",
+  "path": "指标表头 → 重点对象 → 同列差异 → 口径说明。",
+  "trade": "这是**主动选表格**的合法场景（读者任务本来就是逐格查数）；新增字段导致长句换行时分组或拆表，**不缩字号**。",
+  "avoid": "读者要的是趋势或对比结论，不是查数 → 回图表选型。",
+  "build": {
+   "kind": "inline",
+   "grid": "minmax(0,1fr)",
+   "gap": 24
+  },
+  "regions": [
+   {
+    "slot": "main",
+    "span": 12,
+    "form": "html.table",
+    "role": "primary"
+   }
+  ],
+  "forms": [
+   {
+    "name": "html.table",
+    "dagger": false
+   },
+   {
+    "name": "kit.comparisonTable",
+    "dagger": false
+   },
+   {
+    "name": "html.matrix",
+    "dagger": false
+   }
+  ],
+  "rows": [
+   [
+    0
+   ]
+  ]
+ },
+ {
+  "id": "结-1",
+  "name": "目录与路线图",
+  "family": "结构页",
+  "use": "进入正文前看到章节顺序、每章解决什么问题、各自的页范围。",
+  "path": "章节序号 → 章名 → 本章问题 → 页范围。",
+  "trade": "**结构面不整页铺底**；章名与页范围要能一眼扫到。条目内容要来自已冻结的正文，不预告还没写的结论。",
+  "avoid": "全篇不足五页时目录没有导航价值 → 省略，直接进正文。",
+  "build": {
+   "kind": "inline",
+   "grid": "minmax(0,1fr)",
+   "gap": 24
+  },
+  "regions": [
+   {
+    "slot": "main",
+    "span": 12,
+    "form": "html.text",
+    "role": "primary"
+   }
+  ],
+  "forms": [
+   {
+    "name": "html.text",
+    "dagger": false
+   },
+   {
+    "name": "html.table",
+    "dagger": false
+   },
+   {
+    "name": "kit.processFlow",
+    "dagger": false
+   }
+  ],
+  "rows": [
+   [
+    0
+   ]
+  ],
+  "titleKind": "chapter"
+ },
+ {
+  "id": "结-2",
+  "name": "章节导读",
+  "family": "结构页",
+  "use": "感知转场，知道本章解决什么问题、结论是什么。",
+  "path": "章号 → 章名 → 本章问题 → 本章结论（自上而下单轴）。",
+  "trade": "**允许有意的低密度**，不套正文的密度要求；**禁止再开第二栏**。结论必须来自已冻结内容。",
+  "avoid": "章节很短或只有一章 → 省略导读，避免为转场而转场。",
+  "build": {
+   "kind": "inline",
+   "grid": "minmax(0,8fr) minmax(0,4fr)",
+   "gap": 24
+  },
+  "regions": [
+   {
+    "slot": "main",
+    "span": 8,
+    "form": "html.text",
+    "role": "primary"
+   }
+  ],
+  "forms": [
+   {
+    "name": "html.text",
+    "dagger": false
+   }
+  ],
+  "rows": [
+   [
+    0
+   ]
+  ],
+  "rowCols": {
+   "0": "minmax(0,8fr) minmax(0,4fr)"
+  },
+  "titleKind": "chapter"
+ },
+ {
+  "id": "结-3",
+  "name": "结论与行动",
+  "family": "结构页",
+  "use": "知道结论、成立条件与下一步。",
+  "path": "结论 → 成立条件 → 行动分条（或：假设 → 验证 → 反证）。",
+  "trade": "**不使用整页底色**；结论必须已在正文出现过，这里只做收束，不引入新判断。",
+  "avoid": "结论依赖的假设还没被检验 → 先补验证页（或改用\"假设—验证—反证\"三轨）。",
+  "build": {
+   "kind": "inline",
+   "grid": "minmax(0,8fr) minmax(0,4fr)",
+   "gap": 24
+  },
+  "regions": [
+   {
+    "slot": "main",
+    "span": 8,
+    "form": "html.text",
+    "role": "primary"
+   },
+   {
+    "slot": "aside",
+    "span": 4,
+    "form": "html.text",
+    "role": "context"
+   }
+  ],
+  "forms": [
+   {
+    "name": "html.text",
+    "dagger": false
+   },
+   {
+    "name": "html.table",
+    "dagger": false
+   }
+  ],
+  "rows": [
+   [
+    0,
+    1
+   ]
+  ],
+  "titleKind": "chapter"
+ }
+]</script>
+<script>
+"use strict";
+const CAT = JSON.parse(document.getElementById('layout-catalog').textContent);
+const FAMS = [...new Set(CAT.map(e => e.family))];
+
+/* 几何：与 assets/consulting-layouts.css / deck-typography.js 逐字对齐 */
+const G = {
+  W:1280, H:720, padT:32, padX:40, padB:26, contentW:1200, contentH:662,
+  titleLH:32*1.28, titleMB:8, leadLH:15*1.45, bodyMT:16, bodyGap:20, srcLH:12*1.35, srcMT:12
+};
+const bodyH = n => G.contentH - (n*G.titleLH + G.titleMB + G.leadLH) - G.bodyMT;
+const budget = (n, srcIn) => srcIn
+  ? bodyH(n) - G.bodyGap - (G.srcLH + G.srcMT)
+  : bodyH(n) - G.srcMT - G.srcLH;
+
+const TITLE = {
+  page:{ one:'商超渠道是净下滑的主要来源',
+         two:'商超渠道是净下滑的主要来源，电商增长只能抵消约三分之一，且新增门店尚未进入成熟期' },
+  chapter:{ one:'第三章 渠道结构的变化',
+            two:'第三章 渠道结构的变化，以及它对三年增长目标的实际影响与仍需继续验证的假设' }
+};
+const LEAD = '口径：2023–2025 年可比口径，含直营与经销；样本为 12 个重点城市。';
+const SRC  = '来源：公司年报（2025）、渠道调研访谈（n=18）；完整口径见附录 A。';
+
+/* 形式 → 示意图形。未列出的走 chart。 */
+const GLYPH = {
+  'html.text':'text','html.table':'table','html.matrix':'table','kit.comparisonTable':'table',
+  'html.kpi':'kpi','kit.bullet':'bulletbar','kit.dumbbell':'dumbbell','kit.slope':'slope',
+  'kit.waterfall':'waterfall','precision.waterfall':'waterfall','kit.stacked':'stack',
+  'recipe.composition':'stack','precision.stacked':'stack','kit.heatmap':'heatmap',
+  'recipe.heatmap':'heatmap','recipe.timeSeries':'line','recipe.rankedBar':'bars',
+  'recipe.groupedBar':'bars','precision.columns':'bars','recipe.histogram':'hist',
+  'recipe.scatter':'scatter','recipe.sankey':'sankey','recipe.tree':'tree','kit.tree':'tree',
+  'kit.processFlow':'flow','diagram.process':'flow','diagram.swimlane':'flow',
+  'diagram.mechanism':'flow','diagram.hierarchy':'tree','diagram.condition':'text',
+  'svg.custom':'custom'
+};
+const glyphOf = f => GLYPH[f] || 'chart';
+const resolveForm = (e, r) => (r.form === '<本页 form>' ? (e.forms[0] ? e.forms[0].name : 'recipe.timeSeries') : r.form);
+
+const TITLES = {
+  text:['解释与边界','结论与含义','研究发现'],
+  table:['明细对照','口径与数据','逐项核对'],
+  kpi:['关键指标','目标达成','核心读数'],
+  other:['主要证据','分布与差异','结构与变化']
+};
+const pick = (arr, i) => arr[i % arr.length];
+function headFor(form, i){
+  const g = glyphOf(form);
+  if (g === 'text') return pick(TITLES.text, i);
+  if (g === 'table') return pick(TITLES.table, i);
+  if (g === 'kpi' || g === 'bulletbar') return pick(TITLES.kpi, i);
+  return pick(TITLES.other, i);
+}
+
+const SENT = [
+  '下滑集中在华南与华东两个大区，合计解释了净减少的七成以上。',
+  '电商增量主要来自新客，但客单价低于线下约三成，未能等额补回。',
+  '新增门店在第 9 个月后才进入成熟期，本期内尚未贡献可比增量。',
+  '若把口径改为同店可比，降幅收窄约 2.1 个百分点，方向不变。',
+  '经销商库存周转天数上升，说明压力部分停留在渠道而非终端。',
+  '访谈中反复出现的解释是租金上涨与到店频次下降同时发生。'
+];
+
+/* ——— 示意图形（纯 SVG，不引 ECharts）——— */
+const S = (inner, vb) => `<svg viewBox="${vb || '0 0 320 180'}" preserveAspectRatio="xMidYMid meet" aria-hidden="true">${inner}</svg>`;
+const AX = '<line x1="26" y1="150" x2="304" y2="150" stroke="#BFCBD2"/><line x1="26" y1="14" x2="26" y2="150" stroke="#BFCBD2"/>';
+function drawLine(n){
+  let polylines = '';
+  const cols = ['#000080','#007A78','#8652A0'];
+  for (let s = 0; s < n; s++){
+    const pts = [];
+    for (let i = 0; i <= 10; i++){
+      const y = 118 - s*12 - Math.abs(Math.sin(i*0.7 + s*1.9))*62 - i*1.1;
+      pts.push(`${26 + i*27.8},${Math.max(18, y).toFixed(1)}`);
+    }
+    polylines += `<polyline points="${pts.join(' ')}" fill="none" stroke="${cols[s%3]}" stroke-width="2.2"/>`;
+  }
+  return S(AX + polylines);
+}
+function drawBars(){
+  let r = '';
+  for (let i = 0; i < 8; i++){
+    const h = 22 + ((i*37) % 96);
+    r += `<rect x="${38 + i*33}" y="${150-h}" width="21" height="${h}" fill="#000080" opacity="${i === 6 ? 1 : .78}"/>`;
+  }
+  return S(AX + r);
+}
+function drawStack(){
+  let r = '';
+  for (let i = 0; i < 7; i++){
+    let y = 150; const segs = [30 + (i*13)%34, 24 + (i*19)%30, 18 + (i*11)%26];
+    segs.forEach((h, k) => { y -= h; r += `<rect x="${40 + i*36}" y="${y}" width="24" height="${h}" fill="${['#000080','#007A78','#BFCBD2'][k]}"/>`; });
+  }
+  return S(AX + r);
+}
+function drawHist(){
+  let r = '';
+  const hs = [16,34,58,84,104,92,70,52,34,22,14,9];
+  hs.forEach((h,i) => { r += `<rect x="${30 + i*22.5}" y="${150-h}" width="20" height="${h}" fill="#000080" opacity=".8"/>`; });
+  return S(AX + r);
+}
+function drawScatter(){
+  let r = '';
+  for (let i = 0; i < 42; i++){
+    const x = 36 + ((i*61) % 262), y = 148 - ((i*97) % 128);
+    r += `<circle cx="${x}" cy="${y}" r="3.1" fill="#000080" opacity=".55"/>`;
+  }
+  return S(AX + r);
+}
+function drawHeatmap(){
+  let r = '', seq = ['#D9D9EC','#A3A3D1','#6D6DB6','#36369B','#000080'];
+  for (let i = 0; i < 7; i++) for (let k = 0; k < 5; k++)
+    r += `<rect x="${34 + i*38}" y="${20 + k*25}" width="34" height="21" fill="${seq[(i*3+k*2)%5]}"/>`;
+  return S(r, '0 0 320 160');
+}
+function drawWaterfall(){
+  let r = '', up = true; const hs = [46,38,-26,34,-18,30,-24,42];
+  for (let i = 0; i < hs.length; i++){
+    const h = Math.abs(hs[i]) * 1.5;
+    const y = hs[i] > 0 ? 138 - h : 138;
+    r += `<rect x="${34 + i*33}" y="${y}" width="22" height="${h}" fill="${hs[i] > 0 ? '#000080' : '#9C5C14'}"/>`;
+  }
+  return S(AX + r);
+}
+function drawDumbbell(){
+  let r = '';
+  for (let i = 0; i < 5; i++){
+    const y = 32 + i*24, x1 = 60 + ((i*47) % 70), x2 = 190 + ((i*29) % 80);
+    r += `<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="#BFCBD2" stroke-width="2.4"/>`
+       + `<circle cx="${x1}" cy="${y}" r="5.4" fill="#BFCBD2"/><circle cx="${x2}" cy="${y}" r="5.4" fill="#000080"/>`;
+  }
+  return S(r, '0 0 320 170');
+}
+function drawSlope(){
+  let r = '';
+  for (let i = 0; i < 5; i++){
+    const y1 = 30 + i*25, y2 = 30 + ((i*3 + 1) % 5)*25;
+    r += `<line x1="72" y1="${y1}" x2="248" y2="${y2}" stroke="#000080" stroke-width="1.9" opacity=".5"/>`
+       + `<circle cx="72" cy="${y1}" r="5" fill="#BFCBD2"/><circle cx="248" cy="${y2}" r="5" fill="#000080"/>`;
+  }
+  return S(r, '0 0 320 170');
+}
+function drawBulletbar(){
+  let r = '';
+  for (let i = 0; i < 4; i++){
+    const y = 26 + i*34, w = 110 + ((i*53) % 140);
+    r += `<rect x="40" y="${y}" width="240" height="15" fill="#F2F5F7"/>`
+       + `<rect x="40" y="${y}" width="${w}" height="15" fill="#000080" opacity=".82"/>`
+       + `<line x1="${40 + 190}" y1="${y-4}" x2="${40 + 190}" y2="${y+19}" stroke="#9C5C14" stroke-width="2.4"/>`;
+  }
+  return S(r, '0 0 320 170');
+}
+function drawFlow(){
+  let r = '';
+  for (let i = 0; i < 4; i++){
+    r += `<rect x="${24 + i*74}" y="62" width="54" height="46" rx="2" fill="#000080" opacity="${.82 - i*0.11}"/>`;
+    if (i < 3) r += `<polygon points="${82 + i*74},80 ${92 + i*74},85 ${82 + i*74},90" fill="#50606E"/>`;
+  }
+  return S(r + '<line x1="24" y1="132" x2="296" y2="132" stroke="#BFCBD2" stroke-dasharray="4 4"/>', '0 0 320 170');
+}
+function drawTree(){
+  let r = `<rect x="14" y="72" width="62" height="30" fill="#000080"/>`;
+  [26, 72, 118].forEach(y => {
+    r += `<line x1="76" y1="87" x2="118" y2="${y+15}" stroke="#BFCBD2"/>`
+       + `<rect x="118" y="${y}" width="72" height="30" fill="#6D6DB6"/>`
+       + `<line x1="190" y1="${y+15}" x2="228" y2="${y+15}" stroke="#BFCBD2"/>`
+       + `<rect x="228" y="${y}" width="76" height="30" fill="#D9D9EC" stroke="#BFCBD2"/>`;
+  });
+  return S(r, '0 0 320 170');
+}
+function drawSankey(){
+  return S('<path d="M20 30 L120 52 L120 118 L20 140 Z" fill="#000080" opacity=".75"/>'
+    + '<path d="M200 44 L300 62 L300 108 L200 126 Z" fill="#007A78" opacity=".75"/>'
+    + '<path d="M120 52 C160 52 160 62 200 62 L200 108 C160 108 160 118 120 118 Z" fill="#BFCBD2" opacity=".8"/>', '0 0 320 170');
+}
+function drawCustom(){
+  return S(drawLine(2).replace(/^<svg[^>]*>|<\/svg>$/g, '') + '<rect x="150" y="20" width="120" height="60" fill="none" stroke="#000080" stroke-dasharray="3 3"/>', '0 0 320 180');
+}
+function drawTable(n){
+  let r = '<rect x="0" y="0" width="320" height="24" fill="#000080" opacity=".9"/>', y = 24;
+  for (let i = 0; i < n; i++){
+    if (i % 2 === 0) r += `<rect x="0" y="${y}" width="320" height="26" fill="#F2F5F7"/>`;
+    r += `<line x1="0" y1="${y+26}" x2="320" y2="${y+26}" stroke="#BFCBD2" opacity=".6"/>`;
+    y += 26;
+  }
+  return S(r, `0 0 320 ${y}`);
+}
+function drawKpi(){
+  let r = '';
+  [0,1,2].forEach(i => {
+    const x = 10 + i*104;
+    r += `<text x="${x}" y="66" font-size="34" font-weight="600" fill="#000080">${['−18.4','+6.1','0.72'][i]}</text>`
+       + `<rect x="${x}" y="80" width="66" height="7" fill="#D9D9EC"/>`
+       + `<text x="${x}" y="102" font-size="12" fill="#50606E">${['净下滑','电商增量','达成率'][i]}</text>`;
+  });
+  return S(r, '0 0 320 120');
+}
+function drawText(n){
+  let r = '', y = 14;
+  for (let i = 0; i < n; i++){
+    const w = 200 + ((i*67) % 110);
+    r += `<rect x="0" y="${y}" width="${w}" height="8" rx="2" fill="#BFCBD2"/>`;
+    y += 17;
+  }
+  return S(r, `0 0 320 ${y}`);
+}
+function glyphSVG(g, seed){
+  switch (g){
+    case 'line': return drawLine(2);
+    case 'bars': return drawBars();
+    case 'stack': return drawStack();
+    case 'hist': return drawHist();
+    case 'scatter': return drawScatter();
+    case 'heatmap': return drawHeatmap();
+    case 'waterfall': return drawWaterfall();
+    case 'dumbbell': return drawDumbbell();
+    case 'slope': return drawSlope();
+    case 'bulletbar': return drawBulletbar();
+    case 'flow': return drawFlow();
+    case 'tree': return drawTree();
+    case 'sankey': return drawSankey();
+    case 'custom': return drawCustom();
+    case 'table': return drawTable(4 + (seed % 3));
+    case 'kpi': return drawKpi();
+    case 'text': return drawText(4 + (seed % 3));
+    default: return drawLine(3);
+  }
+}
+
+/* ——— 分区渲染 ——— */
+function textBlock(seed){
+  let h = `<div class="region__h">${pick(TITLES.text, seed)}</div>`;
+  const n = 3 + (seed % 2);
+  for (let i = 0; i < n; i++) h += `<p class="p">${pick(SENT, seed + i)}</p>`;
+  return h;
+}
+function innerHTML(kind, seed){
+  const box = (i, txt) => `<div class="ibox${txt ? ' ibox--txt' : ''}">${txt
+    ? `<p class="p">${pick(SENT, i)}</p>` : glyphSVG(glyphOf('recipe.timeSeries'), i)}</div>`;
+  if (kind === 'quad')  return `<div class="inner inner--quad">${[0,1,2,3].map(i => box(i)).join('')}</div>`;
+  if (kind === 'grid9') return `<div class="inner inner--grid9">${[0,1,2,3,4,5,6,7,8].map(i => box(i, i % 3 === 0)).join('')}</div>`;
+  if (kind === 'stack2') return `<div class="inner inner--stack2">${[0,1].map(i => box(i, true)).join('')}</div>`;
+  if (kind === 'stack3') return `<div class="inner inner--stack3">${[0,1,2].map(i => box(i, true)).join('')}</div>`;
+  if (kind === 'smallmultiples') return `<div class="inner inner--sm">${[0,1,2,3,4,5].map(i => box(i)).join('')}</div>`;
+  return '';
+}
+
+function regionContent(e, i, mode){
+  const r = e.regions[i], form = resolveForm(e, r);
+  const g = glyphOf(form);
+  if (mode === 'wire'){
+    const inner = e.inner && e.inner[i];
+    return `<div class="wire__tag"><em>${r.slot} · ${r.role} · span ${r.span}</em></div>`
+      + `<div class="wire__meta">${e.build.kind === 'class' ? '.' + e.build.cls + '　' : ''}${e.build.grid || ''}</div>`
+      + `<div class="wire__form">建议 ${form}${form !== r.form ? '（本页 form 占位）' : ''}</div>`
+      + (inner ? `<div class="wire__inner">${'<div class="wire__slot"></div>'.repeat(inner === 'grid9' ? 9 : inner === 'quad' ? 4 : inner === 'smallmultiples' ? 6 : inner === 'stack3' ? 3 : 2)}</div>` : '');
+  }
+  const inner = e.inner && e.inner[i];
+  const body = inner ? innerHTML(inner, i)
+    : (g === 'text' ? textBlock(i) : `<div class="glyph">${glyphSVG(g, i)}</div>`);
+  const head = inner ? '' : (g === 'text' ? '' : `<div class="region__h">${headFor(form, i)}</div>`);
+  return head + body
+    + `<div class="cap">${form}${r.role === 'primary' ? ' · 第一落点' : ''}</div>`;
+}
+
+function rowColsOf(e, ids){
+  if (e.rowCols && e.rowCols[String(ids[0])] && ids.length === 1) return e.rowCols[String(ids[0])];
+  let order = ids.slice();
+  if (e.place && order.every(i => e.place[i] && e.place[i].col)){
+    order = order.slice().sort((a, b) => e.place[a].col - e.place[b].col);
+  }
+  return order.map(i => `minmax(0,${e.regions[i].span}fr)`).join(' ');
+}
+
+function rowsHTML(e){
+  const gap = e.build.gap;
+  if (e.flat){
+    const cells = e.regions.map((r, i) => {
+      const p = (e.place && e.place[i]) || { col:i+1, row:1 };
+      const sp = p.rowSpan ? ` / span ${p.rowSpan}` : '';
+      return `<div class="region" data-slot="${r.slot}" data-role="${r.role}" style="grid-column:${p.col};grid-row:${p.row}${sp}">${regionContent(e, i, state.mode)}</div>`;
+    }).join('');
+    const rt = (e.rowFr || Array(e.rowCount).fill(1))
+      .map(f => typeof f === 'number' ? `minmax(0,${f}fr)` : f).join(' ');
+    return `<div class="rows" style="grid-template-columns:${e.cols};grid-template-rows:${rt};gap:${gap}px">${cells}</div>`;
+  }
+  const rows = e.rows && e.rows.length ? e.rows : [e.regions.map((_, i) => i)];
+  const fr = e.rowFr || rows.map(() => 1);
+  const html = rows.map((ids, ri) => {
+    const cells = ids.map(i => {
+      const r = e.regions[i];
+      const p = e.place && e.place[i];
+      /* place 只给列号时必须同时钉住行号：一行内只写 grid-column 会让自动放置把靠左的项挤到下一行 */
+      const st = p && p.col ? ` style="grid-column:${p.col};grid-row:1"` : '';
+      return `<div class="region" data-slot="${r.slot}" data-role="${r.role}"${st}>${regionContent(e, i, state.mode)}</div>`;
+    }).join('');
+    return `<div class="row${gap <= 20 ? ' row--tight' : ''}" data-row="${ri}" style="grid-template-columns:${rowColsOf(e, ids)}">${cells}</div>`;
+  }).join('');
+  return `<div class="rows" style="grid-template-rows:${fr.map(f => `minmax(0,${f}fr)`).join(' ')};gap:20px">${html}</div>`;
+}
+
+function contractHTML(e){
+  const page = {
+    page: 1, proves: e.use, form: e.regions.find(r => r.role === 'primary').form,
+    regions: e.regions
+  };
+  const skel = `<section class="slide reading" data-frame-boundary="line">
+  <div class="slide__frame" aria-hidden="true"></div>
+  <div class="slide__tracker">章节名称</div>
+  <header class="slide__header">
+    <h1 class="slide__title">本页主判断</h1>
+    <p class="slide__lead">必要范围或解释</p>
+  </header>
+  <div class="slide__body">
+${rowsSkeleton(e)}
+    <div class="source">来源与边界</div>
+  </div>
+  <div class="slide__page">01</div>
+</section>`;
+  return `<div class="contract">
+    <h4>pages.json</h4><pre>${esc(JSON.stringify(page, null, 2))}</pre>
+    <h4>HTML 骨架</h4><pre>${esc(skel)}</pre>
+    <h4>CSS</h4><pre>${esc(cssFor(e))}</pre>
+    <h4>来源位置</h4><pre>${esc(state.srcIn
+      ? '.slide__body{display:grid;grid-template-rows:minmax(0,1fr) auto;gap:20px}   /* 来源放 body 内，主体 ' + budget(state.titleLines, true).toFixed(1) + 'px */'
+      : '.slide__body{flex:1;min-height:0;display:grid}   /* 来源留在 body 之后，主体 ' + budget(state.titleLines, false).toFixed(1) + 'px */')}</pre>
+  </div>`;
+}
+const esc = s => String(s).replace(/[&<>]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;' }[c]));
+
+function rowsSkeleton(e){
+  const rows = e.flat ? [e.regions.map((_, i) => i)] : (e.rows || [e.regions.map((_, i) => i)]);
+  return rows.map(ids => `    <div style="display:grid;grid-template-columns:${rowColsOf(e, ids)};gap:${e.build.gap}px">\n`
+    + ids.map(i => `      <div data-region="${e.regions[i].slot}">…</div>`).join('\n')
+    + `\n    </div>`).join('\n');
+}
+function cssFor(e){
+  return e.build.kind === 'class'
+    ? `/* assets/consulting-layouts.css */\n.${e.build.cls}{display:grid;${
+        e.build.axis === 'rows' ? 'grid-template-rows' : 'grid-template-columns'}:${e.build.grid};gap:${e.build.gap}px;min-height:0}`
+    : `display:grid;grid-template-columns:${e.build.grid};gap:${e.build.gap}px;min-height:0;`;
+}
+
+function overlaysHTML(e){
+  if (!state.safe && !state.tracks) return '';
+  let h = '';
+  if (state.safe){
+    h += `<div class="ov__pad" style="left:0;top:0;width:40px;height:720px"></div>`
+      +  `<div class="ov__pad" style="left:1240px;top:0;width:40px;height:720px"></div>`
+      +  `<div class="ov__pad" style="left:0;top:0;width:1280px;height:32px"></div>`
+      +  `<div class="ov__pad" style="left:0;top:694px;width:1280px;height:26px"></div>`
+      +  `<div class="ov__safe"></div>`
+      +  `<div class="ov__note">安全区 1200×662（左右 40 / 上 32 / 下 26）· 标题区高度随「标题行数」重算</div>`;
+  }
+  if (state.tracks){
+    if (e.build.cls === 'evidence-grid'){
+      for (let i = 0; i < 12; i++){
+        const w = (1200 - 11*20) / 12;
+        h += `<div class="ov__col" style="left:${40 + i*(w+20)}px;width:${w}px"></div>`;
+      }
+      h += `<div class="ov__note" style="top:706px">12 栏 + gap 20 —— .evidence-grid 独有，不是全局网格</div>`;
+    } else {
+      h += `<div class="ov__note" style="top:706px">该结构没有栏轨道可叠：本 skill 不存在全局列网格，页级布局是 fr 比例</div>`;
+    }
+  }
+  return h ? `<div class="ov">${h}</div>` : '';
+}
+
+/* ——— 渲染 ——— */
+const state = { i:0, mode:'content', safe:true, lines:false, tracks:false, titleLines:2, srcIn:true, overview:false };
+const stage = document.getElementById('stage'), wrap = document.getElementById('wrap'), stager = document.getElementById('stager');
+
+function renderStage(){
+  const e = CAT[state.i];
+  document.body.classList.toggle('overview', state.overview);
+  if (state.overview){ renderOverview(); return; }
+  stager.style.maxWidth = '1280px';
+  if (state.mode === 'contract'){
+    stage.style.width = '1280px'; stage.style.height = '720px';
+    stage.className = 'stage'; stage.innerHTML = contractHTML(e);
+    fit(); return;
+  }
+  const tk = TITLE[e.titleKind || 'page'][state.titleLines === 1 ? 'one' : 'two'];
+  stage.style.width = '1280px'; stage.style.height = '720px';
+  stage.className = 'stage' + (state.mode === 'wire' ? ' wire' : '') + (state.lines ? ' lines-on' : '');
+  stage.innerHTML = `<section class="slide reading">
+    <div class="slide__tracker">${e.family}</div>
+    <header class="slide__header">
+      <h1 class="slide__title" style="--lineh:${G.titleLH}px">${tk}</h1>
+      <p class="slide__lead" style="--lineh:${G.leadLH}px">${LEAD}</p>
+    </header>
+    <div class="slide__body ${state.srcIn ? 'source-in' : ''}">
+      ${rowsHTML(e)}
+      ${state.srcIn ? `<div class="source">${SRC}</div>` : ''}
+    </div>
+    ${state.srcIn ? '' : `<div class="source">${SRC}</div>`}
+    <div class="slide__page">01</div>
+  </section>${overlaysHTML(e)}`;
+  document.querySelectorAll('.region').forEach((el, i) => {
+    el.style.setProperty('--lineh', (17*1.5) + 'px');
+    const b = document.createElement('span');
+    b.className = 'region__cnt';
+    el.appendChild(b);
+  });
+  if (state.lines) requestAnimationFrame(countLines);
+  fit();
+}
+function countLines(){
+  document.querySelectorAll('.region').forEach(el => {
+    const b = el.querySelector('.region__cnt'); if (!b) return;
+    const h = el.getBoundingClientRect().height / scale;
+    b.textContent = '≈ ' + Math.max(0, Math.floor((h - 40) / (17*1.5))) + ' 行';
+  });
+}
+function renderOverview(){
+  stager.style.maxWidth = 'none';
+  stage.className = 'stage'; stage.style.width = 'auto'; stage.style.height = 'auto';
+  stage.style.transform = 'none';
+  stage.innerHTML = `<div class="grid-ov">${CAT.map((e, i) => `
+    <button class="ovcard" data-go="${i}">
+      <div class="ovcard__box">${thumb(e)}</div>
+      <div class="ovcard__t"><span class="nav__id">${e.id}</span>${e.name}</div>
+      <div class="ovcard__s">${e.family}</div>
+    </button>`).join('')}</div>`;
+  stage.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { go(+b.dataset.go); setOverview(false); });
+  wrap.style.height = '';
+}
+function thumb(e){
+  const rows = e.flat ? [e.regions.map((_, i) => i)] : (e.rows || [e.regions.map((_, i) => i)]);
+  const fr = e.rowFr || rows.map(() => 1);
+  return `<div style="position:absolute;left:3.1%;top:4.4%;width:93.8%;height:91.2%;display:grid;
+      grid-template-rows:${fr.map(f => `${f}fr`).join(' ')};gap:3px">`
+    + rows.map(ids => `<div style="display:grid;gap:3px;grid-template-columns:${rowColsOf(e, ids)}">`
+        + ids.map(i => {
+            const p = e.place && e.place[i];
+            const st = p && p.col ? `grid-column:${p.col};` : '';
+            return `<div style="${st}background:${e.regions[i].role === 'primary' ? 'rgba(0,0,128,.30)' : 'rgba(0,0,128,.13)'};border:1px solid rgba(0,0,128,.35);border-radius:1px"></div>`;
+          }).join('')
+        + `</div>`).join('')
+    + `</div>`;
+}
+function fit(){
+  if (state.overview) return;
+  const avail = wrap.clientWidth - 40;
+  scale = Math.max(.28, Math.min(1, avail / 1280));
+  stage.style.transform = `scale(${scale})`;
+  stager.style.height = (stage.offsetHeight * scale) + 'px';
+}
+let scale = 1;
+
+/* ——— 导航与状态 ——— */
+const navlist = document.getElementById('navlist');
+function renderNav(){
+  let h = '', last = null;
+  CAT.forEach((e, i) => {
+    if (e.family !== last){ h += `<div class="nav__fam">${e.family}</div>`; last = e.family; }
+    h += `<button class="nav__item" data-go="${i}" aria-current="${i === state.i}">
+      <span class="ovcard__box" style="background:#fff">${thumb(e)}</span>
+      <span class="nav__name"><span class="nav__id">${e.id}</span>${e.name}</span></button>`;
+  });
+  navlist.innerHTML = h;
+  navlist.querySelectorAll('[data-go]').forEach(b => b.onclick = () => go(+b.dataset.go));
+}
+function renderNotes(){
+  const e = CAT[state.i];
+  const forms = e.forms.map(f => `<code>${f.name}</code>${f.dagger ? '†' : ''}`).join('　');
+  document.getElementById('notes').innerHTML = `
+    <dl><dt>读者任务</dt><dd>${e.use}</dd></dl>
+    <dl><dt>阅读路径</dt><dd>${e.path}</dd></dl>
+    <dl><dt>取舍</dt><dd>${e.trade}</dd></dl>
+    <dl><dt>什么时候不该用</dt><dd class="no">${e.avoid}</dd>
+      <dt style="margin-top:8px">常见 form</dt><dd>${forms}</dd></dl>`;
+}
+function syncBar(){
+  const e = CAT[state.i];
+  document.getElementById('bid').textContent = e.id;
+  document.getElementById('bname').textContent = ' ' + e.name + ' · ' + e.family;
+  document.querySelectorAll('#modes button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === state.mode)));
+  document.querySelectorAll('#tlines button').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.lines === state.titleLines)));
+  document.getElementById('togSafe').checked = state.safe;
+  document.getElementById('togLines').checked = state.lines;
+  document.getElementById('togTracks').checked = state.tracks;
+  document.getElementById('togSrc').checked = state.srcIn;
+  document.getElementById('btnOverview').setAttribute('aria-pressed', String(state.overview));
+  const b = budget(state.titleLines, state.srcIn);
+  document.getElementById('budget').innerHTML =
+    `主体可用 <b>${b.toFixed(1)}px</b> · 标题区 ${(state.titleLines*G.titleLH + G.titleMB + G.leadLH).toFixed(1)}px · 内容盒 1200×662`;
+}
+function render(){ renderNav(); syncBar(); renderNotes(); renderStage(); location.hash = '#' + CAT[state.i].id; }
+function go(i){ state.i = (i + CAT.length) % CAT.length; if (state.overview) state.overview = false; render(); }
+function setMode(m){ state.mode = m; render(); }
+function setOverview(v){ state.overview = v; render(); }
+
+document.querySelectorAll('#modes button').forEach(b => b.onclick = () => setMode(b.dataset.mode));
+document.querySelectorAll('#tlines button').forEach(b => b.onclick = () => { state.titleLines = +b.dataset.lines; render(); });
+document.getElementById('togSafe').onchange = ev => { state.safe = ev.target.checked; renderStage(); };
+document.getElementById('togLines').onchange = ev => { state.lines = ev.target.checked; renderStage(); };
+document.getElementById('togTracks').onchange = ev => { state.tracks = ev.target.checked; renderStage(); };
+document.getElementById('togSrc').onchange = ev => { state.srcIn = ev.target.checked; render(); };
+document.getElementById('btnPrev').onclick = () => go(state.i - 1);
+document.getElementById('btnNext').onclick = () => go(state.i + 1);
+document.getElementById('btnOverview').onclick = () => setOverview(!state.overview);
+addEventListener('keydown', ev => {
+  if (ev.target.tagName === 'INPUT') return;
+  if (ev.key === 'ArrowLeft') go(state.i - 1);
+  else if (ev.key === 'ArrowRight') go(state.i + 1);
+  else if (ev.key === '1') setMode('wire');
+  else if (ev.key === '2') setMode('content');
+  else if (ev.key === '3') setMode('contract');
+  else if (ev.key === '0') setOverview(!state.overview);
+});
+addEventListener('resize', fit);
+/* 深链：#甲-1 可直接打开；地址栏改 hash 或浏览器前进后退都跟着走。
+   render() 写的 hash 与当前条目相同，不会回环。 */
+addEventListener('hashchange', () => {
+  const i = CAT.findIndex(e => e.id === hashId());
+  if (i >= 0 && i !== state.i){ state.i = i; state.overview = false; render(); }
+});
+/* location.hash 会返回百分号编码（#%E7%94%B2-1），必须解码后再比对中文 id */
+const hashId = () => { try { return decodeURIComponent(location.hash.replace(/^#/, '')); } catch (err) { return ''; } };
+const fromHash = () => { const i = CAT.findIndex(e => e.id === hashId()); return i < 0 ? 0 : i; };
+state.i = fromHash();
+render();
+</script>
+</body>
+</html>

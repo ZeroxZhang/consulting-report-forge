@@ -1,0 +1,51 @@
+/* 咨询阅读型页面组件；内联到deck，不替换导航引擎。 */
+.slide.reading{padding:32px 40px 26px;--fs-body:17px;--fs-note:12px}
+.reading .slide__title{font-size:var(--fs-title,32px);line-height:var(--lh-title,1.28);margin:0 0 8px;max-width:1180px}
+.reading .slide__lead{font-size:var(--fs-subtitle,15px)}
+.reading .slide__tracker{top:12px;font-size:12px;color:var(--gray-2)}
+.reading .slide__body{margin-top:16px;gap:20px}
+.reading .source{margin-top:12px;line-height:1.35;color:var(--gray-2)}
+.reading .slide__page{font-size:12px}
+.evidence-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:20px;min-height:0}
+.layout-split{display:grid;grid-template-columns:minmax(0,8fr) minmax(0,4fr);gap:24px;min-height:0}
+.layout-three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;min-height:0}
+.layout-paired{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px;min-height:0}
+.layout-stack{display:grid;grid-template-rows:minmax(0,1fr) auto;gap:18px;min-height:0}
+.exhibit{display:flex;flex-direction:column;min-width:0;min-height:0}
+.exhibit h2{font-size:19px;line-height:1.3;color:var(--brand);margin:0 0 8px}
+.exhibit .unit{font-size:13px;color:var(--gray-2);margin-bottom:8px;line-height:1.4}
+.exhibit .graphic{min-height:0;flex:1;display:flex;align-items:center}
+.exhibit .graphic>svg{display:block;width:100%;height:100%}
+/* 注释保留完整语义，以自然高度排版；不要将短文字伸展成空框。
+   收短后仍须重新组织整页，不能把剩余空间默认为已完成的留白。 */
+.annotation{font-size:15px;line-height:1.45;padding:8px 0;margin-top:10px;background:transparent;align-self:start;flex:0 0 auto}
+.evidence-note{font-size:16px;line-height:1.5;color:var(--gray-1);padding:12px 0;border-bottom:1px solid var(--gray-3)}
+.evidence-note strong{display:block;color:var(--brand);font-size:18px;margin-bottom:5px}
+.decision-strip{background:var(--brand);color:var(--on-brand);padding:12px 16px;font-size:17px;line-height:1.4}
+.reading .data-table{width:100%;border-collapse:collapse;font-size:var(--fs-data,16px);line-height:1.4;table-layout:fixed}
+.data-table th{font-size:var(--fs-table-head,15px);font-weight:600;text-align:left;color:var(--gray-1);border-bottom:2px solid var(--brand);padding:10px 9px;vertical-align:bottom}
+.data-table td{padding:13px 9px;border-bottom:1px solid var(--gray-3);vertical-align:top;overflow-wrap:anywhere}
+.data-table .num{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--font-num)}
+.data-table .selected{background:var(--selected)}
+.data-table .group td{font-size:13px;color:var(--gray-2);background:var(--gray-4);padding:6px 9px}
+.row-label{font-weight:700;color:var(--brand)}
+.status-label{font-size:14px;font-weight:700;border:1px solid currentColor;padding:2px 7px;display:inline-block;white-space:nowrap}
+.microbar{display:block;height:5px;background:var(--gray-4);margin-top:7px}
+.microbar>i{height:100%;display:block;background:var(--accent)}
+.matrix-note{font-size:14px;line-height:1.5;color:var(--gray-1);margin-top:10px}
+@media print{.reading .graphic{break-inside:avoid}.decision-strip{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
+
+.status-good{color:var(--good);background:var(--good-soft)}
+.status-risk{color:var(--risk);background:var(--risk-soft)}
+.status-caution{color:var(--caution);background:var(--caution-soft)}
+
+/* 分析表保留行列语义，数据条只作数值的冗余编码。 */
+.analytical-table caption{text-align:left;font-size:19px;font-weight:700;color:var(--ink);padding-bottom:12px}
+.analytical-table .column-unit{display:block;font-size:12px;font-weight:400;color:var(--gray-2);margin-top:4px}
+.analytical-table .table-bar{display:block;width:100%;height:14px;margin-top:5px}
+.analytical-table .total td{border-top:2px solid var(--brand);border-bottom:0;font-weight:700}
+.analytical-table .group th{padding:7px 9px;border-bottom:1px solid var(--gray-3);background:var(--gray-4)}
+/* 用于图表内注释已充分的页面，避免外围重色块抢占证据层级。 */
+.reading.analytical .exhibit h2{border-top:0;padding-top:0}
+.reading.analytical .annotation{background:transparent;padding:10px 0 0}
+.reading.analytical .decision-strip{background:transparent;color:var(--ink);padding:12px 0 0}

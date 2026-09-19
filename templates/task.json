@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "workMode": "editorial",
+  "complexity": "simple",
+  "majorConclusion": false,
+  "mode": "reading",
+  "theme": "mckinsey",
+  "typography": "serif-report-bold",
+  "ratio": "16x9",
+  "kind": "fragment",
+  "pages": {"record": "pages.json"},
+  "critical": []
+}

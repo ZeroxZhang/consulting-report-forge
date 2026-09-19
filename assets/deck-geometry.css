@@ -1,0 +1,15 @@
+/* 共享排版轨道；图形行中心和文字首行基线分别建立，不用逐标签偏移。 */
+.precision-table{font-size:var(--fs-data,16px);line-height:1.45;width:100%}
+.precision-row{display:grid;grid-template-columns:var(--comparison-columns,180px 88px minmax(120px,1fr) 130px 130px);gap:18px;align-items:first baseline;padding:17px 0;border-bottom:1px solid var(--gray-3);min-width:0}
+.precision-row.head{font-size:var(--fs-table-head,15px);font-weight:600;padding:0 0 12px;border-bottom:1px solid var(--gray-2)}
+.precision-cell{min-width:0;overflow-wrap:anywhere}
+.precision-number{text-align:right;font-variant-numeric:lining-nums tabular-nums}
+.precision-bar-track{align-self:center;height:12px;position:relative;min-width:0}
+.precision-bar{display:block;height:12px;background:var(--brand);min-width:0}
+.precision-bar-zero{position:absolute;top:-3px;height:18px;border-left:1px solid var(--gray-2)}
+.proof-layout{display:grid;grid-template-columns:minmax(0,var(--proof-ratio,2.5fr)) minmax(0,1fr);gap:32px;align-items:start}
+.proof-aside{align-self:start;font-size:16px;line-height:1.55}
+.proof-aside p{margin:0 0 20px}
+.proof-aside h2,.proof-main h2{font-size:19px;font-weight:600;line-height:1.3;margin:0 0 12px;color:var(--ink)}
+.plot-stack{display:grid;grid-template-rows:auto auto minmax(0,1fr);min-height:0}
+.plot-stack>svg{width:100%;height:100%;display:block}

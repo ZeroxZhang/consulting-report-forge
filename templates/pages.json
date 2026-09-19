@@ -1,0 +1,25 @@
+{
+  "version": 2,
+  "pages": [
+    {
+      "page": 1,
+      "proves": "填写读者必须在页面上直接看出的一个关系。",
+      "form": "svg.custom",
+      "visual": "填写实际图型，例如 waterfall、ecdf、mechanism 或 comparison-matrix。",
+      "density": {
+        "profile": "balanced",
+        "evidenceUnits": [
+          {
+            "role": "primary",
+            "purpose": "主图直接呈现标题所称的核心差异、趋势或机制。"
+          },
+          {
+            "role": "support",
+            "purpose": "补充比较对象、分母、条件或反例，防止主结论被过度解释。"
+          }
+        ],
+        "spaceIntent": "主展品占据主体阅读区；留白只用于分隔主图与支持证据，并保持来源安全区。"
+      }
+    }
+  ]
+}

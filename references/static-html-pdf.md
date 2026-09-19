@@ -1,0 +1,146 @@
+# 静态 HTML/PDF 路线
+
+仅在用户需要离线、浏览器可打开的研究型报告或静态网页翻阅稿时使用本路线。需要 PPT/PPTX 时改走 `slides` 技能及 Slides MCP。
+
+## 安装与环境探测
+
+在实际技能根目录运行。首次使用、升级依赖或浏览器环境变化时执行探测；探测输出的挑战图必须实际打开查看，再以 `--verify` 记录结论。构建需要 Node 18+、Chrome、Playwright、Poppler、Python/fontTools 和随包字体资源。
+
+```sh
+npm ci
+npm run setup-fonts
+node scripts/probe_capabilities.cjs /tmp/report-forge-probe
+# 查看探测输出的 PNG 后：
+node scripts/probe_capabilities.cjs /tmp/report-forge-probe --verify
+```
+
+默认调用本地 Chrome。若环境没有 Chrome，可安装 Playwright Chromium，并在所有启动浏览器的命令前设置 `CHROME_CHANNEL=chromium`：
+
+```sh
+npx playwright install chromium
+CHROME_CHANNEL=chromium node scripts/probe_capabilities.cjs /tmp/report-forge-probe
+```
+
+如果无法查看实际 PNG 或最终 PDF，继续制作时将视觉审查状态明确写为未验收，不要用自动 PASS 替代。
+
+## 最小任务合同
+
+先在任务目录创建并校验 `deck-blueprint.json`，再创建与正文页一致的 `task.json` 和 `pages.json`。blueprint 是叙事、标题、主展品、密度和来源计划的唯一设计源；`pages.json` 是静态装配所需的正文页机器合同。分别从 [deck blueprint 模板](../templates/deck-blueprint.json)、[任务模板](../templates/task.json) 与 [页面模板](../templates/pages.json) 开始；不要把模板原样用于实际报告。
+
+```sh
+node scripts/deck_blueprint.cjs /任务/deck-blueprint.json --ready
+```
+
+蓝图中每一张 `analysis`、`decision`、`action`、`risk` 或 `appendix` 页，必须在 `pages.json` 中有且仅有一个同序的正文页。将 `proves`、主视觉形式和密度配置同步到静态页面合同；封面、章节页、参考资料与封底由报告书册结构管理，不计入该一对一正文映射。
+
+创建 `pages.json` 后、编写 HTML 前运行：
+
+```sh
+node scripts/verify_blueprint_pages.cjs /任务/deck-blueprint.json /任务/pages.json
+```
+
+该检查拒绝在制作阶段悄然改变页面证明任务、主表达或密度配置；如果结论改变，应先修改 blueprint 并重新做叙事审查。
+
+```json
+{
+  "version": 1,
+  "workMode": "analytical",
+  "complexity": "complex",
+  "majorConclusion": true,
+  "mode": "reading",
+  "theme": "mckinsey",
+  "typography": "serif-report-bold",
+  "ratio": "16x9",
+  "kind": "report",
+  "pages": {"record": "pages.json"},
+  "critical": [
+    {"id": "scope_2026", "text": "仅覆盖中国大陆市场，期间为 2024–2026 年。"}
+  ]
+}
+```
+
+| 字段 | 取值与规则 |
+|---|---|
+| `workMode` | `editorial`（重组已确认文稿）、`analytical`（新计算/新推理）、`exploratory`（开放研究）。 |
+| `complexity` | `simple` 或 `complex`；未判断时使用 `complex`。出现新计算、方法选择或新结论即为 `complex`。 |
+| `majorConclusion` | 重大投资、经营、战略或风险建议设为 `true`。`complex` 或 `true` 均要求独立复核。 |
+| `mode` | 深度阅读用 `reading`，现场讲述用 `presentation`。 |
+| `theme` | `mckinsey`、`bcg`、`accenture`。 |
+| `kind` | `report`（封面、正文、参考资料、封底）、`fragment` 或 `collection`。它不降低风险复核要求。 |
+| `critical` | 只登记改变判断的期间、分母、状态、否定条件、关键数字或反证；在 HTML 中用 `data-critical-id` 标到相关对象。 |
+
+`pages.json` 的每个正文页必须按从 1 开始的连续顺序声明 `page`、`proves` 与 `form`。手写或原生 SVG 使用 `form: "svg.custom"` 并加 `visual`；多展品页的 `regions` 必须有且仅有一个 `role: "primary"`，且它与页面 `form` 一致。正文 `<section>` 用相同的 `data-form`；`visual` 存在时同时使用相同 `data-visual`。
+
+### 内容密度与留白合同（新稿使用 `pages.version: 2`）
+
+不要以字数、卡片数或填满背景来衡量密度。对每一正文页新增 `density`，先回答“页面需要多少个**不同职责的证据单元**，以及空出来的地方为什么必须空”。装配时，`density.profile` 必须同步写到正文 `<section data-density-profile="…">`；漏写或与 `pages.json` 不一致会阻断装配。
+
+| profile | 使用情形 | 最低结构 | 留白规则 |
+|---|---|---|---|
+| `dense` | 需要同时比较、解释、限定并导出行动的分析页 | `primary` + 至少两个不同辅助角色，且必须有 `implication` | 只能作为紧凑分组、比较间隙或来源安全区；正文出现大空洞会阻断验收。 |
+| `balanced` | 默认的研究、机制、比较或决策页 | `primary` + 至少一个 `support` / `context` / `implication` | 主展品与支持证据必须形成完整阅读路径；正文大空洞会阻断验收。 |
+| `sparse` | 确有必要的章节过渡、单个关键判断或读者停顿页 | 一个主证据单元 | 必须写 `sparseReason`，说明为何减少信息比增加证据更有助判断；不能把普通正文页伪装成极简页。 |
+
+```json
+{
+  "version": 2,
+  "pages": [{
+    "page": 3,
+    "proves": "价格战扩大了量，却压缩了单客毛利。",
+    "form": "kit.dumbbell",
+    "density": {
+      "profile": "dense",
+      "evidenceUnits": [
+        {"role": "primary", "purpose": "显示各区域价格与毛利的同口径前后差异。"},
+        {"role": "context", "purpose": "给出促销强度和样本覆盖，以限定差异解释。"},
+        {"role": "implication", "purpose": "把差异转化为停止补贴或重设门槛的判断。"}
+      ],
+      "spaceIntent": "左侧主图占据主体阅读区；右下角仅保留行动判断及来源安全区，不留无解释的大块空白。"
+    }
+  }]
+}
+```
+
+每个 `purpose` 必须是不同的证据职责，而不是“补一段描述”“放三个数字”。优先补入与标题直接相关的比较对象、分母、反例、机制条件、时间维度、敏感性或行动含义；**禁止**为追求饱满添加重复结论、无关图标、拉高表格行或空框。
+
+## 制作与装配
+
+只编写 `pages.html` 与可选的 `page.css`。每个顶层正文页使用 `<section class="slide reading|presentation">`，并显式给出 `data-frame-boundary="line|integrated|space"`。新稿使用 `pages.version: 2` 时，同步给出与 manifest 一致的 `data-density-profile="dense|balanced|sparse"`。封面或全出血页加 `data-frame="off"` 和 `data-frame-boundary="space"`。
+
+静态装配只接受内联 SVG 与 `data:` 资源。先将 ECharts 渲染为 SVG；禁止 `script`、`canvas`、外部图片/样式/字体、`@import`、事件属性、嵌套 slide 或动态 chart 容器。静态读者不能悬停，所以直接显示关键值和说明。
+
+```sh
+node scripts/assemble_deck.cjs /任务/pages.html /任务/deck.html \
+  --css /任务/page.css --title "报告标题" --contract /任务/task.json
+
+# 每完成一页即装配到该页并看图
+node scripts/assemble_deck.cjs /任务/pages.html /任务/deck.html \
+  --css /任务/page.css --title "报告标题" --contract /任务/task.json --upto 3
+node scripts/preview_page.cjs /任务/deck.html 3
+```
+
+页面图型先由关系决定，而非由现成组件决定。可查询已封装实现与容量，但没有组件时保留表达并使用原生 SVG 或构建期渲染：
+
+```sh
+node scripts/sweep_forms.cjs
+```
+
+## 验收、审查与打包
+
+`preview_page` 和迭代档只用于制作期，不能代替最终 PDF 验收。整册完成后执行验收档；它生成 PDF、逐页证据清单和 `audit.json`。逐页实际查看 HTML 截图与 PDF 页面，然后编写真实的 `author.json`；不允许脚本预填“通过”。复杂或重大结论需要由未参与制作的一方额外提交 `independent.json`。对 `dense` 和 `balanced` 页面，`V-UNDERFILLED-PAGE` 是阻断错误：先补强真实支持证据、注释或解释，再收紧布局；不能仅以放大主图、拉伸容器或改配色关闭。
+
+```sh
+# 制作期：指定页的快速自查
+node scripts/qa_deck.cjs /任务/deck.html /任务/renders-iter --tier iteration --pages 3
+
+# 交付前：唯一可打包的验收档
+node scripts/qa_deck.cjs /任务/deck.html /任务/renders
+node scripts/aggregate_reviews.cjs /任务/renders/audit.json /任务/renders/review.json /任务/renders/author.json
+# complex 或 majorConclusion=true 时追加 independent.json
+node scripts/aggregate_reviews.cjs /任务/renders/audit.json /任务/renders/review.json /任务/renders/author.json /任务/renders/independent.json
+node scripts/package_delivery.cjs /任务/deck.html /任务/renders/deck.pdf /任务/delivery 报告名
+```
+
+每份审查都使用 schemaVersion 3，并绑定本次 audit 内的 HTML/PDF 证据 id、产物 SHA-256 与审查范围。最终 `review.status` 为 `complete`，`analysis`、`evidence`、`visual` 均有实际依据；所有 `audit.warnings` 均在 `warningReview` 中以 `accepted` 或 `fixed` 处置；不存在未解决的 `major` 或 `blocking` 问题。只有 `tier: acceptance`、几何 PASS、无 errors、审查完整且打包校验通过，才称正式交付。
+
+未完成审查时仅使用 `package_delivery.cjs --preview`，并明确将结果称为预览。

@@ -1,0 +1,37 @@
+/* 低对比母版：只负责页面分区与识别，不复用数据强调色。 */
+:root{
+  --frame-rule:color-mix(in srgb,var(--gray-2) 24%,var(--page-bg));
+  --frame-mark:color-mix(in srgb,var(--gray-2) 42%,var(--page-bg));
+  --frame-display:none; --frame-rule-content:none;
+  --frame-rule-offset:-7px;
+  --frame-mark-top:28px; --frame-mark-width:3px; --frame-mark-height:40px;
+  --frame-corner-right:10px; --frame-corner-bottom:18px; --frame-corner-size:12px;
+}
+:where(html,.slide)[data-frame="quiet"]{--frame-display:block;--frame-rule-content:""}
+:where(html,.slide)[data-frame="off"]{--frame-display:none;--frame-rule-content:none}
+.slide{isolation:isolate}
+:where(.slide.reading){--frame-rule-offset:-8px;--frame-mark-top:32px}
+.slide[data-frame-boundary="integrated"],.slide[data-frame-boundary="space"]{--frame-rule-content:none}
+/* flex 容器保留标题/副题原有间距，不额外占用正文高度。 */
+.slide__header{position:relative;display:flex;flex-direction:column;flex:0 0 auto;isolation:isolate}
+.slide__header::after{
+  content:var(--frame-rule-content);position:absolute;left:0;right:0;
+  bottom:var(--frame-rule-offset);height:1px;background:var(--frame-rule);pointer-events:none;
+}
+/* 专用空节点避免占用作者的 .slide::before / ::after。 */
+.slide__frame{display:var(--frame-display);position:absolute;inset:0;z-index:2;pointer-events:none}
+.slide__frame::before{
+  content:"";position:absolute;left:0;top:var(--frame-mark-top);
+  width:var(--frame-mark-width);height:var(--frame-mark-height);background:var(--frame-mark);
+}
+.slide__frame::after{
+  content:"";position:absolute;right:var(--frame-corner-right);bottom:var(--frame-corner-bottom);
+  width:var(--frame-corner-size);height:var(--frame-corner-size);
+  border-right:1px solid var(--frame-mark);border-bottom:1px solid var(--frame-mark);
+}
+.slide__tracker,.slide__sticker{z-index:3}
+@media print{
+  .slide__header::after,.slide__frame::before,.slide__frame::after{
+    print-color-adjust:exact;-webkit-print-color-adjust:exact;
+  }
+}

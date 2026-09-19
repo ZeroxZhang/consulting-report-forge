@@ -1,0 +1,46 @@
+/* 首尾页 1.0.0：只作用于显式页面角色，不改变历史封面或正文。 */
+.slide[data-page-role="cover"],.slide[data-page-role="back-cover"]{
+  padding:32px 40px 26px;box-shadow:none;--bookend-gap:72px;
+}
+.bookend-top,.bookend-footer{flex:0 0 auto;color:var(--gray-2)}
+.bookend-top{display:flex;align-items:baseline;justify-content:space-between;gap:24px;
+  padding-bottom:14px;border-bottom:1px solid var(--gray-3);min-height:34px}
+.bookend-producer{font-size:16px;font-weight:600;color:var(--ink);overflow-wrap:anywhere}
+.bookend-access{font-size:12px;line-height:1.5;text-align:right;max-width:40%;overflow-wrap:anywhere}
+.bookend-main{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;justify-content:flex-end;
+  padding:32px 0 var(--bookend-gap)}
+.bookend-kicker{display:flex;align-items:center;gap:12px;font-size:15px;line-height:1.5;font-weight:600;color:var(--brand)}
+.bookend-kicker::before{content:none}
+.bookend-client{margin-top:20px;font-size:17px;line-height:1.5;color:var(--gray-2)}
+.bookend-client strong{color:var(--ink);font-weight:600}
+.slide[data-page-role="cover"] .cover-title,.slide[data-page-role="back-cover"] .cover-title{
+  color:var(--ink);font-size:46px;line-height:1.28;margin:14px 0 0;max-width:1040px;text-wrap:pretty;overflow-wrap:break-word;
+}
+.bookend-subtitle{margin:18px 0 0;font-size:15px;line-height:1.5;color:var(--gray-2);max-width:760px}
+.bookend-footer{border-top:1px solid var(--gray-3);padding-top:12px}
+.bookend-meta{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:12px;line-height:1.5}
+.bookend-meta [data-report-field="date"]{font-size:14px;color:var(--gray-1)}
+.bookend-statement{font-size:12px;line-height:1.5;margin-top:8px;overflow-wrap:anywhere}
+.slide[data-page-role="back-cover"] .cover-title{font-size:38px;max-width:960px}
+.slide[data-page-role="back-cover"] .bookend-main{--bookend-gap:96px}
+body[data-ratio="4x3"] .bookend-subtitle{max-width:640px}
+
+/* 文后书目是本页正文，不继承 12px Source。分栏由作者明确分配，DOM 与打印阅读顺序一致。 */
+.slide[data-page-role="references"]{padding:32px 40px 26px}
+.slide[data-page-role="references"] .slide__body{display:flex;flex-direction:column;gap:0;margin-top:24px;--frame-rule-offset:-8px}
+.reference-columns{display:grid;grid-template-columns:minmax(0,1fr);gap:32px;align-content:start;flex:1;min-height:0}
+.reference-columns[data-columns="2"]{grid-template-columns:repeat(2,minmax(0,1fr))}
+.reference-list{list-style:none;margin:0;padding:0;min-width:0}
+.reference-item{display:grid;grid-template-columns:64px minmax(0,1fr);gap:8px;margin-bottom:16px;
+  font-size:15px;line-height:1.55;color:var(--ink);break-inside:avoid;overflow-wrap:anywhere}
+.reference-number{color:var(--gray-2);font-size:14px;font-variant-numeric:lining-nums tabular-nums}
+.reference-title{font-weight:600;color:var(--ink)}
+.reference-item a{color:inherit;text-decoration:underline;text-decoration-color:var(--gray-3);text-underline-offset:3px}
+.reference-item a:hover,.reference-item a:focus-visible{color:var(--brand);text-decoration-color:currentColor}
+.reference-item a:focus-visible{outline:2px solid var(--brand);outline-offset:3px}
+.reference-detail{color:var(--gray-2)}
+.reference-selection{flex:0 0 auto;font-size:14px;line-height:1.5;color:var(--gray-2);margin-top:16px}
+@media print{
+  .bookend-top,.bookend-footer{print-color-adjust:exact;-webkit-print-color-adjust:exact}
+  .reference-item a{color:var(--ink)}
+}

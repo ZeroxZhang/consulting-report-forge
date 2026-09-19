@@ -1,0 +1,125 @@
+{
+  "version": "1.1.0",
+  "faces": [
+    {
+      "id": "noto-serif-sc-600",
+      "family": "Deck Noto Serif SC",
+      "weight": 600,
+      "file": "noto-serif-sc-600.woff2",
+      "sha256": "f6e3c090225ed5372d7ca7175e4148b8f4fb676be73f932891f64a91512c7a5a",
+      "bytes": 5798144,
+      "source": "https://raw.githubusercontent.com/google/fonts/5e35378e6bda803962ee6fd257e444a7d459660d/ofl/notoserifsc/NotoSerifSC%5Bwght%5D.ttf",
+      "source_sha256": "050080d9255a86808f2945bffac582b31ef32bc36411ce29563b4961670c66f9",
+      "license": "notoserifsc-OFL.txt",
+      "upstream_revision": "5e35378e6bda803962ee6fd257e444a7d459660d"
+    },
+    {
+      "id": "noto-sans-sc-400",
+      "family": "Deck Noto Sans SC",
+      "weight": 400,
+      "file": "noto-sans-sc-400.woff2",
+      "sha256": "758dff09a5625dd659ea4c529ffdb7741bdbc182b54957a7007f1cfcfd450820",
+      "bytes": 4192712,
+      "source": "https://raw.githubusercontent.com/google/fonts/5e35378e6bda803962ee6fd257e444a7d459660d/ofl/notosanssc/NotoSansSC%5Bwght%5D.ttf",
+      "source_sha256": "a3041811a78c361b1de50f953c805e0244951c21c5bd412f7232ef0d899af0da",
+      "license": "notosanssc-OFL.txt",
+      "upstream_revision": "5e35378e6bda803962ee6fd257e444a7d459660d"
+    },
+    {
+      "id": "noto-sans-sc-600",
+      "family": "Deck Noto Sans SC",
+      "weight": 600,
+      "file": "noto-sans-sc-600.woff2",
+      "sha256": "722d2f69f1b0f494148dd6a492f7efcfcc9ba9b6c0a203b39987feea076a6064",
+      "bytes": 4280356,
+      "source": "https://raw.githubusercontent.com/google/fonts/5e35378e6bda803962ee6fd257e444a7d459660d/ofl/notosanssc/NotoSansSC%5Bwght%5D.ttf",
+      "source_sha256": "a3041811a78c361b1de50f953c805e0244951c21c5bd412f7232ef0d899af0da",
+      "license": "notosanssc-OFL.txt",
+      "upstream_revision": "5e35378e6bda803962ee6fd257e444a7d459660d"
+    },
+    {
+      "id": "inter-400",
+      "family": "Deck Inter",
+      "weight": 400,
+      "file": "inter-400.woff2",
+      "sha256": "bcbeebd42959db2525e77e128008ecd36ea2bdf7f53b3324a7d9fac4dac31fe9",
+      "bytes": 113476,
+      "source": "https://raw.githubusercontent.com/google/fonts/5e35378e6bda803962ee6fd257e444a7d459660d/ofl/inter/Inter%5Bopsz%2Cwght%5D.ttf",
+      "source_sha256": "29160a80ff49ddcab2c97711247e08b1fab27a484a329ce8b813d820dc559031",
+      "license": "inter-OFL.txt",
+      "upstream_revision": "5e35378e6bda803962ee6fd257e444a7d459660d"
+    },
+    {
+      "id": "inter-500",
+      "family": "Deck Inter",
+      "weight": 500,
+      "file": "inter-500.woff2",
+      "sha256": "984fda754e99710d3c501c938198c8f08f4ad03dbf94f8cba673ec1096076653",
+      "bytes": 116560,
+      "source": "https://raw.githubusercontent.com/google/fonts/5e35378e6bda803962ee6fd257e444a7d459660d/ofl/inter/Inter%5Bopsz%2Cwght%5D.ttf",
+      "source_sha256": "29160a80ff49ddcab2c97711247e08b1fab27a484a329ce8b813d820dc559031",
+      "license": "inter-OFL.txt",
+      "upstream_revision": "5e35378e6bda803962ee6fd257e444a7d459660d"
+    },
+    {
+      "id": "inter-600",
+      "family": "Deck Inter",
+      "weight": 600,
+      "file": "inter-600.woff2",
+      "sha256": "17ddb7a9eb2a4eb165173d648281a0b7406f6ec8281fdbba2a5adfdfb8ec485a",
+      "bytes": 117004,
+      "source": "https://raw.githubusercontent.com/google/fonts/5e35378e6bda803962ee6fd257e444a7d459660d/ofl/inter/Inter%5Bopsz%2Cwght%5D.ttf",
+      "source_sha256": "29160a80ff49ddcab2c97711247e08b1fab27a484a329ce8b813d820dc559031",
+      "license": "inter-OFL.txt",
+      "upstream_revision": "5e35378e6bda803962ee6fd257e444a7d459660d"
+    },
+    {
+      "id": "dm-serif-text-400",
+      "family": "Deck DM Serif Text",
+      "weight": 400,
+      "file": "dm-serif-text-400.woff2",
+      "sha256": "d74351892ec8873fd75ee23d9221cec1a5d87518a3917c858d19446896990c48",
+      "bytes": 31272,
+      "source": "https://raw.githubusercontent.com/google/fonts/5e35378e6bda803962ee6fd257e444a7d459660d/ofl/dmseriftext/DMSerifText-Regular.ttf",
+      "source_sha256": "94b5fa7bac0f406cb3149512037f37ea21b55cecd732c3fd3a076260441399cd",
+      "license": "dmseriftext-OFL.txt",
+      "upstream_revision": "5e35378e6bda803962ee6fd257e444a7d459660d"
+    },
+    {
+      "id": "playfair-display-500",
+      "family": "Deck Playfair Display",
+      "weight": 500,
+      "file": "playfair-display-500.woff2",
+      "sha256": "1a7096c91d344e3ccc9eb52625c678b408fb78bcc85f9eb6fc017eeb4964625f",
+      "bytes": 66156,
+      "source": "https://raw.githubusercontent.com/google/fonts/5e35378e6bda803962ee6fd257e444a7d459660d/ofl/playfairdisplay/PlayfairDisplay%5Bwght%5D.ttf",
+      "source_sha256": "c40f2293766a503bc70cce9e512ef844a4ccb7cbcde792fe2ea31d191917d8d6",
+      "license": "playfairdisplay-OFL.txt",
+      "upstream_revision": "5e35378e6bda803962ee6fd257e444a7d459660d"
+    },
+    {
+      "id": "noto-serif-sc-700",
+      "family": "Deck Noto Serif SC",
+      "weight": 700,
+      "file": "noto-serif-sc-700.woff2",
+      "sha256": "5f9ea1f47fcc46540e199586cc7c0a5799a9fa8473ca82d950ea6b779ed405cc",
+      "bytes": 5925560,
+      "source": "https://raw.githubusercontent.com/google/fonts/5e35378e6bda803962ee6fd257e444a7d459660d/ofl/notoserifsc/NotoSerifSC%5Bwght%5D.ttf",
+      "source_sha256": "050080d9255a86808f2945bffac582b31ef32bc36411ce29563b4961670c66f9",
+      "license": "notoserifsc-OFL.txt",
+      "upstream_revision": "5e35378e6bda803962ee6fd257e444a7d459660d"
+    },
+    {
+      "id": "playfair-display-700",
+      "family": "Deck Playfair Display",
+      "weight": 700,
+      "file": "playfair-display-700.woff2",
+      "sha256": "2a1484e446c8d29f3cc74f29ad1aec21ae7d5162cf80aa4e38bb2426724226c0",
+      "bytes": 66724,
+      "source": "https://raw.githubusercontent.com/google/fonts/5e35378e6bda803962ee6fd257e444a7d459660d/ofl/playfairdisplay/PlayfairDisplay%5Bwght%5D.ttf",
+      "source_sha256": "c40f2293766a503bc70cce9e512ef844a4ccb7cbcde792fe2ea31d191917d8d6",
+      "license": "playfairdisplay-OFL.txt",
+      "upstream_revision": "5e35378e6bda803962ee6fd257e444a7d459660d"
+    }
+  ]
+}

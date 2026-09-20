@@ -1,4 +1,21 @@
 /* 共享排版轨道；图形行中心和文字首行基线分别建立，不用逐标签偏移。 */
+
+/* ══════════════ 版心与模块网格 ══════════════
+   数值权威在 assets/deck-grid.js：scripts/test_deck_grid.cjs 逐项对账，改一边不改另一边会测试失败。
+   两种画幅共用 12 栏 × 6 行拓扑，所以布局目录里的 {c,r,w,h} 换画幅仍然成立。
+   16:9：12×89 + 11×12 = 1200 栏宽；6×71 + 5×12 = 486 行高；128 + 486 + 48 = 662 版心高。
+   4:3 ：12×64 + 11×16 = 944 栏宽；6×80 + 5×16 = 560 行高；120 + 560 + 30 = 710 版心高。 */
+:root{
+  --grid-columns:12;--grid-rows:6;
+  --grid-gutter:12px;--grid-column-width:89px;--grid-row-height:71px;
+  --grid-title-band:128px;--grid-body-height:486px;
+  --grid-line:24px;--grid-note-line:22px;
+  --grid-module-pad:12px;--grid-module-title:33px;--grid-module-unit:26px;
+}
+body[data-ratio="4x3"]{
+  --grid-gutter:16px;--grid-column-width:64px;--grid-row-height:80px;
+  --grid-title-band:120px;--grid-body-height:560px;
+}
 .precision-table{font-size:var(--fs-data,16px);line-height:1.45;width:100%}
 .precision-row{display:grid;grid-template-columns:var(--comparison-columns,180px 88px minmax(120px,1fr) 130px 130px);gap:18px;align-items:first baseline;padding:17px 0;border-bottom:1px solid var(--gray-3);min-width:0}
 .precision-row.head{font-size:var(--fs-table-head,15px);font-weight:600;padding:0 0 12px;border-bottom:1px solid var(--gray-2)}

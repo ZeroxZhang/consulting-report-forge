@@ -90,7 +90,9 @@ async function assemble(options={}){
     if(!['line','integrated','space'].includes(slide.getAttribute('data-frame-boundary')))throw Error('每页须由作者显式声明data-frame-boundary="line|integrated|space"；不自动选择标题边界');
     const role=slide.dataset.pageRole||null,isBookend=['cover','references','back-cover','divider'].includes(role);
     if(!isBookend&&!slide.dataset.form)throw Error('第'+(slideForms.length+1)+'页缺少data-form：每页须显式声明本页主形式（取值见assets/deck-forms.js，字段见references/static-html-pdf.md的pages合同）；没有静默默认值');
-    slideForms.push({page:slideForms.length+1,form:slide.dataset.form||null,visual:slide.dataset.visual||'',proves:slide.dataset.proves||'',densityProfile:slide.dataset.densityProfile||'',role});
+    // v3 起页面还须声明 data-layout：布局是骨架，CSS 靠它把模块落到 12×6 网格上。
+    // data-module 的取值就是该格的槽位，DOM 顺序须与布局目录逐格一致——顺序错了就是顺序错了。
+    slideForms.push({page:slideForms.length+1,form:slide.dataset.form||null,visual:slide.dataset.visual||'',proves:slide.dataset.proves||'',densityProfile:slide.dataset.densityProfile||'',layout:slide.dataset.layout||'',modules:[...slide.querySelectorAll('[data-module]')].map(e=>e.dataset.module||''),role});
     slide.classList.remove('active');
     if(!slide.querySelector(':scope > .slide__frame')){const frame=doc.createElement('div');frame.className='slide__frame';frame.setAttribute('aria-hidden','true');slide.prepend(frame);}
    }

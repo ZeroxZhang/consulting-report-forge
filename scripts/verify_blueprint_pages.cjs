@@ -25,6 +25,9 @@ function verify(blueprint, pagesDoc) {
     if (norm(slide.proves) !== norm(page.proves)) errors.push(at + ' proves 与 blueprint 不一致；不能在制作阶段替换页面要证明的关系');
     const expectedForm = slide.visual.form === 'custom' ? 'svg.custom' : slide.visual.form;
     if (page.form !== expectedForm) errors.push(at + ' form 与 blueprint 不一致：应为 ' + expectedForm + '，当前为 ' + page.form);
+    // 布局是这一页的骨架：蓝图选了哪条，制作阶段就必须用哪条。换布局等于换页面结构，
+    // 不是排版调整——真要换，先改蓝图再改 pages.json，两边留痕。
+    if (norm(slide.visual.layout) !== norm(page.layout)) errors.push(at + ' layout 与 blueprint 不一致：blueprint 写「' + norm(slide.visual.layout) + '」，pages.json 写「' + norm(page.layout) + '」；骨架不能在制作阶段被替换');
     if (stable(slide.density) !== stable(page.density)) errors.push(at + ' density 与 blueprint 不一致；主展品、支持证据与留白意图必须同步');
   }
   return errors;

@@ -3,6 +3,7 @@
 const fs = require('node:fs');
 const forms = require('../assets/deck-forms.js');
 const density = require('./density_contract.cjs');
+const layouts = require('./layout_contract.cjs');
 
 const PAGE_ROLES = ['cover', 'section', 'analysis', 'decision', 'action', 'risk', 'appendix', 'close'];
 const STORY_BEATS = ['context', 'tension', 'diagnosis', 'insight', 'choice', 'action', 'risk', 'close'];
@@ -41,7 +42,15 @@ function validate(doc, options = {}) {
         if (!norm(slide.visual.form)) bad(where + '.visual.form 须声明表达形式');
         else if (slide.visual.form !== 'custom') { try { forms.get(slide.visual.form); } catch (error) { bad(where + '.visual.form ' + error.message + '；词汇表之外的表达可写 custom 并用 rationale 说明'); } }
         if (!norm(slide.visual.primary)) bad(where + '.visual.primary 须说明第一眼的主展品');
-        if (!norm(slide.visual.layout)) bad(where + '.visual.layout 须说明版式模式');
+        // 版式不是自由文案：从布局目录里选一条，页面才有可核对的骨架，作者也才知道每格能放什么。
+        // 确实没有合适布局时写 layoutExemptReason 说清楚——出口要有，但不能是静默的。
+        if (!norm(slide.visual.layout)) bad(where + '.visual.layout 须填布局编号（见 assets/layout-atlas.html 或 assets/layout-atlas/catalog.json，形如 L09）');
+        else if (!layouts.has(norm(slide.visual.layout))) {
+          if (norm(slide.visual.layoutExemptReason).length >= layouts.MIN_REASON) { /* 已声明豁免 */ }
+          else bad(where + '.visual.layout="' + norm(slide.visual.layout) + '" 不是目录里的布局编号：'
+            + '布局目录共 ' + layouts.list().length + ' 条（' + layouts.list().slice(0, 3).map(item => item.id).join('/') + '…）；'
+            + '选一条承载得住这一页的布局，或写 visual.layoutExemptReason（≥' + layouts.MIN_REASON + '字）说明为什么目录里没有可用结构');
+        }
         if (!norm(slide.visual.readingPath)) bad(where + '.visual.readingPath 须写出读者的阅读顺序');
         if (slide.visual.form === 'custom' && !norm(slide.visual.rationale)) bad(where + '.visual.form="custom" 必须写 rationale，说明为何现有形式不适用');
       }

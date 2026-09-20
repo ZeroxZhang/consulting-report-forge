@@ -103,9 +103,61 @@ node scripts/verify_blueprint_pages.cjs /任务/deck-blueprint.json /任务/page
 
 每个 `purpose` 必须是不同的证据职责，而不是“补一段描述”“放三个数字”。优先补入与标题直接相关的比较对象、分母、反例、机制条件、时间维度、敏感性或行动含义；**禁止**为追求饱满添加重复结论、无关图标、拉高表格行或空框。
 
+### 布局绑定合同（新稿使用 `pages.version: 3`）
+
+`version: 3` 在 v2 之上加了**布局绑定**：页面结构不再由作者临场决定，而是引用布局目录里的一条骨架。**先约束，后填充**——选完布局，每一格能装什么、装得下几行就已经定死；作者的自由落在“每一格放哪种表达”。
+
+选布局用 [布局图谱](../assets/layout-atlas.html)，数据源是 `assets/layout-atlas/catalog.json`（唯一权威）。
+
+每页新增三个字段：
+
+| 字段 | 规则 |
+|---|---|
+| `layout` | 布局编号，形如 `L09`。必须在目录里存在。确实没有合适骨架时写 `layoutExemptReason`（≥12 字）。 |
+| `regions` | **按序**对应布局的每一格，一项不多一项不少。每项写 `form`，手绘 SVG 另写 `visual`。 |
+| `layoutReason` | 同一布局第 3 次使用时必填，说明为什么这里还是它。 |
+
+`regions` 里**不要写 `c/r/w/h`**：几何由 `layout` 决定，写了会与目录漂移，校验直接拒绝。`slot` 与 `role` 可以写，但必须与目录一致。主展品那一格的 `form` 必须等于页面 `form`。
+
+```json
+{
+  "version": 3,
+  "pages": [{
+    "page": 3,
+    "proves": "价格战扩大了量，却压缩了单客毛利。",
+    "form": "kit.dumbbell",
+    "layout": "L01",
+    "regions": [
+      {"form": "kit.dumbbell"},
+      {"form": "html.text"}
+    ],
+    "density": {"profile": "balanced", "evidenceUnits": ["…"]}
+  }]
+}
+```
+
+整册还有两条布局下限：正文超过 10 页须至少 6 种布局，超过 20 页须至少 10 种；不足时写 `pages.layoutDiversityReason`（≥12 字）。这两个数与"同一布局第 3 次使用须写 `layoutReason`"同源：不写理由时每条布局最多用两次，N 页天然上限是 N/2，下限各留一条复用口子。
+
 ## 制作与装配
 
 只编写 `pages.html` 与可选的 `page.css`。每个顶层正文页使用 `<section class="slide reading|presentation">`，并显式给出 `data-frame-boundary="line|integrated|space"`。新稿使用 `pages.version: 2` 时，同步给出与 manifest 一致的 `data-density-profile="dense|balanced|sparse"`。封面或全出血页加 `data-frame="off"` 和 `data-frame-boundary="space"`。
+
+`pages.version: 3` 时还要**把布局落到 DOM 上**：正文 `<section>` 加 `data-layout="L09"`，并按布局逐格给模块元素加 `data-module="<槽位>"`。
+
+```html
+<section class="slide reading" data-layout="L01" data-form="kit.dumbbell" data-frame-boundary="line" data-density-profile="balanced">
+  <header class="slide__header"><h1 class="slide__title">价格战扩大了量，却压缩了单客毛利</h1></header>
+  <div class="slide__body">
+    <div class="exhibit" data-module="chart">…</div>
+    <div class="annotation" data-module="annotation">…</div>
+  </div>
+  <div class="source">来源：…</div>
+</section>
+```
+
+**不要写 `grid-column` / `grid-row`。** 几何由 `.slide.reading[data-layout="…"] .slide__body > :nth-child(n of [data-module])` 一组规则给出，那组规则由 `scripts/build_layout_css.cjs` 从布局目录生成、写在 `assets/consulting-layouts.css` 末尾，`npm test` 会在漂移时报错。作者只负责**按布局目录的格子顺序**给出模块——DOM 顺序就是阅读顺序，顺序错了就是顺序错了，不是风格差异。
+
+装配期核对 `data-layout` / `data-module` 与 `pages.json`；QA 期再逐格量实际矩形，模块没落在 12×6 的格线上会报出偏了几像素（`scripts/check_layout_grid.cjs` 是同一判据的目录级定点核对，改布局 CSS 后跑一次）。
 
 静态装配只接受内联 SVG 与 `data:` 资源。先将 ECharts 渲染为 SVG；禁止 `script`、`canvas`、外部图片/样式/字体、`@import`、事件属性、嵌套 slide 或动态 chart 容器。静态读者不能悬停，所以直接显示关键值和说明。
 

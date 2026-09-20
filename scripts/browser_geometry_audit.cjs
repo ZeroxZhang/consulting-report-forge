@@ -73,4 +73,29 @@ function inspectSlide(slide){
   const content=[...slide.querySelectorAll('.slide__body > *,[data-proof-role]')].filter(shown).map(e=>({role:e.dataset.proofRole||'unspecified',...logical(e.getBoundingClientRect())}));
   return {status:errors.length?'FAIL':Object.keys(groups).length?'PASS':'NOT_DECLARED',toleranceLogicalPx:tolerance,slideSize:{width:slide.offsetWidth,height:slide.offsetHeight},scale:{x:sx,y:sy},groups,measurements,layouts,content,errors,canvas:slide.querySelectorAll('canvas').length?'UNSUPPORTED_WITHOUT_ADAPTER':'NONE'};
 }
-module.exports={settle,inspectSlide};
+/* 模块网格对账：布局声明了几格、每格在哪，成稿里就必须真的长在那里。
+   这是"布局先约束"的落地判据——README 式的声明只能说明意图，量出来的矩形才是事实。
+   expected 由 scripts/layout_contract.cjs 的 resolveModules 产出（逻辑像素，相对版心左上角）。
+   自包含，供 Playwright 序列化。 */
+function inspectModules(slide,expected){
+  const sr=slide.getBoundingClientRect(),sx=sr.width/slide.offsetWidth,sy=sr.height/slide.offsetHeight,tolerance=.35,errors=[],modules=[];
+  const logical=r=>({x:(r.left-sr.left)/sx,y:(r.top-sr.top)/sy,width:r.width/sx,height:r.height/sy});
+  const nodes=[...slide.querySelectorAll('[data-module]')];
+  if(nodes.length!==expected.length){
+    errors.push({code:'M-COUNT',got:nodes.length,want:expected.length,detail:'布局声明 '+expected.length+' 格，成稿有 '+nodes.length+' 个 [data-module]；逐格对应才能对账'});
+    return {status:'FAIL',toleranceLogicalPx:tolerance,modules,errors};
+  }
+  nodes.forEach((node,i)=>{
+    const want=expected[i],got=logical(node.getBoundingClientRect());
+    if((node.dataset.module||'')!==want.slot)errors.push({code:'M-SLOT',index:i,got:node.dataset.module||'',want:want.slot,detail:'第 '+(i+1)+' 格的槽位与布局不符'});
+    // 每个方向单独给差值：只说"对不上"等于让作者回去猜是哪一边偏了。
+    const delta={x:got.x-want.box.x,y:got.y-want.box.y,width:got.width-want.box.width,height:got.height-want.box.height};
+    const rounded=Object.fromEntries(Object.entries(delta).map(([key,value])=>[key,Math.round(value*100)/100]));
+    const worst=Math.max(...Object.values(delta).map(Math.abs));
+    modules.push({index:i,slot:want.slot,title:want.title,worst:Math.round(worst*100)/100,delta:rounded,want:want.box,got:{x:Math.round(got.x*10)/10,y:Math.round(got.y*10)/10,width:Math.round(got.width*10)/10,height:Math.round(got.height*10)/10}});
+    if(worst>tolerance)errors.push({code:'M-GRID',index:i,slot:want.slot,title:want.title,worst:Math.round(worst*100)/100,delta:rounded,want:want.box,got:modules[modules.length-1].got,
+      detail:'第 '+(i+1)+' 格「'+want.title+'」实际占位与布局网格不符：模块必须落在 12×6 的格线上，偏移超过 '+tolerance+'px 就说明没按布局排'});
+  });
+  return {status:errors.length?'FAIL':'PASS',toleranceLogicalPx:tolerance,modules,errors};
+}
+module.exports={settle,inspectSlide,inspectModules};

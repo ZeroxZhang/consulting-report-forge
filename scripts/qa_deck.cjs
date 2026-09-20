@@ -101,8 +101,19 @@ function parseArgs(argv){
    const record=path.resolve(path.dirname(input),taskContract.pages.record);
    if(!fs.existsSync(record)||taskContracts.fileHash(record)!==taskContract.pages.sha256)throw Error('pages记录缺失或sha256与任务合同不符');
    const doc=JSON.parse(fs.readFileSync(record,'utf8')),checked=pagesApi.check(doc);
-   const mismatches=pagesApi.verifyDeck(doc,rows.map(r=>({page:r.page,form:r.form,visual:r.visual,proves:r.proves,densityProfile:r.densityProfile,role:r.bookends?.role})));
+   const mismatches=pagesApi.verifyDeck(doc,rows.map(r=>({page:r.page,form:r.form,visual:r.visual,proves:r.proves,densityProfile:r.densityProfile,layout:r.layout,modules:r.modules,role:r.bookends?.role})));
    const all=[...checked.errors,...mismatches];
+   // 布局对账：声明了布局的页，每一格必须真的落在网格上。量出来的矩形才是事实。
+   const layoutApi=require('./layout_contract.cjs');
+   for(const page of doc.pages){
+    const expected=layoutApi.resolveModules(page,taskContract.ratio);
+    if(!expected.length)continue;
+    const row=rows.find(item=>item.page===page.page);
+    if(!row){all.push('page '+page.page+' 的布局 '+page.layout+' 无法对账：成稿里找不到这一页');continue;}
+    const measured=await p.locator('.slide').nth(row.page-1).evaluate(geometry.inspectModules,expected.map((m,i)=>({index:i,slot:m.slot,title:m.title,box:m.box})));
+    row.layoutCheck={layout:page.layout,name:layoutApi.get(page.layout).name,...measured};
+    measured.errors.forEach(e=>all.push('page '+page.page+' 布局 '+page.layout+'：'+e.detail+'（'+(e.code==='M-GRID'?'期望 '+JSON.stringify(e.want)+'，实际 '+JSON.stringify(e.got):e.code)+'）'));
+   }
    pagesCheck={status:all.length?'FAIL':'PASS',errors:all,record,sha256:taskContract.pages.sha256,inventory:checked.inventory};
    all.forEach(e=>errors.push('pages合同：'+e));
   }catch(error){pagesCheck={status:'FAIL',errors:[error.message]};errors.push('pages合同：'+error.message);}

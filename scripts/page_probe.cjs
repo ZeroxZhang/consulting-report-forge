@@ -76,6 +76,8 @@ function inspectDom(s) {
   }
   return {
     exhibits, textEvidence, unreadableText: unreadable, form: s.dataset.form || null, visual: s.dataset.visual || '', proves: s.dataset.proves || '', densityProfile: s.dataset.densityProfile || '',
+    // v3 布局绑定：QA 拿它和 pages.json、布局目录三方对账。
+    layout: s.dataset.layout || '', modules: [...s.querySelectorAll('[data-module]')].map(e => e.dataset.module || ''),
     title: s.querySelector('.slide__title,.cover-title,.divider-name')?.textContent || '',
     overflow: bad, tinyText: tiny, smallDataText: smallData, scaledSvg,
     charts: [...s.querySelectorAll('.chart')].map(e => ({width: e.clientWidth, height: e.clientHeight, rendered: !!e.querySelector('svg,canvas'), error: e.dataset.chartError || null, risks: e.dataset.chartRisks || null})),
@@ -121,6 +123,7 @@ function summarize(row) {
   for (const item of row.unreadableText || []) errors.push({code: 'UNREADABLE-TEXT', ...item});
   for (const chart of row.charts || []) if (!chart.rendered || chart.error) errors.push({code: 'CHART-NOT-RENDERED', ...chart});
   for (const item of row.relations?.errors || []) errors.push({code: item.code || 'GEOMETRY', ...item});
+  for (const item of row.layoutCheck?.errors || []) errors.push({code: item.code || 'LAYOUT', ...item});
   for (const item of row.visualPolicy?.errors || []) errors.push({code: item.code || 'VISUAL', ...item});
   for (const item of row.visualPolicy?.warnings || []) warnings.push({code: item.code || 'VISUAL-WARN', ...item});
   for (const item of row.tinyText || []) warnings.push({code: 'TINY-TEXT', ...item});

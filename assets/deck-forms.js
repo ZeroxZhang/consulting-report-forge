@@ -53,6 +53,10 @@ const FAMILY_LABELS = {
   diagram: '机制与流程', table: '精确查数', text: '结构化文字', custom: '作者实现（实际图型见 visual）'
 };
 
+/* 不计入表达丰富度的族：表格与结构化文字是查数与陈述，不是把数据变成图形。
+   放在形式登记表里，是因为它与具体形式绑定；丰富度合同与布局合同都用这一个定义。 */
+const NON_EXPRESSIVE_FAMILIES = ['table', 'text'];
+
 const list = () => Object.keys(FORMS);
 const get = form => {
   const entry = FORMS[form];
@@ -60,6 +64,8 @@ const get = form => {
   return Object.assign({ form }, entry);
 };
 const familyOf = form => get(form).family;
+/* 该形式是否把数据变成图形：false 表示它只承载查数或陈述，凑数时不算一种表达。 */
+const expressive = form => { try { return !NON_EXPRESSIVE_FAMILIES.includes(familyOf(form)); } catch (error) { return false; } };
 /* 旁解读入口：'layer' 走通用标注层（annotations），'comparisons' 用该形式自带的 Δ 入口，null 表示尚未接入。 */
 const annotationEntry = form => get(form).annotation || null;
 const byFamily = () => list().reduce((groups, form) => {
@@ -68,4 +74,4 @@ const byFamily = () => list().reduce((groups, form) => {
   return groups;
 }, {});
 
-module.exports = { version: '1.0.0', forms: FORMS, familyLabels: FAMILY_LABELS, list, get, familyOf, annotationEntry, byFamily };
+module.exports = { version: '1.1.0', forms: FORMS, familyLabels: FAMILY_LABELS, NON_EXPRESSIVE_FAMILIES, list, get, familyOf, expressive, annotationEntry, byFamily };

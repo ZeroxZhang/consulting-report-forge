@@ -3,2251 +3,492 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>单页布局图谱 · consulting deck</title>
+<title>单页布局图谱 · consulting-report-forge</title>
 <link rel="stylesheet" href="fonts/deck-fonts.css">
 <style>
 /* ══════════════════════════════════════════════════════════════
-   单页布局图谱 —— Report Forge「页面蓝图」阶段的可视辅助。
-   舞台内的几何与排印常量逐字对齐成稿：assets/consulting-layouts.css
-   的 .slide.reading / .layout-* / .evidence-grid，以及
-   assets/deck-typography.js 的 serif-report-bold 角色 token。
-   改动其中任何一处都应同步这里，并在实际页面中复核。
-   图谱自身界面（导航 / 工具栏）用中性灰，刻意不用 brand 蓝，
-   避免与舞台内页面主体的强调色混淆。
+   单页布局图谱 —— 本文件由 scripts/build_layout_atlas.cjs 生成，请勿手改。
+   改布局 → 改 assets/layout-atlas/catalog.json → 重新生成。
+   目录里的 c/r/w/h 是唯一事实，线框里的矩形、逐格表的尺寸与容量全部由它算出。
    ══════════════════════════════════════════════════════════════ */
 :root{
-  /* —— 主题 token：assets/deck-themes.js 的 mckinsey，静态复制 —— */
-  --brand:#000080;--accent:#000080;--accent-vivid:#D9D9EC;--ink:#172C3B;
-  --gray-1:#445563;--gray-2:#50606E;--gray-3:#BFCBD2;--gray-4:#F2F5F7;
-  --selected:#D9D9EC;
-  --cat-1:#000080;--cat-2:#007A78;--cat-3:#8652A0;--cat-4:#9C5C14;--cat-5:#667586;--cat-6:#9B4566;
-  --seq-1:#D9D9EC;--seq-2:#A3A3D1;--seq-3:#6D6DB6;--seq-4:#36369B;--seq-5:#000080;
-  --good:#276749;--risk:#A3313C;--caution:#805B18;
-  --page-bg:#FFFFFF;--surface:#F2F5F7;--neutral:#50606E;
-  /* —— 排印：deck-typography.js 的 serif-report-bold —— */
+  --brand:#000080;--ink:#172C3B;--gray-1:#445563;--gray-2:#50606E;--gray-3:#BFCBD2;--gray-4:#F2F5F7;
   --font-title:'Deck Playfair Display','Deck Noto Serif SC',serif;
   --font-body:'Deck Inter','Deck Noto Sans SC',sans-serif;
-  --fs-title:32px;--lh-title:1.28;--fs-body:17px;--fs-data:16px;--fs-table-head:15px;
-  --fs-subtitle:15px;--fs-exhibit-title:19px;--fs-annotation:15px;--fs-note:12px;
-  /* —— 图谱界面（中性灰）—— */
+  /* 槽位配色：与成稿的图表分类色同源，保证图谱里认得出的颜色在成稿里也认得出。 */
+  --s-chart:#000080;--s-table:#007A78;--s-diagram:#8652A0;--s-kpi:#9C5C14;
+  --s-timeline:#1F6FB2;--s-text:#50606E;--s-annotation:#9B4566;--s-panel:#445563;
+  /* 图谱自身界面用中性灰，刻意不用 brand 蓝，避免与舞台内页面的强调色混淆。 */
   --ui-bg:#F4F5F6;--ui-panel:#FFFFFF;--ui-line:#DCE0E3;--ui-line-soft:#E9ECEE;
   --ui-ink:#252E36;--ui-muted:#6C7780;--ui-hi:#E7EBEE;--ui-sel:#DDE3E7;
 }
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
-body{
-  font-family:var(--font-body);color:var(--ui-ink);background:var(--ui-bg);
-  display:grid;grid-template-columns:266px minmax(0,1fr);overflow:hidden;
-}
-button{font:inherit;color:inherit}
+body{font-family:var(--font-body);color:var(--ui-ink);background:var(--ui-bg);
+  display:grid;grid-template-columns:280px minmax(0,1fr);overflow:hidden}
 
-/* ══════════ 左：导航 ══════════ */
-.nav{background:var(--ui-panel);border-right:1px solid var(--ui-line);display:flex;flex-direction:column;min-height:0}
-.nav__head{padding:14px 16px 10px;border-bottom:1px solid var(--ui-line-soft)}
-.nav__title{font-size:13px;font-weight:700;letter-spacing:.02em}
-.nav__sub{font-size:11px;color:var(--ui-muted);margin-top:3px;line-height:1.5}
-.nav__list{overflow:auto;padding:6px 8px 24px;min-height:0}
-.nav__fam{font-size:10px;color:var(--ui-muted);letter-spacing:.1em;padding:12px 8px 5px;font-weight:600}
-.nav__item{display:grid;grid-template-columns:44px minmax(0,1fr);gap:9px;align-items:center;
-  width:100%;text-align:left;background:none;border:0;padding:6px 8px;border-radius:5px;cursor:pointer}
-.nav__item:hover{background:var(--ui-hi)}
-.nav__item[aria-current="true"]{background:var(--ui-sel)}
-.nav__name{font-size:12.5px;line-height:1.35}
-.nav__id{font-size:10px;color:var(--ui-muted);margin-right:5px}
+/* —— 左栏：母版 → 布局的树 —— */
+.side{background:var(--ui-panel);border-right:1px solid var(--ui-line);display:flex;flex-direction:column;min-height:0}
+.side__head{padding:16px 18px 12px;border-bottom:1px solid var(--ui-line-soft)}
+.side__title{font-family:var(--font-title);font-size:19px;font-weight:700;color:var(--brand);margin:0 0 4px}
+.side__sub{font-size:12px;color:var(--ui-muted);line-height:1.5}
+.side__stats{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.stat{font-size:11px;color:var(--ui-muted);background:var(--ui-hi);border-radius:2px;padding:2px 7px}
+.stat b{color:var(--ui-ink);font-weight:600}
+.side__search{padding:10px 14px;border-bottom:1px solid var(--ui-line-soft)}
+.side__search input{width:100%;font:inherit;font-size:13px;padding:6px 9px;border:1px solid var(--ui-line);border-radius:3px;background:var(--ui-bg)}
+.side__search input:focus{outline:2px solid var(--ui-sel);outline-offset:-1px}
+.side__list{flex:1;overflow-y:auto;padding:6px 0 20px}
+.grp{margin:10px 0 2px;padding:0 18px;font-size:11px;letter-spacing:.08em;color:var(--ui-muted);text-transform:uppercase}
+.grp span{float:right;letter-spacing:0;text-transform:none}
+.item{display:block;width:100%;text-align:left;border:0;background:none;font:inherit;cursor:pointer;
+  padding:7px 18px 7px 16px;border-left:3px solid transparent;color:var(--ink)}
+.item:hover{background:var(--ui-hi)}
+.item[aria-current="true"]{background:var(--ui-sel);border-left-color:var(--brand)}
+.item__id{font-size:11px;color:var(--ui-muted);font-variant-numeric:tabular-nums;margin-right:6px}
+.item__name{font-size:13.5px}
+.item__use{display:block;font-size:11.5px;color:var(--ui-muted);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.side__foot{border-top:1px solid var(--ui-line-soft);padding:10px 18px;font-size:11.5px}
+.side__foot a{color:var(--ui-muted);text-decoration:none;display:inline-block;margin-right:12px}
+.side__foot a:hover{color:var(--brand);text-decoration:underline}
 
-/* ══════════ 右：主区 ══════════ */
+/* —— 主区 —— */
 .main{display:flex;flex-direction:column;min-width:0;min-height:0}
-.bar{display:flex;flex-wrap:wrap;gap:16px;align-items:center;padding:11px 20px;
-  background:var(--ui-panel);border-bottom:1px solid var(--ui-line);flex:0 0 auto}
-.bar__id{font-size:15px;font-weight:700}
-.bar__name{font-size:13px;color:var(--ui-muted)}
-.bar__sp{flex:1 1 auto}
-.grp{display:flex;align-items:center;gap:0;border:1px solid var(--ui-line);border-radius:5px;overflow:hidden}
-.grp button{background:var(--ui-panel);border:0;border-right:1px solid var(--ui-line);
-  padding:5px 11px;font-size:12px;cursor:pointer}
-.grp button:last-child{border-right:0}
-.grp button[aria-pressed="true"]{background:var(--ui-sel);font-weight:600}
-.grp__lab{font-size:10px;color:var(--ui-muted);letter-spacing:.08em;margin-right:7px}
-.tog{display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;user-select:none}
-.tog input{margin:0}
-.budget{font-size:11.5px;color:var(--ui-muted);font-variant-numeric:tabular-nums}
-.budget b{color:var(--ui-ink);font-weight:600}
+.bar{display:flex;align-items:center;gap:14px;padding:9px 18px;background:var(--ui-panel);
+  border-bottom:1px solid var(--ui-line);flex-wrap:wrap;flex:0 0 auto}
+.bar__id{font-family:var(--font-title);font-weight:700;font-size:17px;color:var(--brand)}
+.bar__name{font-size:14px}
+.bar__tag{font-size:11px;color:var(--ui-muted);background:var(--ui-hi);border-radius:2px;padding:2px 7px}
+.bar__sp{flex:1}
+.seg{display:inline-flex;border:1px solid var(--ui-line);border-radius:3px;overflow:hidden}
+.seg button{font:inherit;font-size:12px;padding:4px 10px;border:0;background:var(--ui-panel);color:var(--ui-muted);cursor:pointer}
+.seg button+button{border-left:1px solid var(--ui-line)}
+.seg button[aria-pressed="true"]{background:var(--ui-sel);color:var(--ink);font-weight:600}
+.bar label.tog{font-size:12px;color:var(--ui-muted);display:inline-flex;align-items:center;gap:5px;cursor:pointer}
+.bar__lab{font-size:11px;color:var(--ui-muted);letter-spacing:.06em}
 
-/* ══════════ 舞台 ══════════ */
-.wrap{flex:1 1 auto;min-height:0;overflow:auto;padding:20px;display:flex;justify-content:center;align-items:flex-start}
-.stager{position:relative;width:100%;max-width:1280px}
-.stage{position:relative;width:1280px;height:720px;background:var(--page-bg);
-  transform-origin:top left;box-shadow:0 1px 3px rgba(23,44,59,.14),0 8px 28px rgba(23,44,59,.10)}
-body.overview .wrap{align-items:flex-start}
-body.overview .stager{max-width:none}
-.grid-ov{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px}
-.ovcard{background:var(--ui-panel);border:1px solid var(--ui-line);border-radius:6px;padding:10px;cursor:pointer;text-align:left}
-.ovcard:hover{border-color:var(--ui-muted)}
-.ovcard__t{font-size:12.5px;font-weight:600;margin:8px 0 2px}
-.ovcard__s{font-size:10.5px;color:var(--ui-muted)}
-.ovcard__box{position:relative;width:100%;aspect-ratio:16/9;background:var(--page-bg);border:1px solid var(--ui-line-soft);overflow:hidden}
+.scroll{flex:1;overflow-y:auto;min-height:0;padding:20px 22px 60px}
+.stagebox{background:var(--ui-panel);border:1px solid var(--ui-line);border-radius:4px;padding:12px;
+  display:flex;justify-content:center;margin-bottom:16px}
+.stage{display:block;width:100%;max-width:1280px;height:auto;box-shadow:0 1px 3px rgba(23,44,59,.10)}
 
-/* ══════════ 页面本体（几何对齐成稿）══════════ */
-.slide{position:relative;width:1280px;height:720px;display:flex;flex-direction:column;
-  padding:32px 40px 26px;background:var(--page-bg);overflow:hidden;isolation:isolate}
-.slide__tracker{position:absolute;top:12px;left:40px;font-size:12px;color:var(--gray-2);letter-spacing:.08em}
-.slide__page{position:absolute;bottom:10px;right:40px;font:12px/1 var(--font-body);color:var(--gray-2)}
-.slide__header{display:flex;flex-direction:column;flex:0 0 auto}
-.slide__title{font-family:var(--font-title);font-weight:700;font-size:var(--fs-title);
-  line-height:var(--lh-title);color:var(--brand);margin:0 0 8px;max-width:1180px;letter-spacing:.01em}
-.slide__lead{font-size:var(--fs-subtitle);color:var(--gray-1);line-height:1.45;margin:0}
-.slide__body{flex:1;min-height:0;margin-top:16px;display:grid;gap:20px}
-.slide__body.source-in{grid-template-rows:minmax(0,1fr) auto}
-.source{font-size:var(--fs-note);color:var(--gray-2);line-height:1.35;margin-top:12px}
-.source b{color:var(--gray-1);font-weight:600}
-.rows{display:grid;gap:20px;min-height:0;height:100%}
-.row{display:grid;gap:24px;min-height:0;min-width:0}
-.row--tight{gap:20px}
-.region{min-width:0;min-height:0;position:relative;display:flex;flex-direction:column;overflow:hidden}
-.region__h{font-size:var(--fs-exhibit-title);font-weight:600;line-height:1.3;color:var(--ink);margin-bottom:8px}
+/* —— 详情：契约 + 逐格表 —— */
+.cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;margin-bottom:16px}
+@media (max-width:1120px){.cols{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--ui-panel);border:1px solid var(--ui-line);border-radius:4px;padding:14px 16px}
+.card h3{margin:0 0 10px;font-size:11px;letter-spacing:.08em;color:var(--ui-muted);font-weight:600;text-transform:uppercase}
+.field{margin-bottom:11px}
+.field:last-child{margin-bottom:0}
+.field dt{font-size:11.5px;color:var(--ui-muted);margin-bottom:2px}
+.field dd{margin:0;font-size:13.5px;line-height:1.62}
+.field dd.warn{color:#8A3620}
+.field dd.constraint{background:#FBF1DC;border-left:3px solid #805B18;padding:6px 10px;font-size:13px}
+.field dd .skeleton{display:block;white-space:pre;overflow-x:auto;font-size:11.5px;line-height:1.7;
+  background:var(--ui-hi);border-radius:3px;padding:8px 10px;margin-bottom:4px}
+.badge{display:inline-block;font-size:11px;border-radius:2px;padding:2px 7px;margin-left:6px;vertical-align:1px}
+.badge.tiled{background:#E8F2EC;color:#276749}
+.badge.open{background:#FBF1DC;color:#805B18}
 
-/* 内容模式：正文与图注 */
-.p{font-size:var(--fs-body);line-height:1.5;color:var(--gray-1);margin:0 0 7px}
-.p:last-child{margin-bottom:0}
-.cap{font-size:var(--fs-note);line-height:1.4;color:var(--gray-2);margin-top:auto;padding-top:8px}
-.glyph{flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center}
-.glyph svg{width:100%;height:100%;max-height:100%;display:block}
-.inner{flex:1 1 auto;min-height:0;display:grid;gap:10px}
-.inner--quad{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr))}
-.inner--grid9{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr))}
-.inner--stack2{grid-template-rows:repeat(2,minmax(0,1fr))}
-.inner--stack3{grid-template-rows:repeat(3,minmax(0,1fr))}
-.inner--sm{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));gap:16px}
-.ibox{background:var(--surface);border:1px solid var(--ui-line-soft);border-radius:2px;
-  display:flex;align-items:center;justify-content:center;min-height:0;overflow:hidden;padding:6px}
-.ibox svg{width:100%;height:100%}
-.ibox--txt{align-items:flex-start;justify-content:flex-start;padding:10px 12px}
-.ibox--txt .p{font-size:var(--fs-annotation)}
+table.grid{width:100%;border-collapse:collapse;font-size:12.5px}
+table.grid th{text-align:left;font-weight:600;color:var(--ui-muted);font-size:11px;letter-spacing:.04em;
+  border-bottom:1px solid var(--ui-line);padding:5px 7px}
+table.grid td{border-bottom:1px solid var(--ui-line-soft);padding:6px 7px;vertical-align:top;line-height:1.5}
+table.grid tr:last-child td{border-bottom:0}
+table.grid td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+table.grid .slot{display:inline-block;font-size:11px;font-weight:600;color:#fff;border-radius:2px;padding:1px 6px}
+table.grid .role{font-size:11px;color:var(--ui-muted)}
+table.grid .acc{font-size:11.5px;color:var(--ui-muted);line-height:1.5}
+table.grid tr.primary-row td{background:#F7F8FA}
+.swatch{display:inline-block;width:8px;height:8px;border-radius:1px;margin-right:6px;vertical-align:0}
 
-/* 线框模式 */
-.wire .region{border:1.5px solid var(--brand);background:rgba(217,217,236,.20);padding:9px 11px}
-.wire .region[data-role="evidence"]{border-color:var(--cat-2);background:rgba(0,122,120,.07)}
-.wire .region[data-role="support"]{border-color:var(--cat-3);background:rgba(134,82,160,.07)}
-.wire .region[data-role="context"]{border-color:var(--cat-4);background:rgba(156,92,20,.07)}
-.wire__tag{font-size:12.5px;font-weight:600;color:var(--ink)}
-.wire__tag em{font-style:normal;font-family:var(--font-body);font-variant-numeric:tabular-nums}
-.wire__meta{font-size:11.5px;color:var(--ui-muted);margin-top:5px;line-height:1.5;word-break:break-all}
-.wire__form{font-size:11.5px;color:var(--brand);margin-top:4px;word-break:break-all}
-.wire__inner{flex:1 1 auto;min-height:0;margin-top:8px;display:grid;gap:8px;
-  grid-template-columns:repeat(auto-fit,minmax(80px,1fr))}
-.wire__slot{border:1px dashed var(--ui-line);border-radius:2px;min-height:22px}
+/* —— 总览 —— */
+.wall{margin-bottom:26px}
+.wall h3{font-size:12px;letter-spacing:.06em;color:var(--ui-muted);margin:0 0 4px;font-weight:600}
+.wall p{margin:0 0 12px;font-size:12.5px;color:var(--ui-muted);line-height:1.6}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(248px,1fr));gap:14px}
+.tile{border:1px solid var(--ui-line);border-radius:4px;background:var(--ui-panel);padding:10px;cursor:pointer;
+  text-align:left;font:inherit;color:inherit;display:block}
+.tile:hover{border-color:var(--brand);box-shadow:0 2px 8px rgba(23,44,59,.10)}
+.tile svg{display:block;width:100%;height:auto;margin-bottom:8px}
+.tile__id{font-size:11px;color:var(--ui-muted);font-variant-numeric:tabular-nums;margin-right:6px}
+.tile__name{font-size:13.5px;font-weight:600}
+.tile__use{display:block;font-size:11.5px;color:var(--ui-muted);margin-top:3px;line-height:1.5;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 
-/* 契模式 */
-.contract{padding:22px 26px;overflow:auto;height:100%;background:var(--page-bg)}
-.contract h4{font-size:12px;letter-spacing:.1em;color:var(--ui-muted);margin:0 0 7px;font-weight:600}
-.contract pre{font:12.5px/1.62 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--surface);
-  border:1px solid var(--ui-line-soft);border-radius:4px;padding:12px 14px;margin:0 0 18px;
-  white-space:pre-wrap;word-break:break-word;color:var(--ink);user-select:text}
-
-/* 叠加层 */
-.ov{position:absolute;inset:0;z-index:6;pointer-events:none}
-.ov__safe{position:absolute;left:40px;top:32px;width:1200px;height:662px;
-  outline:1px dashed rgba(0,0,128,.42);outline-offset:0}
-.ov__pad{position:absolute;border:1px dashed rgba(156,92,20,.40)}
-.ov__col{position:absolute;top:32px;bottom:26px;background:rgba(0,122,120,.055);
-  border-left:1px dashed rgba(0,122,120,.35)}
-/* 顶栏注释靠右：左上角是 .slide__tracker 的位置，靠左会与页面眉标叠字 */
-.ov__note{position:absolute;right:44px;top:8px;text-align:right;font-size:10.5px;color:rgba(0,0,128,.75);letter-spacing:.04em}
-.ov__lbl{position:absolute;font-size:10.5px;color:var(--ui-muted);background:rgba(255,255,255,.86);padding:0 3px}
-.stage.lines-on .region__h,.stage.lines-on .p,.stage.lines-on .slide__title,.stage.lines-on .slide__lead{
-  background-image:repeating-linear-gradient(to bottom,rgba(0,122,120,.28) 0 1px,transparent 1px var(--lineh))}
-.stage.lines-on .region__cnt{display:block}
-.region__cnt{display:none;position:absolute;right:4px;top:2px;font-size:10px;color:var(--cat-2);
-  background:rgba(255,255,255,.9);padding:0 3px;font-variant-numeric:tabular-nums;z-index:7}
-.hint{font-size:11.5px;color:var(--ui-muted);margin-top:8px}
-.hint b{color:var(--ui-ink)}
-
-/* 说明区 */
-.notes{flex:0 0 auto;background:var(--ui-panel);border-top:1px solid var(--ui-line);
-  padding:11px 20px 13px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px}
-.notes dl{margin:0}
-.notes dt{font-size:10px;letter-spacing:.1em;color:var(--ui-muted);margin-bottom:3px;font-weight:600}
-.notes dd{margin:0;font-size:12.5px;line-height:1.5;color:var(--ui-ink)}
-.notes dd.no{color:var(--risk)}
-@media (max-width:1180px){.notes{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* —— 方法 —— */
+.method{background:var(--ui-panel);border:1px solid var(--ui-line);border-radius:4px;padding:18px 20px;margin-top:8px}
+.method h2{font-family:var(--font-title);font-size:17px;color:var(--brand);margin:0 0 4px}
+.method h4{font-size:12.5px;margin:20px 0 7px;color:var(--ink)}
+.method p{font-size:13px;line-height:1.7;color:var(--gray-1);margin:0 0 8px}
+.method code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;background:var(--ui-hi);padding:1px 5px;border-radius:2px}
+.hint{font-size:12px;color:var(--ui-muted);line-height:1.6}
 </style>
 </head>
 <body>
-
-<aside class="nav">
-  <div class="nav__head">
-    <div class="nav__title">单页布局图谱</div>
-    <div class="nav__sub">页面蓝图的可视图 · 1280×720<br>结构与类名随运行时更新，不单独维护</div>
+<aside class="side">
+  <div class="side__head">
+    <h1 class="side__title">单页布局图谱</h1>
+    <div class="side__sub">先定这是哪种页，再选布局，最后决定每一格填什么。</div>
+    <div class="side__stats">
+      <span class="stat"><b id="n-layouts"></b> 条布局</span>
+      <span class="stat"><b id="n-families"></b> 族</span>
+      <span class="stat"><b id="n-masters"></b> 母版</span>
+      <span class="stat"><b>12×6</b> 网格</span>
+    </div>
   </div>
-  <div class="nav__list" id="navlist"></div>
+  <div class="side__search"><input id="q" type="search" placeholder="搜编号 / 名称 / 用途，如 泳道、L25"></div>
+  <div class="side__list" id="list"></div>
+  <div class="side__foot">
+    <a href="#" data-view="overview">总览</a>
+    <a href="#method">网格与容量</a>
+    <a href="#" id="link-catalog">目录 JSON</a>
+  </div>
 </aside>
 
 <main class="main">
   <div class="bar">
-    <div>
-      <span class="bar__id" id="bid"></span>
-      <span class="bar__name" id="bname"></span>
+    <span class="bar__id" id="bar-id">总览</span>
+    <span class="bar__name" id="bar-name"></span>
+    <span class="bar__tag" id="bar-tag"></span>
+    <span class="bar__sp"></span>
+    <span class="bar__lab">画幅</span>
+    <div class="seg" id="ratio">
+      <button data-ratio="16x9" aria-pressed="true">16:9 · 1280×720</button>
+      <button data-ratio="4x3" aria-pressed="false">4:3 · 1024×768</button>
     </div>
-    <div class="bar__sp"></div>
-    <span class="grp__lab">模式</span>
-    <div class="grp" id="modes">
-      <button data-mode="wire" aria-pressed="false">结构线框 · 1</button>
-      <button data-mode="content" aria-pressed="true">内容示例 · 2</button>
-      <button data-mode="contract" aria-pressed="false">契约 · 3</button>
+    <span class="bar__lab">视图</span>
+    <div class="seg" id="mode">
+      <button data-mode="wire" aria-pressed="true">结构线框</button>
+      <button data-mode="capacity" aria-pressed="false">容量</button>
     </div>
-    <span class="grp__lab">标题</span>
-    <div class="grp" id="tlines">
-      <button data-lines="1" aria-pressed="false">1 行</button>
-      <button data-lines="2" aria-pressed="true">2 行</button>
-    </div>
-    <label class="tog"><input type="checkbox" id="togSafe" checked>安全区</label>
-    <label class="tog"><input type="checkbox" id="togLines">行盒标尺</label>
-    <label class="tog"><input type="checkbox" id="togTracks">栏轨道</label>
-    <label class="tog"><input type="checkbox" id="togSrc" checked>来源放 body 内</label>
-    <span class="budget" id="budget"></span>
-    <div class="grp">
-      <button id="btnOverview" aria-pressed="false">总览 · 0</button>
+    <label class="tog"><input type="checkbox" id="togGrid" checked>网格线</label>
+    <label class="tog"><input type="checkbox" id="togSafe" checked>版心</label>
+    <div class="seg">
       <button id="btnPrev">← 上一条</button>
       <button id="btnNext">下一条 →</button>
     </div>
   </div>
-
-  <div class="wrap" id="wrap">
-    <div class="stager" id="stager"><div class="stage" id="stage"></div></div>
-  </div>
-
-  <div class="notes" id="notes"></div>
+  <div class="scroll" id="scroll"></div>
 </main>
 
-<script type="application/json" id="layout-catalog">[
- {
-  "id": "甲-1",
-  "name": "主图＋侧栏解读",
-  "family": "甲 单证据统领",
-  "use": "一个核心图表已能承担证明，另有两三个解释点要贴着它说。",
-  "path": "判断标题 → 主图 → 侧栏解释 → 来源。",
-  "trade": "侧栏**不要再开一个同等复杂的新议题**；窄于 4fr 时只放短判断，不放表。",
-  "avoid": "主图需要 >9fr 才读得清（长序列、宽散点）→ 改甲-2。",
-  "build": {
-   "kind": "class",
-   "cls": "layout-split",
-   "grid": "minmax(0,8fr) minmax(0,4fr)",
-   "gap": 24
-  },
-  "regions": [
-   {
-    "slot": "main",
-    "span": 8,
-    "form": "<本页 form>",
-    "role": "primary"
-   },
-   {
-    "slot": "aside",
-    "span": 4,
-    "form": "html.text",
-    "role": "support"
-   }
-  ],
-  "forms": [
-   {
-    "name": "recipe.timeSeries",
-    "dagger": true
-   },
-   {
-    "name": "kit.waterfall",
-    "dagger": true
-   },
-   {
-    "name": "recipe.rankedBar",
-    "dagger": true
-   },
-   {
-    "name": "html.text",
-    "dagger": false
-   }
-  ],
-  "rows": [
-   [
-    0,
-    1
-   ]
-  ]
- },
- {
-  "id": "甲-2",
-  "name": "全幅主图＋底部解读",
-  "family": "甲 单证据统领",
-  "use": "主图的**宽度本身**就是证明力（横向趋势、长序列、宽比较）。",
-  "path": "标题 → 通栏图 → 左下事实 → 右下含义。",
-  "trade": "底部只在图**说不完**时出现；图自己能说完就整页给图。",
-  "avoid": "短宽比图通栏后更空；需要精确读数的散点被压到一窄条后读不出 → 改甲-1。",
-  "build": {
-   "kind": "inline",
-   "grid": "minmax(0,8fr) minmax(0,4fr)",
-   "gap": 20
-  },
-  "regions": [
-   {
-    "slot": "top",
-    "span": 12,
-    "form": "<本页 form>",
-    "role": "primary"
-   },
-   {
-    "slot": "bottom",
-    "span": 8,
-    "form": "html.text",
-    "role": "evidence"
-   },
-   {
-    "slot": "bottom",
-    "span": 4,
-    "form": "html.text",
-    "role": "context"
-   }
-  ],
-  "forms": [
-   {
-    "name": "recipe.timeSeries",
-    "dagger": true
-   },
-   {
-    "name": "kit.stacked",
-    "dagger": true
-   },
-   {
-    "name": "recipe.histogram",
-    "dagger": true
-   },
-   {
-    "name": "html.text",
-    "dagger": false
-   }
-  ],
-  "rows": [
-   [
-    0
-   ],
-   [
-    1,
-    2
-   ]
-  ],
-  "rowFr": [
-   3,
-   1
-  ]
- },
- {
-  "id": "甲-3",
-  "name": "结论横带＋三项支撑",
-  "family": "甲 单证据统领",
-  "use": "一个综合判断由三个同级维度共同支持（执行摘要、阶段复盘）。",
-  "path": "横带结论 → 三项从左到右 → 回到结论。",
-  "trade": "三项**必须真的同级**；横带里不要塞第二层论证，否则会被读成标题。",
-  "avoid": "三项之间没有共同结论、只是三个并列事实 → 改乙-2。",
-  "build": {
-   "kind": "class",
-   "cls": "layout-three",
-   "grid": "repeat(3,minmax(0,1fr))",
-   "gap": 24
-  },
-  "regions": [
-   {
-    "slot": "top",
-    "span": 12,
-    "form": "html.text",
-    "role": "primary"
-   },
-   {
-    "slot": "bottom",
-    "span": 4,
-    "form": "html.kpi",
-    "role": "support"
-   },
-   {
-    "slot": "bottom",
-    "span": 4,
-    "form": "kit.bullet",
-    "role": "evidence"
-   },
-   {
-    "slot": "bottom",
-    "span": 4,
-    "form": "kit.bullet",
-    "role": "evidence"
-   }
-  ],
-  "forms": [
-   {
-    "name": "html.kpi",
-    "dagger": false
-   },
-   {
-    "name": "precision.columns",
-    "dagger": true
-   },
-   {
-    "name": "html.text",
-    "dagger": false
-   }
-  ],
-  "rows": [
-   [
-    0
-   ],
-   [
-    1,
-    2,
-    3
-   ]
-  ],
-  "rowFr": [
-   1,
-   2
-  ]
- },
- {
-  "id": "乙-1",
-  "name": "双栏对照",
-  "family": "乙 并列与对照",
-  "use": "两个方案／群体／时期在**同一组维度**上的取舍。",
-  "path": "标题 → 左右同序比较 → 每栏结论。",
-  "trade": "两栏**维度和口径必须一致**，不能各写各的问题；对称不等于相等面积。",
-  "avoid": "两侧不是同一维度的对照（如\"现状\"对\"建议\"）→ 改己-2 或己-3。",
-  "build": {
-   "kind": "class",
-   "cls": "layout-paired",
-   "grid": "repeat(2,minmax(0,1fr))",
-   "gap": 24
-  },
-  "regions": [
-   {
-    "slot": "left",
-    "span": 6,
-    "form": "<本页 form>",
-    "role": "primary"
-   },
-   {
-    "slot": "right",
-    "span": 6,
-    "form": "kit.comparisonTable",
-    "role": "support"
-   }
-  ],
-  "forms": [
-   {
-    "name": "kit.comparisonTable",
-    "dagger": false
-   },
-   {
-    "name": "html.table",
-    "dagger": false
-   },
-   {
-    "name": "kit.dumbbell",
-    "dagger": true
-   },
-   {
-    "name": "kit.slope",
-    "dagger": true
-   }
-  ],
-  "rows": [
-   [
-    0,
-    1
-   ]
-  ]
- },
- {
-  "id": "乙-2",
-  "name": "三栏／四栏并列",
-  "family": "乙 并列与对照",
-  "use": "三到四个同级主题或短信息单元（分群、能力、选项、原则）。",
-  "path": "标题 → 逐栏 → 横向比较各栏的相同字段。",
-  "trade": "每栏 4fr ≈ 372px 正文宽，**只适合短段落**；四栏只放短句。",
-  "avoid": "每项超过四个字段或需要长论述 → 改辛-2 或拆页。**\"相邻页重复三栏段落\"是本技能点名的过度摘要信号**，出现时回原材料找还没表达的关联，而不是换外观。",
-  "build": {
-   "kind": "class",
-   "cls": "layout-three",
-   "grid": "repeat(3,minmax(0,1fr))",
-   "gap": 24
-  },
-  "regions": [
-   {
-    "slot": "left",
-    "span": 4,
-    "form": "html.text",
-    "role": "primary"
-   },
-   {
-    "slot": "main",
-    "span": 4,
-    "form": "html.text",
-    "role": "support"
-   },
-   {
-    "slot": "right",
-    "span": 4,
-    "form": "html.text",
-    "role": "evidence"
-   }
-  ],
-  "forms": [
-   {
-    "name": "html.text",
-    "dagger": false
-   },
-   {
-    "name": "kit.bullet",
-    "dagger": true
-   },
-   {
-    "name": "kit.processFlow",
-    "dagger": false
-   },
-   {
-    "name": "html.kpi",
-    "dagger": false
-   }
-  ],
-  "rows": [
-   [
-    0,
-    1,
-    2
-   ]
-  ]
- },
- {
-  "id": "丙-1",
-  "name": "四格矩阵",
-  "family": "丙 矩阵与分面",
-  "use": "两个维度交叉出四种处理策略（优先级、机会分层、组合判断）。",
-  "path": "先读行列语义 → 左上优先项 → 其余三种策略 → 右侧收束。",
-  "trade": "**两轴必须有名称和方向**；只把四段话放进四个框不算矩阵。",
-  "avoid": "两个维度在材料里高度共线（如\"重要性\"与\"紧急度\"）→ 拆成一维排序。",
-  "build": {
-   "kind": "inline",
-   "grid": "minmax(0,7fr) minmax(0,5fr)",
-   "gap": 24
-  },
-  "regions": [
-   {
-    "slot": "left",
-    "span": 7,
-    "form": "html.matrix",
-    "role": "primary"
-   },
-   {
-    "slot": "right",
-    "span": 5,
-    "form": "html.text",
-    "role": "support"
-   }
-  ],
-  "forms": [
-   {
-    "name": "html.matrix",
-    "dagger": false
-   },
-   {
-    "name": "kit.heatmap",
-    "dagger": true
-   },
-   {
-    "name": "html.text",
-    "dagger": false
-   }
-  ],
-  "rows": [
-   [
-    0,
-    1
-   ]
-  ],
-  "inner": {
-   "0": "quad"
-  }
- },
- {
-  "id": "丙-2",
-  "name": "三对象×三维度九格",
-  "family": "丙 矩阵与分面",
-  "use": "三个对象在三个维度上的定性比较（供应商、技术方案、进入路径）。",
-  "path": "第一行识别对象 → 同行比较 → 沿列汇总取舍。",
-  "trade": "单格只放短判断；需要长论证时减少维度，不是缩小字号。",
-  "avoid": "三个对象在不同维度上不可比 → 改辛-2 明细表。",
-  "build": {
-   "kind": "class",
-   "cls": "evidence-grid",
-   "grid": "repeat(12,minmax(0,1fr))",
-   "gap": 20
-  },
-  "regions": [
-   {
-    "slot": "full",
-    "span": 12,
-    "form": "html.matrix",
-    "role": "primary"
-   },
-   {
-    "slot": "bottom",
-    "span": 12,
-    "form": "html.text",
-    "role": "context"
-   }
-  ],
-  "forms": [
-   {
-    "name": "html.matrix",
-    "dagger": false
-   },
-   {
-    "name": "html.table",
-    "dagger": false
-   },
-   {
-    "name": "html.text",
-    "dagger": false
-   }
-  ],
-  "rows": [
-   [
-    0
-   ],
-   [
-    1
-   ]
-  ],
-  "rowFr": [
-   5,
-   1
-  ],
-  "inner": {
-   "0": "grid9"
-  }
- },
- {
-  "id": "丙-3",
-  "name": "同尺度小多图",
-  "family": "丙 矩阵与分面",
-  "use": "多个同口径序列并行比较（区域、产品线、客户分群）。",
-  "path": "逐行扫描变化 → 定位差异单元 → 读对应解释。",
-  "trade": "**必须共用同一量尺**，否则图形会夸大差异；带面积填充时**基准线要画在填充之上**，否则基期那条线被填充吃掉，六张图就没有共同参照了。刻度只在首列出现，每张只标自己的变化量，绝对值交给公共刻度——六张各标一套绝对值等于六套坐标。用 `svg.custom` 时 `visual` 必填，成稿要带同名 `data-visual`。每格只有 384 宽，图内标签实际落在 12–13px，这是这一条的固有代价。",
-  "avoid": "序列超过 6 个，或读者要看的是时间趋势而非横向差异 → 减少小图或改分面。",
-  "build": {
-   "kind": "inline",
-   "grid": "minmax(0,1fr)",
-   "gap": 24
-  },
-  "regions": [
-   {
-    "slot": "main",
-    "span": 12,
-    "form": "svg.custom",
-    "visual": "small-multiples",
-    "role": "primary"
-   }
-  ],
-  "forms": [
-   {
-    "name": "svg.custom",
-    "dagger": false
-   },
-   {
-    "name": "recipe.timeSeries",
-    "dagger": true
-   },
-   {
-    "name": "kit.bullet",
-    "dagger": true
-   }
-  ],
-  "rows": [
-   [
-    0
-   ]
-  ],
-  "inner": {
-   "0": "smallmultiples"
-  }
- },
- {
-  "id": "丁-1",
-  "name": "横向阶段＋共同条件",
-  "family": "丁 递进与拆解",
-  "use": "三到五个顺序明确的阶段，且跨阶段有共同门槛。",
-  "path": "左 → 右读阶段 → 底部读共同约束。",
-  "trade": "**等宽不表示等时长**，**顺序不冒充因果**；真实时长差异明显时改用有刻度的形式。",
-  "avoid": "阶段超过 5 个，或阶段之间有交叉依赖 → 改泳道或拆页。",
-  "build": {
-   "kind": "inline",
-   "grid": "repeat(4,minmax(0,1fr))",
-   "gap": 24
-  },
-  "regions": [
-   {
-    "slot": "top",
-    "span": 3,
-    "form": "kit.processFlow",
-    "role": "primary"
-   },
-   {
-    "slot": "top",
-    "span": 3,
-    "form": "html.text",
-    "role": "support"
-   },
-   {
-    "slot": "top",
-    "span": 3,
-    "form": "html.text",
-    "role": "support"
-   },
-   {
-    "slot": "top",
-    "span": 3,
-    "form": "html.text",
-    "role": "support"
-   },
-   {
-    "slot": "bottom",
-    "span": 12,
-    "form": "html.text",
-    "role": "context"
-   }
-  ],
-  "forms": [
-   {
-    "name": "kit.processFlow",
-    "dagger": false
-   },
-   {
-    "name": "diagram.process",
-    "dagger": false
-   },
-   {
-    "name": "diagram.swimlane",
-    "dagger": false
-   }
-  ],
-  "rows": [
-   [
-    0,
-    1,
-    2,
-    3
-   ],
-   [
-    4
-   ]
-  ],
-  "rowFr": [
-   2,
-   1
-  ]
- },
- {
-  "id": "丁-2",
-  "name": "阶梯推进",
-  "family": "丁 递进与拆解",
-  "use": "阶段之间有先决条件或成熟度递进，且必须**看见依赖**。",
-  "path": "左上 → 中 → 右下；空白本身表示推进方向。",
-  "trade": "底部空白必须是**方向**而不是\"没做完\"——两者在截图里长得一样，只有在有明显台阶时才成立。",
-  "avoid": "阶段之间其实没有先决关系（那只是并列）→ 改丁-1 或乙-2。",
-  "build": {
-   "kind": "inline",
-   "grid": "repeat(4,minmax(0,1fr))",
-   "gap": 24
-  },
-  "regions": [
-   {
-    "slot": "left",
-    "span": 3,
-    "form": "html.text",
-    "role": "primary"
-   },
-   {
-    "slot": "main",
-    "span": 3,
-    "form": "html.text",
-    "role": "support"
-   },
-   {
-    "slot": "right",
-    "span": 3,
-    "form": "html.text",
-    "role": "support"
-   },
-   {
-    "slot": "right",
-    "span": 3,
-    "form": "html.text",
-    "role": "evidence"
-   }
-  ],
-  "forms": [
-   {
-    "name": "diagram.hierarchy",
-    "dagger": false
-   },
-   {
-    "name": "kit.processFlow",
-    "dagger": false
-   },
-   {
-    "name": "html.text",
-    "dagger": false
-   }
-  ],
-  "place": {
-   "0": {
-    "col": 1,
-    "row": 1
-   },
-   "1": {
-    "col": 2,
-    "row": 2
-   },
-   "2": {
-    "col": 3,
-    "row": 3
-   },
-   "3": {
-    "col": 4,
-    "row": 4
-   }
-  },
-  "flat": true,
-  "cols": "repeat(4,minmax(0,1fr))",
-  "rowCount": 4
- },
- {
-  "id": "丁-3",
-  "name": "逻辑拆解树",
-  "family": "丁 递进与拆解",
-  "use": "从整体拆到驱动因素或根因（指标拆解、问题诊断）。",
-  "path": "左侧总指标 → 中间一级驱动 → 右侧计算口径。",
-  "trade": "**每层必须同一拆分逻辑**（都加法或都乘法），混用会让读者算不通。",
-  "avoid": "叶子超过 5 个 → 改两层或拆页。",
-  "build": {
-   "kind": "inline",
-   "grid": "3fr 4fr 5fr",
-   "gap": 24
-  },
-  "regions": [
-   {
-    "slot": "left",
-    "span": 3,
-    "form": "kit.tree",
-    "role": "primary"
-   },
-   {
-    "slot": "main",
-    "span": 4,
-    "form": "html.text",
-    "role": "support"
-   },
-   {
-    "slot": "right",
-    "span": 5,
-    "form": "html.text",
-    "role": "evidence"
-   }
-  ],
-  "forms": [
-   {
-    "name": "kit.tree",
-    "dagger": false
-   },
-   {
-    "name": "diagram.hierarchy",
-    "dagger": false
-   },
-   {
-    "name": "kit.waterfall",
-    "dagger": true
-   }
-  ],
-  "rows": [
-   [
-    0,
-    1,
-    2
-   ]
-  ]
- },
- {
-  "id": "丁-4",
-  "name": "分层结构＋逐层释义",
-  "family": "丁 递进与拆解",
-  "use": "抽象目标逐级落到动作（战略解码、能力层次、治理结构）。",
-  "path": "左侧自上而下理解层级 → 右侧读层间如何传递与验证。",
-  "trade": "**空间分层优先于装饰性金字塔**；只画金字塔不作层间释义，属于用形状代替论证。",
-  "avoid": "层级之间没有传递关系（只是三个并列项）→ 改乙-2。",
-  "build": {
-   "kind": "class",
-   "cls": "layout-paired",
-   "grid": "repeat(2,minmax(0,1fr))",
-   "gap": 24
-  },
-  "regions": [
-   {
-    "slot": "left",
-    "span": 6,
-    "form": "diagram.hierarchy",
-    "role": "primary"
-   },
-   {
-    "slot": "right",
-    "span": 6,
-    "form": "html.text",
-    "role": "context"
-   }
-  ],
-  "forms": [
-   {
-    "name": "diagram.hierarchy",
-    "dagger": false
-   },
-   {
-    "name": "html.text",
-    "dagger": false
-   },
-   {
-    "name": "kit.bullet",
-    "dagger": true
-   }
-  ],
-  "rows": [
-   [
-    0,
-    1
-   ]
-  ],
-  "inner": {
-   "0": "stack3"
-  }
- },
- {
-  "id": "戊-1",
-  "name": "指标概览＋证据组合",
-  "family": "戊 主辅互补",
-  "use": "同一主题同时需要 KPI、局部证据和管理解读。",
-  "path": "左上指标 → 左下两组证据 → 右侧综合判断。",
-  "trade": "指标不先被看见就失去概览作用；解读区不要变成第二组证据。`html.kpi` 上限 5 张卡，且**每张要有比较基准**。",
-  "avoid": "指标之间没有可比基准（只是几个孤立的数）→ 改甲-3。",
-  "build": {
-   "kind": "inline",
-   "grid": "minmax(0,8fr) minmax(0,4fr)",
-   "gap": 24
-  },
-  "regions": [
-   {
-    "slot": "top",
-    "span": 8,
-    "form": "html.kpi",
-    "role": "primary"
-   },
-   {
-    "slot": "main",
-    "span": 8,
-    "form": "kit.bullet",
-    "role": "evidence"
-   },
-   {
-    "slot": "aside",
-    "span": 4,
-    "form": "html.text",
-    "role": "context"
-   }
-  ],
-  "forms": [
-   {
-    "name": "html.kpi",
-    "dagger": false
-   },
-   {
-    "name": "kit.bullet",
-    "dagger": true
-   },
-   {
-    "name": "kit.dumbbell",
-    "dagger": true
-   },
-   {
-    "name": "html.text",
-    "dagger": false
-   }
-  ],
-  "rowFr": [
-   1,
-   2
-  ],
-  "place": {
-   "0": {
-    "col": 1,
-    "row": 1
-   },
-   "1": {
-    "col": 1,
-    "row": 2
-   },
-   "2": {
-    "col": 2,
-    "row": 1,
-    "rowSpan": 2
-   }
-  },
-  "flat": true,
-  "cols": "minmax(0,8fr) minmax(0,4fr)",
-  "rowCount": 2
- },
- {
-  "id": "戊-2",
-  "name": "主图＋四项辅助证据",
-  "family": "戊 主辅互补",
-  "use": "一个主问题需要四个局部切片解释。",
-  "path": "主图 → 四格证据 → 检查解释是否与主图一致。",
-  "trade": "主图**必须保住坐标空间**；小格只承载短证据。",
-  "avoid": "把主图塞不下的东西挪进小格——那是改分工，不是改布局。",
-  "build": {
-   "kind": "inline",
-   "grid": "minmax(0,6fr) minmax(0,6fr)",
-   "gap": 24
-  },
-  "regions": [
-   {
-    "slot": "main",
-    "span": 6,
-    "form": "<本页 form>",
-    "role": "primary"
-   },
-   {
-    "slot": "aside",
-    "span": 6,
-    "form": "kit.bullet",
-    "role": "evidence"
-   }
-  ],
-  "forms": [
-   {
-    "name": "recipe.timeSeries",
-    "dagger": true
-   },
-   {
-    "name": "kit.bullet",
-    "dagger": true
-   },
-   {
-    "name": "precision.columns",
-    "dagger": true
-   }
-  ],
-  "rows": [
-   [
-    0,
-    1
-   ]
-  ],
-  "inner": {
-   "1": "quad"
-  }
- },
- {
-  "id": "戊-3",
-  "name": "完整表格＋决策栏",
-  "family": "戊 主辅互补",
-  "use": "比较维度多、要保留可复核细节，同时要给出判断。",
-  "path": "判断 → 表格逐项核对 → 侧栏确认成立条件。",
-  "trade": "3fr ≈ 285px，**侧栏只放短判断，不放第二张表**。",
-  "avoid": "侧栏内容本身需要横向比较 → 改戊-4 或拆页。",
-  "build": {
-   "kind": "class",
-   "cls": "layout-split",
-   "grid": "minmax(0,8fr) minmax(0,4fr)",
-   "gap": 24
-  },
-  "regions": [
-   {
-    "slot": "main",
-    "span": 8,
-    "form": "html.table",
-    "role": "primary"
-   },
-   {
-    "slot": "aside",
-    "span": 4,
-    "form": "html.text",
-    "role": "support"
-   }
-  ],
-  "forms": [
-   {
-    "name": "html.table",
-    "dagger": false
-   },
-   {
-    "name": "kit.comparisonTable",
-    "dagger": false
-   },
-   {
-    "name": "html.matrix",
-    "dagger": false
-   },
-   {
-    "name": "html.text",
-    "dagger": false
-   }
-  ],
-  "rows": [
-   [
-    0,
-    1
-   ]
-  ]
- },
- {
-  "id": "戊-4",
-  "name": "双明细表＋共通判断",
-  "family": "戊 主辅互补",
-  "use": "两组明细要并读，但塞不进同一张宽表（成本/收益、供需、前后期）。",
-  "path": "左表 → 右表 → 底部共同判断。",
-  "trade": "左右并排**只表示阅读节奏，不表示一一因果对应**——必须在图注写明，否则读者会误读成配对。",
-  "avoid": "两组明细本来就有共同主键 → 合成一张表（改辛-2）。",
-  "build": {
-   "kind": "class",
-   "cls": "layout-stack",
-   "grid": "minmax(0,1fr) auto",
-   "gap": 18,
-   "axis": "rows"
-  },
-  "regions": [
-   {
-    "slot": "top",
-    "span": 6,
-    "form": "html.table",
-    "role": "primary"
-   },
-   {
-    "slot": "top",
-    "span": 6,
-    "form": "html.table",
-    "role": "evidence"
-   },
-   {
-    "slot": "bottom",
-    "span": 12,
-    "form": "html.text",
-    "role": "context"
-   }
-  ],
-  "forms": [
-   {
-    "name": "html.table",
-    "dagger": false
-   },
-   {
-    "name": "kit.comparisonTable",
-    "dagger": false
-   },
-   {
-    "name": "html.text",
-    "dagger": false
-   }
-  ],
-  "rows": [
-   [
-    0,
-    1
-   ],
-   [
-    2
-   ]
-  ],
-  "rowFr": [
-   2,
-   1
-  ]
- },
- {
-  "id": "己-1",
-  "name": "中轴结论＋四侧条件",
-  "family": "己 综合与研判",
-  "use": "一个综合结论受四项条件共同约束（可行性研判、决策门槛）。",
-  "path": "先看中轴判断 → 四侧条件 → 回中轴做决策。",
-  "trade": "**只适用于汇聚关系，不适用于时间顺序**。条件必须真的会改变结论；凑数的\"条件\"应删。",
-  "avoid": "条件之间有权重差异（那就不是\"共同满足\"）→ 改丙-1 或戊-3。",
-  "build": {
-   "kind": "inline",
-   "grid": "repeat(3,minmax(0,1fr))",
-   "gap": 24
-  },
-  "regions": [
-   {
-    "slot": "main",
-    "span": 4,
-    "form": "html.text",
-    "role": "primary"
-   },
-   {
-    "slot": "left",
-    "span": 4,
-    "form": "kit.bullet",
-    "role": "evidence"
-   },
-   {
-    "slot": "right",
-    "span": 4,
-    "form": "kit.bullet",
-    "role": "evidence"
-   }
-  ],
-  "forms": [
-   {
-    "name": "html.text",
-    "dagger": false
-   },
-   {
-    "name": "kit.bullet",
-    "dagger": true
-   },
-   {
-    "name": "diagram.condition",
-    "dagger": false
-   }
-  ],
-  "rows": [
-   [
-    0,
-    1,
-    2
-   ]
-  ],
-  "place": {
-   "0": {
-    "col": 2
-   },
-   "1": {
-    "col": 1
-   },
-   "2": {
-    "col": 3
-   }
-  },
-  "inner": {
-   "1": "stack2",
-   "2": "stack2"
-  }
- },
- {
-  "id": "己-2",
-  "name": "决策摘要＋证据与异议",
-  "family": "己 综合与研判",
-  "use": "决策者要快速读结论，同时能核对主要依据与**反对意见**。",
-  "path": "顶部状态 → 左侧证据 → 右侧异议与成立条件。",
-  "trade": "状态条只是入口，正文必须保留判断依据；**保留意见不能写成一行免责**。",
-  "avoid": "没有真实异议（那应改甲-3）；两侧其实不是同一维度的对照（→ 乙-1）。",
-  "build": {
-   "kind": "inline",
-   "grid": "minmax(0,8fr) minmax(0,4fr)",
-   "gap": 24
-  },
-  "regions": [
-   {
-    "slot": "top",
-    "span": 12,
-    "form": "html.text",
-    "role": "primary"
-   },
-   {
-    "slot": "bottom",
-    "span": 8,
-    "form": "html.table",
-    "role": "evidence"
-   },
-   {
-    "slot": "bottom",
-    "span": 4,
-    "form": "html.text",
-    "role": "context"
-   }
-  ],
-  "forms": [
-   {
-    "name": "html.text",
-    "dagger": false
-   },
-   {
-    "name": "html.table",
-    "dagger": false
-   }
-  ],
-  "rows": [
-   [
-    0
-   ],
-   [
-    1,
-    2
-   ]
-  ],
-  "rowFr": [
-   1,
-   3
-  ]
- },
- {
-  "id": "己-3",
-  "name": "顶层命题＋双支柱",
-  "family": "己 综合与研判",
-  "use": "一个目标依赖两项**互补**机制（获客与留存、供给与需求）。",
-  "path": "顶层目标 → 左右两条路径 → 各自的验证方法。",
-  "trade": "**左右是互补关系，要区别于二选一**；两条支柱必须能被同一套指标检验。",
-  "avoid": "两条其实是备选方案 → 改乙-1。",
-  "build": {
-   "kind": "inline",
-   "grid": "repeat(2,minmax(0,1fr))",
-   "gap": 24
-  },
-  "regions": [
-   {
-    "slot": "top",
-    "span": 12,
-    "form": "html.text",
-    "role": "primary"
-   },
-   {
-    "slot": "left",
-    "span": 6,
-    "form": "kit.bullet",
-    "role": "support"
-   },
-   {
-    "slot": "right",
-    "span": 6,
-    "form": "kit.bullet",
-    "role": "support"
-   }
-  ],
-  "forms": [
-   {
-    "name": "html.text",
-    "dagger": false
-   },
-   {
-    "name": "kit.bullet",
-    "dagger": true
-   },
-   {
-    "name": "html.table",
-    "dagger": false
-   }
-  ],
-  "rows": [
-   [
-    0
-   ],
-   [
-    1,
-    2
-   ]
-  ],
-  "rowFr": [
-   1,
-   3
-  ]
- },
- {
-  "id": "庚-1",
-  "name": "工作包×责任矩阵",
-  "family": "庚 执行与治理",
-  "use": "多角色参与多工作包，需要明确最终责任。",
-  "path": "工作包 → 最终批准者 → 执行者 → 协作与知会。",
-  "trade": "**矩阵表达职责，不表达先后**；角色超过 5 个时按阶段拆分。`html.matrix` 要求权重与评分锚点透明。",
-  "avoid": "要表达的是时间顺序 → 改丁-1 或庚-2。",
-  "build": {
-   "kind": "inline",
-   "grid": "minmax(0,1fr)",
-   "gap": 24
-  },
-  "regions": [
-   {
-    "slot": "main",
-    "span": 12,
-    "form": "html.matrix",
-    "role": "primary"
-   }
-  ],
-  "forms": [
-   {
-    "name": "html.matrix",
-    "dagger": false
-   },
-   {
-    "name": "html.table",
-    "dagger": false
-   }
-  ],
-  "rows": [
-   [
-    0
-   ]
-  ]
- },
- {
-  "id": "庚-2",
-  "name": "路线图＋风险门槛",
-  "family": "庚 执行与治理",
-  "use": "计划、风险与\"进入下一阶段的门槛\"要同页管理。",
-  "path": "左上目标 → 左下阶段 → 右上风险 → 右下门槛。",
-  "trade": "**风险不是额外的流程节点**，保持独立归属；门槛必须是可判断的条件，不是\"加强沟通\"。",
-  "avoid": "没有真实门槛，只是时间表 → 改丁-1（或结-1）。",
-  "build": {
-   "kind": "inline",
-   "grid": "minmax(0,8fr) minmax(0,4fr)",
-   "gap": 24
-  },
-  "regions": [
-   {
-    "slot": "main",
-    "span": 8,
-    "form": "html.table",
-    "role": "primary"
-   },
-   {
-    "slot": "aside",
-    "span": 4,
-    "form": "kit.bullet",
-    "role": "evidence"
-   }
-  ],
-  "forms": [
-   {
-    "name": "html.table",
-    "dagger": false
-   },
-   {
-    "name": "kit.processFlow",
-    "dagger": false
-   },
-   {
-    "name": "html.text",
-    "dagger": false
-   }
-  ],
-  "rows": [
-   [
-    0,
-    1
-   ]
-  ],
-  "inner": {
-   "0": "stack2",
-   "1": "stack2"
-  }
- },
- {
-  "id": "庚-3",
-  "name": "行动台账＋双侧约束",
-  "family": "庚 执行与治理",
-  "use": "多项短行动要责任与时限，同时保留共同约束。",
-  "path": "左侧排序依据 → 中部逐项 → 右侧升级规则。",
-  "trade": "明细长句改用全幅表格，**不靠压缩字号承载**。",
-  "avoid": "行动少于 5 项（三栏会显空）→ 改乙-2 或戊-3。",
-  "build": {
-   "kind": "inline",
-   "grid": "3fr 6fr 3fr",
-   "gap": 24
-  },
-  "regions": [
-   {
-    "slot": "main",
-    "span": 6,
-    "form": "html.table",
-    "role": "primary"
-   },
-   {
-    "slot": "left",
-    "span": 3,
-    "form": "html.text",
-    "role": "context"
-   },
-   {
-    "slot": "right",
-    "span": 3,
-    "form": "html.text",
-    "role": "evidence"
-   }
-  ],
-  "forms": [
-   {
-    "name": "html.table",
-    "dagger": false
-   },
-   {
-    "name": "html.text",
-    "dagger": false
-   }
-  ],
-  "rows": [
-   [
-    0,
-    1,
-    2
-   ]
-  ],
-  "place": {
-   "0": {
-    "col": 2
-   },
-   "1": {
-    "col": 1
-   },
-   "2": {
-    "col": 3
-   }
-  }
- },
- {
-  "id": "辛-1",
-  "name": "三栏研究论述",
-  "family": "辛 论述与查证",
-  "use": "文字论述多于数值比较（研究发现、访谈归纳、政策解读、方法说明）。",
-  "path": "左现象 → 中解释 → 右边界与待验证。",
-  "trade": "**不逐条切成卡片**，段落内部要连续；4fr 栏约 20 余中文字/行，接近可读下限。",
-  "avoid": "材料其实有数值比较 → 那是选错结构，不是选错栏数。",
-  "build": {
-   "kind": "class",
-   "cls": "layout-three",
-   "grid": "repeat(3,minmax(0,1fr))",
-   "gap": 24
-  },
-  "regions": [
-   {
-    "slot": "left",
-    "span": 4,
-    "form": "html.text",
-    "role": "primary"
-   },
-   {
-    "slot": "main",
-    "span": 4,
-    "form": "html.text",
-    "role": "support"
-   },
-   {
-    "slot": "right",
-    "span": 4,
-    "form": "html.text",
-    "role": "context"
-   }
-  ],
-  "forms": [
-   {
-    "name": "html.text",
-    "dagger": false
-   }
-  ],
-  "rows": [
-   [
-    0,
-    1,
-    2
-   ]
-  ]
- },
- {
-  "id": "辛-2",
-  "name": "多对象×多指标总表",
-  "family": "辛 论述与查证",
-  "use": "对象与指标都多，读者要**交叉查阅并逐格查数**。",
-  "path": "指标表头 → 重点对象 → 同列差异 → 口径说明。",
-  "trade": "这是**主动选表格**的合法场景（读者任务本来就是逐格查数）；新增字段导致长句换行时分组或拆表，**不缩字号**。",
-  "avoid": "读者要的是趋势或对比结论，不是查数 → 回图表选型。",
-  "build": {
-   "kind": "inline",
-   "grid": "minmax(0,1fr)",
-   "gap": 24
-  },
-  "regions": [
-   {
-    "slot": "main",
-    "span": 12,
-    "form": "html.table",
-    "role": "primary"
-   }
-  ],
-  "forms": [
-   {
-    "name": "html.table",
-    "dagger": false
-   },
-   {
-    "name": "kit.comparisonTable",
-    "dagger": false
-   },
-   {
-    "name": "html.matrix",
-    "dagger": false
-   }
-  ],
-  "rows": [
-   [
-    0
-   ]
-  ]
- },
- {
-  "id": "结-1",
-  "name": "目录与路线图",
-  "family": "结构页",
-  "use": "进入正文前看到章节顺序、每章解决什么问题、各自的页范围。",
-  "path": "章节序号 → 章名 → 本章问题 → 页范围。",
-  "trade": "**结构面不整页铺底**；章名与页范围要能一眼扫到。条目内容要来自已冻结的正文，不预告还没写的结论。",
-  "avoid": "全篇不足五页时目录没有导航价值 → 省略，直接进正文。",
-  "build": {
-   "kind": "inline",
-   "grid": "minmax(0,1fr)",
-   "gap": 24
-  },
-  "regions": [
-   {
-    "slot": "main",
-    "span": 12,
-    "form": "html.text",
-    "role": "primary"
-   }
-  ],
-  "forms": [
-   {
-    "name": "html.text",
-    "dagger": false
-   },
-   {
-    "name": "html.table",
-    "dagger": false
-   },
-   {
-    "name": "kit.processFlow",
-    "dagger": false
-   }
-  ],
-  "rows": [
-   [
-    0
-   ]
-  ],
-  "titleKind": "chapter"
- },
- {
-  "id": "结-2",
-  "name": "章节导读",
-  "family": "结构页",
-  "use": "感知转场，知道本章解决什么问题、结论是什么。",
-  "path": "章号 → 章名 → 本章问题 → 本章结论（自上而下单轴）。",
-  "trade": "**允许有意的低密度**，不套正文的密度要求；**禁止再开第二栏**。结论必须来自已冻结内容。",
-  "avoid": "章节很短或只有一章 → 省略导读，避免为转场而转场。",
-  "build": {
-   "kind": "inline",
-   "grid": "minmax(0,8fr) minmax(0,4fr)",
-   "gap": 24
-  },
-  "regions": [
-   {
-    "slot": "main",
-    "span": 8,
-    "form": "html.text",
-    "role": "primary"
-   }
-  ],
-  "forms": [
-   {
-    "name": "html.text",
-    "dagger": false
-   }
-  ],
-  "rows": [
-   [
-    0
-   ]
-  ],
-  "rowCols": {
-   "0": "minmax(0,8fr) minmax(0,4fr)"
-  },
-  "titleKind": "chapter"
- },
- {
-  "id": "结-3",
-  "name": "结论与行动",
-  "family": "结构页",
-  "use": "知道结论、成立条件与下一步。",
-  "path": "结论 → 成立条件 → 行动分条（或：假设 → 验证 → 反证）。",
-  "trade": "**不使用整页底色**；结论必须已在正文出现过，这里只做收束，不引入新判断。",
-  "avoid": "结论依赖的假设还没被检验 → 先补验证页（或改用\"假设—验证—反证\"三轨）。",
-  "build": {
-   "kind": "inline",
-   "grid": "minmax(0,8fr) minmax(0,4fr)",
-   "gap": 24
-  },
-  "regions": [
-   {
-    "slot": "main",
-    "span": 8,
-    "form": "html.text",
-    "role": "primary"
-   },
-   {
-    "slot": "aside",
-    "span": 4,
-    "form": "html.text",
-    "role": "context"
-   }
-  ],
-  "forms": [
-   {
-    "name": "html.text",
-    "dagger": false
-   },
-   {
-    "name": "html.table",
-    "dagger": false
-   }
-  ],
-  "rows": [
-   [
-    0,
-    1
-   ]
-  ],
-  "titleKind": "chapter"
- }
-]</script>
+<script type="application/json" id="atlas-data">
+{"source":"assets/layout-atlas/catalog.json","schema":1,"provenance":"条目结构、use/path/trade 文案源自作者本人的 consulting-report-skill/assets/layout-atlas（同为 12×6 拓扑）；本版按 consulting-report-forge 的 1280×720 版心重算几何，并补齐模块槽位、角色、约束与禁用条件。","grid":{"columns":12,"rows":6,"slots":["head","chart","diagram","table","kpi","timeline","text","annotation","panel","source"],"module":{"pad":12,"titleBand":33,"unitBand":26},"lines":{"body":24,"note":22},"defaultRatio":"16x9"},"ratios":{"16x9":{"id":"16x9","canvas":{"width":1280,"height":720},"pad":{"top":32,"left":40,"right":40,"bottom":26},"titleBand":128,"sourceBand":48,"columnWidth":89,"rowHeight":71,"gutter":12,"content":{"x":40,"y":32,"width":1200,"height":662},"body":{"x":40,"y":160,"width":1200,"height":486},"capacity":[{"h":1,"module":71,"inner":47,"body":{"plain":1,"titled":0,"titledUnit":0},"note":{"plain":2,"titled":0,"titledUnit":0}},{"h":2,"module":154,"inner":130,"body":{"plain":5,"titled":4,"titledUnit":2},"note":{"plain":5,"titled":4,"titledUnit":3}},{"h":3,"module":237,"inner":213,"body":{"plain":8,"titled":7,"titledUnit":6},"note":{"plain":9,"titled":8,"titledUnit":7}},{"h":4,"module":320,"inner":296,"body":{"plain":12,"titled":10,"titledUnit":9},"note":{"plain":13,"titled":11,"titledUnit":10}},{"h":5,"module":403,"inner":379,"body":{"plain":15,"titled":14,"titledUnit":13},"note":{"plain":17,"titled":15,"titledUnit":14}},{"h":6,"module":486,"inner":462,"body":{"plain":19,"titled":17,"titledUnit":16},"note":{"plain":21,"titled":19,"titledUnit":18}}]},"4x3":{"id":"4x3","canvas":{"width":1024,"height":768},"pad":{"top":32,"left":40,"right":40,"bottom":26},"titleBand":120,"sourceBand":30,"columnWidth":64,"rowHeight":80,"gutter":16,"content":{"x":40,"y":32,"width":944,"height":710},"body":{"x":40,"y":152,"width":944,"height":560},"capacity":[{"h":1,"module":80,"inner":56,"body":{"plain":2,"titled":0,"titledUnit":0},"note":{"plain":2,"titled":1,"titledUnit":0}},{"h":2,"module":176,"inner":152,"body":{"plain":6,"titled":4,"titledUnit":3},"note":{"plain":6,"titled":5,"titledUnit":4}},{"h":3,"module":272,"inner":248,"body":{"plain":10,"titled":8,"titledUnit":7},"note":{"plain":11,"titled":9,"titledUnit":8}},{"h":4,"module":368,"inner":344,"body":{"plain":14,"titled":12,"titledUnit":11},"note":{"plain":15,"titled":14,"titledUnit":12}},{"h":5,"module":464,"inner":440,"body":{"plain":18,"titled":16,"titledUnit":15},"note":{"plain":20,"titled":18,"titledUnit":17}},{"h":6,"module":560,"inner":536,"body":{"plain":22,"titled":20,"titledUnit":19},"note":{"plain":24,"titled":22,"titledUnit":21}}]}},"masters":[{"id":"cover","name":"封面","pageRoles":["cover"],"readerTask":"识别报告、范围与核心命题","notes":"报告名是唯一视觉焦点；不出现页结论标题、模块标题、卡片或图表。"},{"id":"contents","name":"目录与路线图","pageRoles":[],"readerTask":"在进入正文前建立整册地图与阅读路径","notes":"页面角色归属未定（见待决事项），暂不接入合同校验。"},{"id":"divider","name":"章节导读","pageRoles":["divider"],"readerTask":"知道本章要回答什么、看完能判断什么","notes":"导读不承担证据；章号与章名之后保持留白。"},{"id":"analysis","name":"分析页","pageRoles":["analysis","risk","appendix"],"readerTask":"看出一个关系，并知道它的边界","notes":"正文主力母版；每页恰有一个主展品，其余模块承担支持、语境与含义。"},{"id":"closing","name":"结论与行动","pageRoles":["decision","action"],"readerTask":"接受一个判断，或认领一个行动","notes":"结论页与行动页共用母版；行动必须带负责人与时限。"},{"id":"references","name":"附录与来源","pageRoles":["references"],"readerTask":"核对某个数字或说法的出处","notes":"来源索引要能被逐条核对；未采用材料也在此交代。"}],"slotNotes":{"chart":"把数据变成图形。带坐标轴的图必须有足够的格。","diagram":"表达机制、流程、层级或条件，不承担精确读数。","table":"精确查数。读者要能逐个核对数字时用它，不要用图替代。","kpi":"少量关键指标。卡片形态，读数优先于趋势。","timeline":"时间轴、阶段与泳道。顺序本身就是论点。","text":"结构化文字：短判断、清单、条目。","annotation":"贴着展品的解读、口径、结论块。","panel":"通用并列格：接受任何已登记形式。论证不依赖某一格具体形式时用它。","head":"页标题带，由版心固定占用，不接受形式声明。","source":"来源带，由版心固定占用，不接受形式声明。"},"forms":{"families":{"comparison":"比较与排名","trend":"趋势","composition":"构成","distribution":"分布","correlation":"相关与矩阵","flow":"流向","hierarchy":"层级","kpi":"达成度","diagram":"机制与流程","table":"精确查数","text":"结构化文字","custom":"作者实现（实际图型见 visual）"},"all":[{"id":"kit.waterfall","form":"kit.waterfall","family":"comparison","label":"瀑布图","kind":"svg","module":"exhibit-kit","export":"waterfall","annotation":"layer","capacity":"贡献项 ≤ 8；不闭合不做"},{"id":"kit.dumbbell","form":"kit.dumbbell","family":"comparison","label":"哑铃图","kind":"svg","module":"exhibit-kit","export":"dumbbell","annotation":"layer","capacity":"行 ≤ 14；两期同口径同量尺"},{"id":"kit.slope","form":"kit.slope","family":"comparison","label":"坡度图","kind":"svg","module":"exhibit-kit","export":"slope","annotation":"layer","capacity":"行 ≤ 10；只比较排序迁移，不比横距"},{"id":"kit.bullet","form":"kit.bullet","family":"kpi","label":"子弹图","kind":"svg","module":"exhibit-kit","export":"bullet","annotation":"layer","capacity":"指标 ≤ 6；分档须另有业务定义"},{"id":"kit.heatmap","form":"kit.heatmap","family":"correlation","label":"矩阵热力图","kind":"svg","module":"exhibit-kit","export":"heatmap","annotation":"layer","capacity":"≤ 160 格；固定 domain；只接受有限数值，未观察／缺失用自定义 SVG 或 HTML 单独编码"},{"id":"kit.mekko","form":"kit.mekko","family":"composition","label":"百分轴 Mekko","kind":"svg","module":"exhibit-kit","export":"mekko","annotation":"layer","capacity":"列 ≤ 6；窄列与小片自动改走同侧引线通道，通道放不下时报错"},{"id":"kit.stacked","form":"kit.stacked","family":"composition","label":"堆积构成","kind":"svg","module":"exhibit-kit","export":"stacked","annotation":"layer","capacity":"列 ≤ 12 × 系列 ≤ 6；仅非负组成；小片与零值走引线通道"},{"id":"kit.tree","form":"kit.tree","family":"hierarchy","label":"层级树","kind":"svg","module":"exhibit-kit","export":"tree","annotation":null,"capacity":"≤ 48 节点；每层同一拆分逻辑"},{"id":"kit.swimlane","form":"kit.swimlane","family":"diagram","label":"泳道图","kind":"svg","module":"exhibit-kit","export":"swimlane","annotation":null,"capacity":"单元格仅 1 节点；复杂分支换专门路径"},{"id":"kit.processFlow","form":"kit.processFlow","family":"diagram","label":"阶段流程","kind":"svg","module":"exhibit-kit","export":"processFlow","annotation":null,"capacity":"3–6 段线性；等宽不表示等时长"},{"id":"kit.comparisonTable","form":"kit.comparisonTable","family":"table","label":"比较表（HTML）","kind":"html","module":"exhibit-kit","export":"comparisonTable","annotation":null,"capacity":"高度由内容决定，须自行分页"},{"id":"recipe.rankedBar","form":"recipe.rankedBar","family":"comparison","label":"排序条形","kind":"svg","module":"echarts-recipes","export":"rankedBar","annotation":"layer","capacity":"≤ 24 项，正文宜更少"},{"id":"recipe.groupedBar","form":"recipe.groupedBar","family":"comparison","label":"分组柱状","kind":"svg","module":"echarts-recipes","export":"groupedBar","annotation":"layer","capacity":"≤ 12 类 × 4 系列"},{"id":"recipe.timeSeries","form":"recipe.timeSeries","family":"trend","label":"时间序列折线","kind":"svg","module":"echarts-recipes","export":"timeSeries","annotation":"layer","capacity":"≤ 36 期 × 5 系列，更多分面"},{"id":"recipe.composition","form":"recipe.composition","family":"composition","label":"堆积／100% 堆积","kind":"svg","module":"echarts-recipes","export":"composition","annotation":"layer","capacity":"≤ 12 类 × 6 系列"},{"id":"recipe.histogram","form":"recipe.histogram","family":"distribution","label":"直方图","kind":"svg","module":"echarts-recipes","export":"histogram","annotation":"layer","capacity":"须已正确分箱，不从均值伪造"},{"id":"recipe.scatter","form":"recipe.scatter","family":"correlation","label":"散点／气泡","kind":"svg","module":"echarts-recipes","export":"scatter","annotation":"layer","capacity":"> 15 点只标关键点"},{"id":"recipe.heatmap","form":"recipe.heatmap","family":"correlation","label":"连续矩阵热力","kind":"svg","module":"echarts-recipes","export":"heatmap","annotation":"layer","capacity":"≤ 160 格；只接受有限数值，未观察／缺失用自定义 SVG 或 HTML 单独编码"},{"id":"recipe.sankey","form":"recipe.sankey","family":"flow","label":"桑基图","kind":"svg","module":"echarts-recipes","export":"sankey","annotation":"layer","capacity":"≤ 30 节点 / 60 边；须守恒无环"},{"id":"recipe.tree","form":"recipe.tree","family":"hierarchy","label":"层级树（ECharts）","kind":"svg","module":"echarts-recipes","export":"tree","annotation":"layer","capacity":"≤ 48 节点"},{"id":"precision.columns","form":"precision.columns","family":"comparison","label":"数值柱（含小计／断轴／Δ）","kind":"svg","module":"precision","type":"columns","annotation":"layer","capacity":"≥ 400×260；类别 ≤ 4 行"},{"id":"precision.stacked","form":"precision.stacked","family":"composition","label":"数值堆积（含层比较）","kind":"svg","module":"precision","type":"stacked","annotation":"layer","capacity":"仅非负组成；列内须列全系列"},{"id":"precision.waterfall","form":"precision.waterfall","family":"comparison","label":"数值瀑布（含累计连接）","kind":"svg","module":"precision","type":"waterfall","annotation":"layer","capacity":"须闭合；累计连接只用于瀑布"},{"id":"diagram.mechanism","form":"diagram.mechanism","family":"diagram","label":"机制／反馈图","kind":"svg","module":"diagram","annotation":null,"capacity":"边须写含义与证据状态；循环标反馈"},{"id":"diagram.process","form":"diagram.process","family":"flow","label":"流程与资金转移","kind":"svg","module":"diagram","annotation":null,"capacity":"无量化就不给连线加宽度"},{"id":"diagram.swimlane","form":"diagram.swimlane","family":"diagram","label":"多主体泳道","kind":"svg","module":"diagram","annotation":null,"capacity":"lane 编码主体、stage 编码阶段"},{"id":"diagram.hierarchy","form":"diagram.hierarchy","family":"hierarchy","label":"能力／层级地图","kind":"svg","module":"diagram","annotation":null,"capacity":"区分包含、依赖、必要条件"},{"id":"diagram.condition","form":"diagram.condition","family":"diagram","label":"条件与决策树","kind":"svg","module":"diagram","annotation":null,"capacity":"决策节点与结果分开；概率缺依据就保留分支"},{"id":"html.table","form":"html.table","family":"table","label":"精确数据表","kind":"html","annotation":null,"capacity":"一列一种单位；总计由作者提供"},{"id":"html.matrix","form":"html.matrix","family":"table","label":"评估矩阵／RACI","kind":"html","annotation":null,"capacity":"权重与评分锚点须透明"},{"id":"html.kpi","form":"html.kpi","family":"kpi","label":"KPI 卡组","kind":"html","annotation":null,"capacity":"≤ 5 张卡；每张须有目标线"},{"id":"html.text","form":"html.text","family":"text","label":"结构化文字／证据组","kind":"html","annotation":null,"capacity":"无共同维度时保留结构化文字"},{"id":"svg.custom","form":"svg.custom","family":"custom","label":"自定义矢量构图","kind":"svg","annotation":null,"capacity":"几何与语义由作者负责，须实际看图"}],"slotForms":{"head":[],"chart":["kit.waterfall","kit.dumbbell","kit.slope","kit.bullet","kit.heatmap","kit.mekko","kit.stacked","recipe.rankedBar","recipe.groupedBar","recipe.timeSeries","recipe.composition","recipe.histogram","recipe.scatter","recipe.heatmap","recipe.sankey","precision.columns","precision.stacked","precision.waterfall","svg.custom"],"diagram":["kit.tree","kit.swimlane","kit.processFlow","recipe.sankey","recipe.tree","diagram.mechanism","diagram.process","diagram.swimlane","diagram.hierarchy","diagram.condition","svg.custom"],"table":["kit.heatmap","kit.comparisonTable","recipe.heatmap","precision.columns","precision.stacked","html.table","html.matrix","svg.custom"],"kpi":["kit.bullet","html.kpi","svg.custom"],"timeline":["kit.swimlane","kit.processFlow","diagram.process","diagram.swimlane","svg.custom"],"text":["html.text","svg.custom"],"annotation":["html.text","svg.custom"],"panel":["kit.waterfall","kit.dumbbell","kit.slope","kit.bullet","kit.heatmap","kit.mekko","kit.stacked","kit.tree","kit.swimlane","kit.processFlow","kit.comparisonTable","recipe.rankedBar","recipe.groupedBar","recipe.timeSeries","recipe.composition","recipe.histogram","recipe.scatter","recipe.heatmap","recipe.sankey","recipe.tree","precision.columns","precision.stacked","precision.waterfall","diagram.mechanism","diagram.process","diagram.swimlane","diagram.hierarchy","diagram.condition","html.table","html.matrix","html.kpi","html.text","svg.custom"],"source":[]}},"layouts":[{"id":"L01","family":"甲","familyName":"单证据统领","master":"analysis","name":"主证据 + 侧栏解读","use":"一个核心图表，需要两到三个解释点。适合业绩复盘、行业趋势与关键发现。","path":"结论标题 → 左侧主证据 → 右侧解读 → 来源。","trade":"主证据占 8 栏；解读占 4 栏。不要让侧栏再引入一个同等复杂的新议题。","avoid":"两个对象主次不明时不要用 8+4 硬分：侧栏会读成第二主图。改 L04 双栏对照。","fill":"tiled","modules":[{"c":1,"r":1,"w":8,"h":6,"slot":"chart","role":"primary","title":"主证据"},{"c":9,"r":1,"w":4,"h":6,"slot":"annotation","role":"implication","title":"侧栏解读"}],"measured":{"16x9":{"fillRatio":1,"modules":[{"box":{"x":40,"y":160,"width":796,"height":486},"lines":{"module":486,"inner":462,"body":{"plain":19,"titled":17,"titledUnit":16},"note":{"plain":21,"titled":19,"titledUnit":18}},"accepts":null,"style":"plain"},{"box":{"x":848,"y":160,"width":392,"height":486},"lines":{"module":486,"inner":462,"body":{"plain":19,"titled":17,"titledUnit":16},"note":{"plain":21,"titled":19,"titledUnit":18}},"accepts":null,"style":"plain"}]},"4x3":{"fillRatio":1,"modules":[{"box":{"x":40,"y":152,"width":624,"height":560},"lines":{"module":560,"inner":536,"body":{"plain":22,"titled":20,"titledUnit":19},"note":{"plain":24,"titled":22,"titledUnit":21}},"accepts":null,"style":"plain"},{"box":{"x":680,"y":152,"width":304,"height":560},"lines":{"module":560,"inner":536,"body":{"plain":22,"titled":20,"titledUnit":19},"note":{"plain":24,"titled":22,"titledUnit":21}},"accepts":null,"style":"plain"}]}}},{"id":"L02","family":"戊","familyName":"主辅互补","master":"analysis","name":"核心判断 + 证据展开","use":"读者先关心“应该做什么”，随后才核对证据。适合建议页和管理层摘要。","path":"左侧核心判断 → 右上证据 → 右下条件。","trade":"左栏保持短句和一个重点数字；证据区分上下层，避免成为长篇正文。","avoid":"判断块里不要写没有证据支撑的口号；证据填不满 8 栏 × 4 行时说明选错了布局。","fill":"tiled","modules":[{"c":1,"r":1,"w":4,"h":6,"slot":"text","role":"primary","title":"核心判断","style":"finding"},{"c":5,"r":1,"w":8,"h":4,"slot":"chart","role":"support","title":"证据展开"},{"c":5,"r":5,"w":8,"h":2,"slot":"annotation","role":"implication","title":"含义"}],"measured":{"16x9":{"fillRatio":1,"modules":[{"box":{"x":40,"y":160,"width":392,"height":486},"lines":{"module":486,"inner":462,"body":{"plain":19,"titled":17,"titledUnit":16},"note":{"plain":21,"titled":19,"titledUnit":18}},"accepts":null,"style":"finding"},{"box":{"x":444,"y":160,"width":796,"height":320},"lines":{"module":320,"inner":296,"body":{"plain":12,"titled":10,"titledUnit":9},"note":{"plain":13,"titled":11,"titledUnit":10}},"accepts":null,"style":"plain"},{"box":{"x":444,"y":492,"width":796,"height":154},"lines":{"module":154,"inner":130,"body":{"plain":5,"titled":4,"titledUnit":2},"note":{"plain":5,"titled":4,"titledUnit":3}},"accepts":null,"style":"plain"}]},"4x3":{"fillRatio":1,"modules":[{"box":{"x":40,"y":152,"width":304,"height":560},"lines":{"module":560,"inner":536,"body":{"plain":22,"titled":20,"titledUnit":19},"note":{"plain":24,"titled":22,"titledUnit":21}},"accepts":null,"style":"finding"},{"box":{"x":360,"y":152,"width":624,"height":368},"lines":{"module":368,"inner":344,"body":{"plain":14,"titled":12,"titledUnit":11},"note":{"plain":15,"titled":14,"titledUnit":12}},"accepts":null,"style":"plain"},{"box":{"x":360,"y":536,"width":624,"height":176},"lines":{"module":176,"inner":152,"body":{"plain":6,"titled":4,"titledUnit":3},"note":{"plain":6,"titled":5,"titledUnit":4}},"accepts":null,"style":"plain"}]}}},{"id":"L03","family":"戊","familyName":"主辅互补","master":"analysis","name":"结论横带 + 三项支撑","use":"一个综合判断由三个独立维度共同支持。适合经营摘要和项目阶段复盘。","path":"顶部概括 → 下方三项证据从左到右。","trade":"上方跨 12 栏占 2 行，下方每项 4 栏占 4 行。三项证据应处于同一逻辑层级。","avoid":"三项支撑必须同量尺同口径；其中一项明显更重时应改 L16，不要让读者自己发现主次。","fill":"tiled","modules":[{"c":1,"r":1,"w":12,"h":2,"slot":"text","role":"primary","title":"结论横带","style":"finding"},{"c":1,"r":3,"w":4,"h":4,"slot":"chart","role":"evidence","title":"支撑一"},{"c":5,"r":3,"w":4,"h":4,"slot":"chart","role":"evidence","title":"支撑二"},{"c":9,"r":3,"w":4,"h":4,"slot":"chart","role":"evidence","title":"支撑三"}],"measured":{"16x9":{"fillRatio":1,"modules":[{"box":{"x":40,"y":160,"width":1200,"height":154},"lines":{"module":154,"inner":130,"body":{"plain":5,"titled":4,"titledUnit":2},"note":{"plain":5,"titled":4,"titledUnit":3}},"accepts":null,"style":"finding"},{"box":{"x":40,"y":326,"width":392,"height":320},"lines":{"module":320,"inner":296,"body":{"plain":12,"titled":10,"titledUnit":9},"note":{"plain":13,"titled":11,"titledUnit":10}},"accepts":null,"style":"plain"},{"box":{"x":444,"y":326,"width":392,"height":320},"lines":{"module":320,"inner":296,"body":{"plain":12,"titled":10,"titledUnit":9},"note":{"plain":13,"titled":11,"titledUnit":10}},"accepts":null,"style":"plain"},{"box":{"x":848,"y":326,"width":392,"height":320},"lines":{"module":320,"inner":296,"body":{"plain":12,"titled":10,"titledUnit":9},"note":{"plain":13,"titled":11,"titledUnit":10}},"accepts":null,"style":"plain"}]},"4x3":{"fillRatio":1,"modules":[{"box":{"x":40,"y":152,"width":944,"height":176},"lines":{"module":176,"inner":152,"body":{"plain":6,"titled":4,"titledUnit":3},"note":{"plain":6,"titled":5,"titledUnit":4}},"accepts":null,"style":"finding"},{"box":{"x":40,"y":344,"width":304,"height":368},"lines":{"module":368,"inner":344,"body":{"plain":14,"titled":12,"titledUnit":11},"note":{"plain":15,"titled":14,"titledUnit":12}},"accepts":null,"style":"plain"},{"box":{"x":360,"y":344,"width":304,"height":368},"lines":{"module":368,"inner":344,"body":{"plain":14,"titled":12,"titledUnit":11},"note":{"plain":15,"titled":14,"titledUnit":12}},"accepts":null,"style":"plain"},{"box":{"x":680,"y":344,"width":304,"height":368},"lines":{"module":368,"inner":344,"body":{"plain":14,"titled":12,"titledUnit":11},"note":{"plain":15,"titled":14,"titledUnit":12}},"accepts":null,"style":"plain"}]}}},{"id":"L04","family":"乙","familyName":"并列与对照","master":"analysis","name":"双栏对照","use":"两个方案、群体或时期之间的比较。适合现状 / 目标、方案 A / B。","path":"标题 → 两栏同一行横向比较 → 每栏结论。","trade":"两栏各占 6 栏、同高同层级。比较维度和数据口径必须一致。","avoid":"两栏不是同一量尺时不要并排：读者会把它读成对比，而它只是两张图。对象超过两个改 L05。","fill":"tiled","modules":[{"c":1,"r":1,"w":6,"h":6,"slot":"chart","role":"primary","title":"对照对象 A"},{"c":7,"r":1,"w":6,"h":6,"slot":"chart","role":"evidence","title":"对照对象 B"}],"measured":{"16x9":{"fillRatio":1,"modules":[{"box":{"x":40,"y":160,"width":594,"height":486},"lines":{"module":486,"inner":462,"body":{"plain":19,"titled":17,"titledUnit":16},"note":{"plain":21,"titled":19,"titledUnit":18}},"accepts":null,"style":"plain"},{"box":{"x":646,"y":160,"width":594,"height":486},"lines":{"module":486,"inner":462,"body":{"plain":19,"titled":17,"titledUnit":16},"note":{"plain":21,"titled":19,"titledUnit":18}},"accepts":null,"style":"plain"}]},"4x3":{"fillRatio":1,"modules":[{"box":{"x":40,"y":152,"width":464,"height":560},"lines":{"module":560,"inner":536,"body":{"plain":22,"titled":20,"titledUnit":19},"note":{"plain":24,"titled":22,"titledUnit":21}},"accepts":null,"style":"plain"},{"box":{"x":520,"y":152,"width":464,"height":560},"lines":{"module":560,"inner":536,"body":{"plain":22,"titled":20,"titledUnit":19},"note":{"plain":24,"titled":22,"titledUnit":21}},"accepts":null,"style":"plain"}]}}},{"id":"L05","family":"乙","familyName":"并列与对照","master":"analysis","name":"三栏并列","use":"三个同级主题或方案。适合客户分群、战略选项和能力对照。","path":"标题 → 三栏主题 → 横向比较各栏相同字段。","trade":"每栏 4 栏，适合短段落。每项超过四个字段时，应改用表格或拆页。","avoid":"三栏等宽是平等的代价：读者读不出谁更重要。有主次时改 L01 或 L02。","fill":"tiled","modules":[{"c":1,"r":1,"w":4,"h":6,"slot":"chart","role":"primary","title":"对象 A"},{"c":5,"r":1,"w":4,"h":6,"slot":"chart","role":"evidence","title":"对象 B"},{"c":9,"r":1,"w":4,"h":6,"slot":"chart","role":"evidence","title":"对象 C"}],"measured":{"16x9":{"fillRatio":1,"modules":[{"box":{"x":40,"y":160,"width":392,"height":486},"lines":{"module":486,"inner":462,"body":{"plain":19,"titled":17,"titledUnit":16},"note":{"plain":21,"titled":19,"titledUnit":18}},"accepts":null,"style":"plain"},{"box":{"x":444,"y":160,"width":392,"height":486},"lines":{"module":486,"inner":462,"body":{"plain":19,"titled":17,"titledUnit":16},"note":{"plain":21,"titled":19,"titledUnit":18}},"accepts":null,"style":"plain"},{"box":{"x":848,"y":160,"width":392,"height":486},"lines":{"module":486,"inner":462,"body":{"plain":19,"titled":17,"titledUnit":16},"note":{"plain":21,"titled":19,"titledUnit":18}},"accepts":null,"style":"plain"}]},"4x3":{"fillRatio":1,"modules":[{"box":{"x":40,"y":152,"width":304,"height":560},"lines":{"module":560,"inner":536,"body":{"plain":22,"titled":20,"titledUnit":19},"note":{"plain":24,"titled":22,"titledUnit":21}},"accepts":null,"style":"plain"},{"box":{"x":360,"y":152,"width":304,"height":560},"lines":{"module":560,"inner":536,"body":{"plain":22,"titled":20,"titledUnit":19},"note":{"plain":24,"titled":22,"titledUnit":21}},"accepts":null,"style":"plain"},{"box":{"x":680,"y":152,"width":304,"height":560},"lines":{"module":560,"inner":536,"body":{"plain":22,"titled":20,"titledUnit":19},"note":{"plain":24,"titled":22,"titledUnit":21}},"accepts":null,"style":"plain"}]}}},{"id":"L06","family":"乙","familyName":"并列与对照","master":"analysis","name":"四栏速览","use":"四个短主题、要素或工作流。适合能力框架、检查项和原则速览。","path":"从左到右读取主题 → 每栏重点 → 全页共同结论。","trade":"每栏仅 3 栏，正文行长较短。适合短句，不适合长论述和复杂图表。","avoid":"每栏只剩 291px 内宽，带坐标轴与图例的图放不进来；四栏只适合指标卡与最简形式。","fill":"tiled","modules":[{"c":1,"r":1,"w":3,"h":6,"slot":"panel","role":"primary","title":"速览一"},{"c":4,"r":1,"w":3,"h":6,"slot":"panel","role":"evidence","title":"速览二"},{"c":7,"r":1,"w":3,"h":6,"slot":"panel","role":"evidence","title":"速览三"},{"c":10,"r":1,"w":3,"h":6,"slot":"panel","role":"evidence","title":"速览四"}],"measured":{"16x9":{"fillRatio":1,"modules":[{"box":{"x":40,"y":160,"width":291,"height":486},"lines":{"module":486,"inner":462,"body":{"plain":19,"titled":17,"titledUnit":16},"note":{"plain":21,"titled":19,"titledUnit":18}},"accepts":null,"style":"plain"},{"box":{"x":343,"y":160,"width":291,"height":486},"lines":{"module":486,"inner":462,"body":{"plain":19,"titled":17,"titledUnit":16},"note":{"plain":21,"titled":19,"titledUnit":18}},"accepts":null,"style":"plain"},{"box":{"x":646,"y":160,"width":291,"height":486},"lines":{"module":486,"inner":462,"body":{"plain":19,"titled":17,"titledUnit":16},"note":{"plain":21,"titled":19,"titledUnit":18}},"accepts":null,"style":"plain"},{"box":{"x":949,"y":160,"width":291,"height":486},"lines":{"module":486,"inner":462,"body":{"plain":19,"titled":17,"titledUnit":16},"note":{"plain":21,"titled":19,"titledUnit":18}},"accepts":null,"style":"plain"}]},"4x3":{"fillRatio":1,"modules":[{"box":{"x":40,"y":152,"width":224,"height":560},"lines":{"module":560,"inner":536,"body":{"plain":22,"titled":20,"titledUnit":19},"note":{"plain":24,"titled":22,"titledUnit":21}},"accepts":null,"style":"plain"},{"box":{"x":280,"y":152,"width":224,"height":560},"lines":{"module":560,"inner":536,"body":{"plain":22,"titled":20,"titledUnit":19},"note":{"plain":24,"titled":22,"titledUnit":21}},"accepts":null,"style":"plain"},{"box":{"x":520,"y":152,"width":224,"height":560},"lines":{"module":560,"inner":536,"body":{"plain":22,"titled":20,"titledUnit":19},"note":{"plain":24,"titled":22,"titledUnit":21}},"accepts":null,"style":"plain"},{"box":{"x":760,"y":152,"width":224,"height":560},"lines":{"module":560,"inner":536,"body":{"plain":22,"titled":20,"titledUnit":19},"note":{"plain":24,"titled":22,"titledUnit":21}},"accepts":null,"style":"plain"}]}}},{"id":"L07","family":"丙","familyName":"矩阵与分面","master":"analysis","name":"四格矩阵","use":"两个维度产生四种不同策略。适合优先级、机会分层和组合判断。","path":"识别行列语义 → 左上优先项 → 其余三种处理策略。","trade":"每格 6 栏 × 3 行，适合两轴分类。坐标必须明确，不能只是把四段话放进四个框。","avoid":"四个格必须共用同一分面逻辑（同一量尺或同一阈值切分）；四张互不相干的图拼成田字不叫矩阵。","fill":"tiled","modules":[{"c":1,"r":1,"w":6,"h":3,"slot":"chart","role":"primary","title":"分面一"},{"c":7,"r":1,"w":6,"h":3,"slot":"chart","role":"evidence","title":"分面二"},{"c":1,"r":4,"w":6,"h":3,"slot":"chart","role":"evidence","title":"分面三"},{"c":7,"r":4,"w":6,"h":3,"slot":"chart","role":"evidence","title":"分面四"}],"measured":{"16x9":{"fillRatio":1,"modules":[{"box":{"x":40,"y":160,"width":594,"height":237},"lines":{"module":237,"inner":213,"body":{"plain":8,"titled":7,"titledUnit":6},"note":{"plain":9,"titled":8,"titledUnit":7}},"accepts":null,"style":"plain"},{"box":{"x":646,"y":160,"width":594,"height":237},"lines":{"module":237,"inner":213,"body":{"plain":8,"titled":7,"titledUnit":6},"note":{"plain":9,"titled":8,"titledUnit":7}},"accepts":null,"style":"plain"},{"box":{"x":40,"y":409,"width":594,"height":237},"lines":{"module":237,"inner":213,"body":{"plain":8,"titled":7,"titledUnit":6},"note":{"plain":9,"titled":8,"titledUnit":7}},"accepts":null,"style":"plain"},{"box":{"x":646,"y":409,"width":594,"height":237},"lines":{"module":237,"inner":213,"body":{"plain":8,"titled":7,"titledUnit":6},"note":{"plain":9,"titled":8,"titledUnit":7}},"accepts":null,"style":"plain"}]},"4x3":{"fillRatio":1,"modules":[{"box":{"x":40,"y":152,"width":464,"height":272},"lines":{"module":272,"inner":248,"body":{"plain":10,"titled":8,"titledUnit":7},"note":{"plain":11,"titled":9,"titledUnit":8}},"accepts":null,"style":"plain"},{"box":{"x":520,"y":152,"width":464,"height":272},"lines":{"module":272,"inner":248,"body":{"plain":10,"titled":8,"titledUnit":7},"note":{"plain":11,"titled":9,"titledUnit":8}},"accepts":null,"style":"plain"},{"box":{"x":40,"y":440,"width":464,"height":272},"lines":{"module":272,"inner":248,"body":{"plain":10,"titled":8,"titledUnit":7},"note":{"plain":11,"titled":9,"titledUnit":8}},"accepts":null,"style":"plain"},{"box":{"x":520,"y":440,"width":464,"height":272},"lines":{"module":272,"inner":248,"body":{"plain":10,"titled":8,"titledUnit":7},"note":{"plain":11,"titled":9,"titledUnit":8}},"accepts":null,"style":"plain"}]}}},{"id":"L08","family":"乙","familyName":"并列与对照","master":"analysis","name":"六格模块","use":"三个对象各有两层信息，或六个简洁同级模块。适合诊断 / 对策映射。","path":"先读上排问题 → 沿同一列找到下排动作。","trade":"每格 4 栏 × 3 行。上下两排必须共享分组逻辑，不要任意堆六项内容。","avoid":"把六格填成同一种图：那是小多图，不是六格模块。同形同尺请走 L22。","fill":"tiled","modules":[{"c":1,"r":1,"w":4,"h":3,"slot":"panel","role":"primary","title":"模块一"},{"c":5,"r":1,"w":4,"h":3,"slot":"panel","role":"evidence","title":"模块二"},{"c":9,"r":1,"w":4,"h":3,"slot":"panel","role":"evidence","title":"模块三"},{"c":1,"r":4,"w":4,"h":3,"slot":"panel","role":"evidence","title":"模块四"},{"c":5,"r":4,"w":4,"h":3,"slot":"panel","role":"evidence","title":"模块五"},{"c":9,"r":4,"w":4,"h":3,"slot":"panel","role":"evidence","title":"模块六"}],"constraint":"六格互不相同才用本布局；六格同形同尺时改 L22 六组同尺度小图。","measured":{"16x9":{"fillRatio":1,"modules":[{"box":{"x":40,"y":160,"width":392,"height":237},"lines":{"module":237,"inner":213,"body":{"plain":8,"titled":7,"titledUnit":6},"note":{"plain":9,"titled":8,"titledUnit":7}},"accepts":null,"style":"plain"},{"box":{"x":444,"y":160,"width":392,"height":237},"lines":{"module":237,"inner":213,"body":{"plain":8,"titled":7,"titledUnit":6},"note":{"plain":9,"titled":8,"titledUnit":7}},"accepts":null,"style":"plain"},{"box":{"x":848,"y":160,"width":392,"height":237},"lines":{"module":237,"inner":213,"body":{"plain":8,"titled":7,"titledUnit":6},"note":{"plain":9,"titled":8,"titledUnit":7}},"accepts":null,"style":"plain"},{"box":{"x":40,"y":409,"width":392,"height":237},"lines":{"module":237,"inner":213,"body":{"plain":8,"titled":7,"titledUnit":6},"note":{"plain":9,"titled":8,"titledUnit":7}},"accepts":null,"style":"plain"},{"box":{"x":444,"y":409,"width":392,"height":237},"lines":{"module":237,"inner":213,"body":{"plain":8,"titled":7,"titledUnit":6},"note":{"plain":9,"titled":8,"titledUnit":7}},"accepts":null,"style":"plain"},{"box":{"x":848,"y":409,"width":392,"height":237},"lines":{"module":237,"inner":213,"body":{"plain":8,"titled":7,"titledUnit":6},"note":{"plain":9,"titled":8,"titledUnit":7}},"accepts":null,"style":"plain"}]},"4x3":{"fillRatio":1,"modules":[{"box":{"x":40,"y":152,"width":304,"height":272},"lines":{"module":272,"inner":248,"body":{"plain":10,"titled":8,"titledUnit":7},"note":{"plain":11,"titled":9,"titledUnit":8}},"accepts":null,"style":"plain"},{"box":{"x":360,"y":152,"width":304,"height":272},"lines":{"module":272,"inner":248,"body":{"plain":10,"titled":8,"titledUnit":7},"note":{"plain":11,"titled":9,"titledUnit":8}},"accepts":null,"style":"plain"},{"box":{"x":680,"y":152,"width":304,"height":272},"lines":{"module":272,"inner":248,"body":{"plain":10,"titled":8,"titledUnit":7},"note":{"plain":11,"titled":9,"titledUnit":8}},"accepts":null,"style":"plain"},{"box":{"x":40,"y":440,"width":304,"height":272},"lines":{"module":272,"inner":248,"body":{"plain":10,"titled":8,"titledUnit":7},"note":{"plain":11,"titled":9,"titledUnit":8}},"accepts":null,"style":"plain"},{"box":{"x":360,"y":440,"width":304,"height":272},"lines":{"module":272,"inner":248,"body":{"plain":10,"titled":8,"titledUnit":7},"note":{"plain":11,"titled":9,"titledUnit":8}},"accepts":null,"style":"plain"},{"box":{"x":680,"y":440,"width":304,"height":272},"lines":{"module":272,"inner":248,"body":{"plain":10,"titled":8,"titledUnit":7},"note":{"plain":11,"titled":9,"titledUnit":8}},"accepts":null,"style":"plain"}]}}},{"id":"L09","family":"丙","familyName":"矩阵与分面","master":"analysis","name":"中轴结论 + 四侧证据","use":"一个综合结论受到四项条件约束。适合可行性研判与决策门槛。","path":"先看中轴判断 → 四侧条件 → 返回中轴作决策。","trade":"中轴 4 栏通高，左右各分为上下两块。适用于汇聚关系，不适合时间顺序。","avoid":"四侧证据必须都在支撑中轴那一句；四块证据各自成立时，这是一页装了四页的内容。","fill":"tiled","modules":[{"c":1,"r":1,"w":4,"h":3,"slot":"chart","role":"support","title":"左上证据"},{"c":1,"r":4,"w":4,"h":3,"slot":"chart","role":"support","title":"左下证据"},{"c":5,"r":1,"w":4,"h":6,"slot":"text","role":"primary","title":"中轴结论","style":"finding"},{"c":9,"r":1,"w":4,"h":3,"slot":"chart","role":"support","title":"右上证据"},{"c":9,"r":4,"w":4,"h":3,"slot":"chart","role":"support","title":"右下证据"}],"measured":{"16x9":{"fillRatio":1,"modules":[{"box":{"x":40,"y":160,"width":392,"height":237},"lines":{"module":237,"inner":213,"body":{"plain":8,"titled":7,"titledUnit":6},"note":{"plain":9,"titled":8,"titledUnit":7}},"accepts":null,"style":"plain"},{"box":{"x":40,"y":409,"width":392,"height":237},"lines":{"module":237,"inner":213,"body":{"plain":8,"titled":7,"titledUnit":6},"note":{"plain":9,"titled":8,"titledUnit":7}},"accepts":null,"style":"plain"},{"box":{"x":444,"y":160,"width":392,"height":486},"lines":{"module":486,"inner":462,"body":{"plain":19,"titled":17,"titledUnit":16},"note":{"plain":21,"titled":19,"titledUnit":18}},"accepts":null,"style":"finding"},{"box":{"x":848,"y":160,"width":392,"height":237},"lines":{"module":237,"inner":213,"body":{"plain":8,"titled":7,"titledUnit":6},"note":{"plain":9,"titled":8,"titledUnit":7}},"accepts":null,"style":"plain"},{"box":{"x":848,"y":409,"width":392,"height":237},"lines":{"module":237,"inner":213,"body":{"plain":8,"titled":7,"titledUnit":6},"note":{"plain":9,"titled":8,"titledUnit":7}},"accepts":null,"style":"plain"}]},"4x3":{"fillRatio":1,"modules":[{"box":{"x":40,"y":152,"width":304,"height":272},"lines":{"module":272,"inner":248,"body":{"plain":10,"titled":8,"titledUnit":7},"note":{"plain":11,"titled":9,"titledUnit":8}},"accepts":null,"style":"plain"},{"box":{"x":40,"y":440,"width":304,"height":272},"lines":{"module":272,"inner":248,"body":{"plain":10,"titled":8,"titledUnit":7},"note":{"plain":11,"titled":9,"titledUnit":8}},"accepts":null,"style":"plain"},{"box":{"x":360,"y":152,"width":304,"height":560},"lines":{"module":560,"inner":536,"body":{"plain":22,"titled":20,"titledUnit":19},"note":{"plain":24,"titled":22,"titledUnit":21}},"accepts":null,"style":"finding"},{"box":{"x":680,"y":152,"width":304,"height":272},"lines":{"module":272,"inner":248,"body":{"plain":10,"titled":8,"titledUnit":7},"note":{"plain":11,"titled":9,"titledUnit":8}},"accepts":null,"style":"plain"},{"box":{"x":680,"y":440,"width":304,"height":272},"lines":{"module":272,"inner":248,"body":{"plain":10,"titled":8,"titledUnit":7},"note":{"plain":11,"titled":9,"titledUnit":8}},"accepts":null,"style":"plain"}]}}},{"id":"L10","family":"丁","familyName":"递进与拆解","master":"analysis","name":"横向流程 + 底部条件","use":"三至五个顺序明确的阶段。适合实施路径、客户旅程和审批流程。","path":"左 → 右完成流程阅读 → 底部查看共同条件。","trade":"上方四个 3 栏阶段占 4 行；底部跨 12 栏占 2 行，承载统一约束。","avoid":"阶段超过 6 段、或阶段之间有分支时改 L14；等宽节点不表示等时长，不要用它比工期。","fill":"tiled","modules":[{"c":1,"r":1,"w":12,"h":4,"slot":"timeline","role":"primary","title":"横向流程","accepts":["diagram.process","kit.processFlow","diagram.swimlane"]},{"c":1,"r":5,"w":12,"h":2,"slot":"text","role":"implication","title":"底部条件"}],"measured":{"16x9":{"fillRatio":1,"modules":[{"box":{"x":40,"y":160,"width":1200,"height":320},"lines":{"module":320,"inner":296,"body":{"plain":12,"titled":10,"titledUnit":9},"note":{"plain":13,"titled":11,"titledUnit":10}},"accepts":["diagram.process","kit.processFlow","diagram.swimlane"],"style":"plain"},{"box":{"x":40,"y":492,"width":1200,"height":154},"lines":{"module":154,"inner":130,"body":{"plain":5,"titled":4,"titledUnit":2},"note":{"plain":5,"titled":4,"titledUnit":3}},"accepts":null,"style":"plain"}]},"4x3":{"fillRatio":1,"modules":[{"box":{"x":40,"y":152,"width":944,"height":368},"lines":{"module":368,"inner":344,"body":{"plain":14,"titled":12,"titledUnit":11},"note":{"plain":15,"titled":14,"titledUnit":12}},"accepts":["diagram.process","kit.processFlow","diagram.swimlane"],"style":"plain"},{"box":{"x":40,"y":536,"width":944,"height":176},"lines":{"module":176,"inner":152,"body":{"plain":6,"titled":4,"titledUnit":3},"note":{"plain":6,"titled":5,"titledUnit":4}},"accepts":null,"style":"plain"}]}}},{"id":"L11","family":"丁","familyName":"递进与拆解","master":"analysis","name":"阶梯推进","use":"阶段之间存在先决条件或成熟度递进。适合能力演进、分期转型。","path":"左上 → 中间 → 右下；左下补充阶段管理原则。","trade":"每步占 3 栏 × 3 行，依次下移 1 行。空白保留推进方向，不需要强行填满。","avoid":"级与级之间不是递进关系时不要用；阶梯只表达顺序，不表达量级差异。","fill":"open","modules":[{"c":1,"r":1,"w":3,"h":3,"slot":"chart","role":"primary","title":"第一级"},{"c":4,"r":2,"w":3,"h":3,"slot":"chart","role":"support","title":"第二级"},{"c":7,"r":3,"w":3,"h":3,"slot":"chart","role":"support","title":"第三级"},{"c":10,"r":4,"w":3,"h":3,"slot":"chart","role":"support","title":"第四级"}],"openWhy":"四级阶梯沿对角线逐行下移，左下与右上的空白本身就是递进关系的表达；填满会被读成并列四块。","measured":{"16x9":{"fillRatio":0.5,"modules":[{"box":{"x":40,"y":160,"width":291,"height":237},"lines":{"module":237,"inner":213,"body":{"plain":8,"titled":7,"titledUnit":6},"note":{"plain":9,"titled":8,"titledUnit":7}},"accepts":null,"style":"plain"},{"box":{"x":343,"y":243,"width":291,"height":237},"lines":{"module":237,"inner":213,"body":{"plain":8,"titled":7,"titledUnit":6},"note":{"plain":9,"titled":8,"titledUnit":7}},"accepts":null,"style":"plain"},{"box":{"x":646,"y":326,"width":291,"height":237},"lines":{"module":237,"inner":213,"body":{"plain":8,"titled":7,"titledUnit":6},"note":{"plain":9,"titled":8,"titledUnit":7}},"accepts":null,"style":"plain"},{"box":{"x":949,"y":409,"width":291,"height":237},"lines":{"module":237,"inner":213,"body":{"plain":8,"titled":7,"titledUnit":6},"note":{"plain":9,"titled":8,"titledUnit":7}},"accepts":null,"style":"plain"}]},"4x3":{"fillRatio":0.5,"modules":[{"box":{"x":40,"y":152,"width":224,"height":272},"lines":{"module":272,"inner":248,"body":{"plain":10,"titled":8,"titledUnit":7},"note":{"plain":11,"titled":9,"titledUnit":8}},"accepts":null,"style":"plain"},{"box":{"x":280,"y":248,"width":224,"height":272},"lines":{"module":272,"inner":248,"body":{"plain":10,"titled":8,"titledUnit":7},"note":{"plain":11,"titled":9,"titledUnit":8}},"accepts":null,"style":"plain"},{"box":{"x":520,"y":344,"width":224,"height":272},"lines":{"module":272,"inner":248,"body":{"plain":10,"titled":8,"titledUnit":7},"note":{"plain":11,"titled":9,"titledUnit":8}},"accepts":null,"style":"plain"},{"box":{"x":760,"y":440,"width":224,"height":272},"lines":{"module":272,"inner":248,"body":{"plain":10,"titled":8,"titledUnit":7},"note":{"plain":11,"titled":9,"titledUnit":8}},"accepts":null,"style":"plain"}]}}},{"id":"L12","family":"庚","familyName":"执行与治理","master":"analysis","name":"时间 × 责任泳道","use":"多个团队在同一时间轴上协作。适合项目计划、实施路线图和交接安排。","path":"先读时间轴 → 沿责任行查任务 → 纵向检查同期协同。","trade":"主体跨满 12 栏。内部按时间与角色另建表格网格，避免强迫所有表格列服从外部 12 栏。","avoid":"责任主体超过 5 个、或阶段超过 8 个时，单元格会挤到读不出交接关系；若证据本身是一张责任表而非泳道图，用 L25。","fill":"tiled","modules":[{"c":1,"r":1,"w":12,"h":6,"slot":"timeline","role":"primary","title":"时间×责任泳道","accepts":["diagram.swimlane","kit.swimlane"]}],"constraint":"内部按时间与角色另建自己的表格网格：泳道不拆成 12 栏模块，否则列宽会被外部网格逼平。","measured":{"16x9":{"fillRatio":1,"modules":[{"box":{"x":40,"y":160,"width":1200,"height":486},"lines":{"module":486,"inner":462,"body":{"plain":19,"titled":17,"titledUnit":16},"note":{"plain":21,"titled":19,"titledUnit":18}},"accepts":["diagram.swimlane","kit.swimlane"],"style":"plain"}]},"4x3":{"fillRatio":1,"modules":[{"box":{"x":40,"y":152,"width":944,"height":560},"lines":{"module":560,"inner":536,"body":{"plain":22,"titled":20,"titledUnit":19},"note":{"plain":24,"titled":22,"titledUnit":21}},"accepts":["diagram.swimlane","kit.swimlane"],"style":"plain"}]}}},{"id":"L13","family":"丁","familyName":"递进与拆解","master":"analysis","name":"分层结构 + 逐层释义","use":"抽象目标逐级落到具体动作。适合战略解码、能力层次和治理结构。","path":"左侧由上而下理解层级 → 右侧阅读层间关系。","trade":"左侧三个 6 栏 × 2 行的层级，右侧 6 栏通高。空间分层优先于装饰性金字塔。","avoid":"三层必须用同一拆分逻辑；混用包含、依赖与必要条件会让读者误读层级。","fill":"tiled","modules":[{"c":1,"r":1,"w":6,"h":2,"slot":"chart","role":"primary","title":"第一层"},{"c":1,"r":3,"w":6,"h":2,"slot":"chart","role":"evidence","title":"第二层"},{"c":1,"r":5,"w":6,"h":2,"slot":"chart","role":"evidence","title":"第三层"},{"c":7,"r":1,"w":6,"h":6,"slot":"annotation","role":"implication","title":"逐层释义"}],"measured":{"16x9":{"fillRatio":1,"modules":[{"box":{"x":40,"y":160,"width":594,"height":154},"lines":{"module":154,"inner":130,"body":{"plain":5,"titled":4,"titledUnit":2},"note":{"plain":5,"titled":4,"titledUnit":3}},"accepts":null,"style":"plain"},{"box":{"x":40,"y":326,"width":594,"height":154},"lines":{"module":154,"inner":130,"body":{"plain":5,"titled":4,"titledUnit":2},"note":{"plain":5,"titled":4,"titledUnit":3}},"accepts":null,"style":"plain"},{"box":{"x":40,"y":492,"width":594,"height":154},"lines":{"module":154,"inner":130,"body":{"plain":5,"titled":4,"titledUnit":2},"note":{"plain":5,"titled":4,"titledUnit":3}},"accepts":null,"style":"plain"},{"box":{"x":646,"y":160,"width":594,"height":486},"lines":{"module":486,"inner":462,"body":{"plain":19,"titled":17,"titledUnit":16},"note":{"plain":21,"titled":19,"titledUnit":18}},"accepts":null,"style":"plain"}]},"4x3":{"fillRatio":1,"modules":[{"box":{"x":40,"y":152,"width":464,"height":176},"lines":{"module":176,"inner":152,"body":{"plain":6,"titled":4,"titledUnit":3},"note":{"plain":6,"titled":5,"titledUnit":4}},"accepts":null,"style":"plain"},{"box":{"x":40,"y":344,"width":464,"height":176},"lines":{"module":176,"inner":152,"body":{"plain":6,"titled":4,"titledUnit":3},"note":{"plain":6,"titled":5,"titledUnit":4}},"accepts":null,"style":"plain"},{"box":{"x":40,"y":536,"width":464,"height":176},"lines":{"module":176,"inner":152,"body":{"plain":6,"titled":4,"titledUnit":3},"note":{"plain":6,"titled":5,"titledUnit":4}},"accepts":null,"style":"plain"},{"box":{"x":520,"y":152,"width":464,"height":560},"lines":{"module":560,"inner":536,"body":{"plain":22,"titled":20,"titledUnit":19},"note":{"plain":24,"titled":22,"titledUnit":21}},"accepts":null,"style":"plain"}]}}},{"id":"L14","family":"丁","familyName":"递进与拆解","master":"analysis","name":"逻辑拆解树","use":"从整体拆到驱动因素或问题根因。适合指标拆解和问题诊断。","path":"左侧总指标 → 中间一级驱动 → 右侧计算口径。","trade":"使用 3、4、5 栏逐级展开。A 占第 1–4 行，其两个子项各占 2 行；B 与其释义共同占第 5–6 行。","avoid":"每层必须用同一拆分逻辑；节点超过 48 个或需要跨层连线时改自定义构图。","fill":"tiled","modules":[{"c":1,"r":1,"w":3,"h":6,"slot":"diagram","role":"primary","title":"顶层问题","accepts":["kit.tree","recipe.tree","diagram.hierarchy"]},{"c":4,"r":1,"w":4,"h":4,"slot":"diagram","role":"support","title":"一级拆解","accepts":["kit.tree","recipe.tree","diagram.hierarchy"]},{"c":4,"r":5,"w":4,"h":2,"slot":"text","role":"support","title":"二级说明"},{"c":8,"r":1,"w":5,"h":2,"slot":"text","role":"support","title":"末级条目一"},{"c":8,"r":3,"w":5,"h":2,"slot":"text","role":"support","title":"末级条目二"},{"c":8,"r":5,"w":5,"h":2,"slot":"text","role":"support","title":"末级条目三"}],"measured":{"16x9":{"fillRatio":1,"modules":[{"box":{"x":40,"y":160,"width":291,"height":486},"lines":{"module":486,"inner":462,"body":{"plain":19,"titled":17,"titledUnit":16},"note":{"plain":21,"titled":19,"titledUnit":18}},"accepts":["kit.tree","recipe.tree","diagram.hierarchy"],"style":"plain"},{"box":{"x":343,"y":160,"width":392,"height":320},"lines":{"module":320,"inner":296,"body":{"plain":12,"titled":10,"titledUnit":9},"note":{"plain":13,"titled":11,"titledUnit":10}},"accepts":["kit.tree","recipe.tree","diagram.hierarchy"],"style":"plain"},{"box":{"x":343,"y":492,"width":392,"height":154},"lines":{"module":154,"inner":130,"body":{"plain":5,"titled":4,"titledUnit":2},"note":{"plain":5,"titled":4,"titledUnit":3}},"accepts":null,"style":"plain"},{"box":{"x":747,"y":160,"width":493,"height":154},"lines":{"module":154,"inner":130,"body":{"plain":5,"titled":4,"titledUnit":2},"note":{"plain":5,"titled":4,"titledUnit":3}},"accepts":null,"style":"plain"},{"box":{"x":747,"y":326,"width":493,"height":154},"lines":{"module":154,"inner":130,"body":{"plain":5,"titled":4,"titledUnit":2},"note":{"plain":5,"titled":4,"titledUnit":3}},"accepts":null,"style":"plain"},{"box":{"x":747,"y":492,"width":493,"height":154},"lines":{"module":154,"inner":130,"body":{"plain":5,"titled":4,"titledUnit":2},"note":{"plain":5,"titled":4,"titledUnit":3}},"accepts":null,"style":"plain"}]},"4x3":{"fillRatio":1,"modules":[{"box":{"x":40,"y":152,"width":224,"height":560},"lines":{"module":560,"inner":536,"body":{"plain":22,"titled":20,"titledUnit":19},"note":{"plain":24,"titled":22,"titledUnit":21}},"accepts":["kit.tree","recipe.tree","diagram.hierarchy"],"style":"plain"},{"box":{"x":280,"y":152,"width":304,"height":368},"lines":{"module":368,"inner":344,"body":{"plain":14,"titled":12,"titledUnit":11},"note":{"plain":15,"titled":14,"titledUnit":12}},"accepts":["kit.tree","recipe.tree","diagram.hierarchy"],"style":"plain"},{"box":{"x":280,"y":536,"width":304,"height":176},"lines":{"module":176,"inner":152,"body":{"plain":6,"titled":4,"titledUnit":3},"note":{"plain":6,"titled":5,"titledUnit":4}},"accepts":null,"style":"plain"},{"box":{"x":600,"y":152,"width":384,"height":176},"lines":{"module":176,"inner":152,"body":{"plain":6,"titled":4,"titledUnit":3},"note":{"plain":6,"titled":5,"titledUnit":4}},"accepts":null,"style":"plain"},{"box":{"x":600,"y":344,"width":384,"height":176},"lines":{"module":176,"inner":152,"body":{"plain":6,"titled":4,"titledUnit":3},"note":{"plain":6,"titled":5,"titledUnit":4}},"accepts":null,"style":"plain"},{"box":{"x":600,"y":536,"width":384,"height":176},"lines":{"module":176,"inner":152,"body":{"plain":6,"titled":4,"titledUnit":3},"note":{"plain":6,"titled":5,"titledUnit":4}},"accepts":null,"style":"plain"}]}}},{"id":"L15","family":"丁","familyName":"递进与拆解","master":"analysis","name":"顶层命题 + 双支柱","use":"一个目标依赖两项互补机制。适合战略支柱、双路径与供需两端分析。","path":"顶层目标 → 左右两条支撑路径 → 各自验证方法。","trade":"顶部占 2 行；两个 6 栏支柱各占 4 行。左右是互补关系，应区别于二选一方案比较。","avoid":"只有一根支柱时不要用这页：两根支柱是它的全部意义，空一根会读成论证缺口。","fill":"tiled","modules":[{"c":1,"r":1,"w":12,"h":2,"slot":"text","role":"primary","title":"顶层命题","style":"finding"},{"c":1,"r":3,"w":6,"h":4,"slot":"chart","role":"support","title":"支柱一"},{"c":7,"r":3,"w":6,"h":4,"slot":"chart","role":"support","title":"支柱二"}],"measured":{"16x9":{"fillRatio":1,"modules":[{"box":{"x":40,"y":160,"width":1200,"height":154},"lines":{"module":154,"inner":130,"body":{"plain":5,"titled":4,"titledUnit":2},"note":{"plain":5,"titled":4,"titledUnit":3}},"accepts":null,"style":"finding"},{"box":{"x":40,"y":326,"width":594,"height":320},"lines":{"module":320,"inner":296,"body":{"plain":12,"titled":10,"titledUnit":9},"note":{"plain":13,"titled":11,"titledUnit":10}},"accepts":null,"style":"plain"},{"box":{"x":646,"y":326,"width":594,"height":320},"lines":{"module":320,"inner":296,"body":{"plain":12,"titled":10,"titledUnit":9},"note":{"plain":13,"titled":11,"titledUnit":10}},"accepts":null,"style":"plain"}]},"4x3":{"fillRatio":1,"modules":[{"box":{"x":40,"y":152,"width":944,"height":176},"lines":{"module":176,"inner":152,"body":{"plain":6,"titled":4,"titledUnit":3},"note":{"plain":6,"titled":5,"titledUnit":4}},"accepts":null,"style":"finding"},{"box":{"x":40,"y":344,"width":464,"height":368},"lines":{"module":368,"inner":344,"body":{"plain":14,"titled":12,"titledUnit":11},"note":{"plain":15,"titled":14,"titledUnit":12}},"accepts":null,"style":"plain"},{"box":{"x":520,"y":344,"width":464,"height":368},"lines":{"module":368,"inner":344,"body":{"plain":14,"titled":12,"titledUnit":11},"note":{"plain":15,"titled":14,"titledUnit":12}},"accepts":null,"style":"plain"}]}}},{"id":"L16","family":"戊","familyName":"主辅互补","master":"analysis","name":"指标概览 + 证据组合","use":"同一主题同时需要 KPI、局部证据和管理解读。适合经营仪表板式报告。","path":"左上指标 → 左下两组证据 → 右侧综合判断。","trade":"左 8 栏上方 2 行放指标，三个起点分别对应第 1、4、7 栏的内容线；下方证据各占 4 栏，右侧 4 栏通高。","avoid":"指标卡的期间与口径必须与右侧证据一致；口径不同的概览会与证据互相拆台。","fill":"tiled","modules":[{"c":1,"r":1,"w":8,"h":2,"slot":"kpi","role":"primary","title":"指标概览"},{"c":1,"r":3,"w":4,"h":4,"slot":"chart","role":"support","title":"证据一"},{"c":5,"r":3,"w":4,"h":4,"slot":"chart","role":"support","title":"证据二"},{"c":9,"r":1,"w":4,"h":6,"slot":"chart","role":"support","title":"主证据"}],"measured":{"16x9":{"fillRatio":1,"modules":[{"box":{"x":40,"y":160,"width":796,"height":154},"lines":{"module":154,"inner":130,"body":{"plain":5,"titled":4,"titledUnit":2},"note":{"plain":5,"titled":4,"titledUnit":3}},"accepts":null,"style":"plain"},{"box":{"x":40,"y":326,"width":392,"height":320},"lines":{"module":320,"inner":296,"body":{"plain":12,"titled":10,"titledUnit":9},"note":{"plain":13,"titled":11,"titledUnit":10}},"accepts":null,"style":"plain"},{"box":{"x":444,"y":326,"width":392,"height":320},"lines":{"module":320,"inner":296,"body":{"plain":12,"titled":10,"titledUnit":9},"note":{"plain":13,"titled":11,"titledUnit":10}},"accepts":null,"style":"plain"},{"box":{"x":848,"y":160,"width":392,"height":486},"lines":{"module":486,"inner":462,"body":{"plain":19,"titled":17,"titledUnit":16},"note":{"plain":21,"titled":19,"titledUnit":18}},"accepts":null,"style":"plain"}]},"4x3":{"fillRatio":1,"modules":[{"box":{"x":40,"y":152,"width":624,"height":176},"lines":{"module":176,"inner":152,"body":{"plain":6,"titled":4,"titledUnit":3},"note":{"plain":6,"titled":5,"titledUnit":4}},"accepts":null,"style":"plain"},{"box":{"x":40,"y":344,"width":304,"height":368},"lines":{"module":368,"inner":344,"body":{"plain":14,"titled":12,"titledUnit":11},"note":{"plain":15,"titled":14,"titledUnit":12}},"accepts":null,"style":"plain"},{"box":{"x":360,"y":344,"width":304,"height":368},"lines":{"module":368,"inner":344,"body":{"plain":14,"titled":12,"titledUnit":11},"note":{"plain":15,"titled":14,"titledUnit":12}},"accepts":null,"style":"plain"},{"box":{"x":680,"y":152,"width":304,"height":560},"lines":{"module":560,"inner":536,"body":{"plain":22,"titled":20,"titledUnit":19},"note":{"plain":24,"titled":22,"titledUnit":21}},"accepts":null,"style":"plain"}]}}},{"id":"L17","family":"戊","familyName":"主辅互补","master":"analysis","name":"完整表格 + 决策栏","use":"比较维度较多，需要保留证据细节。适合方案评估、竞品分析与审查结果。","path":"标题判断 → 表格逐项核对 → 侧栏确认条件。","trade":"表格占 9 栏，结论占 3 栏。统一单元格对齐；侧栏只保留短判断。","avoid":"表格列超过 6 列时读者无法横向比对；决策栏也不能只说“建议关注”。","fill":"tiled","constraint":"决策栏是通用格，不是文字格：几张卡、一个小图或一段判断都放得下。整页只有表格一种东西时版面会单薄——那一格要真的换一种表达，不能又写一段文字了事。","modules":[{"c":1,"r":1,"w":9,"h":6,"slot":"table","role":"primary","title":"完整表格","accepts":["html.table","kit.comparisonTable"]},{"c":10,"r":1,"w":3,"h":6,"slot":"panel","role":"implication","title":"决策栏","style":"finding"}],"measured":{"16x9":{"fillRatio":1,"modules":[{"box":{"x":40,"y":160,"width":897,"height":486},"lines":{"module":486,"inner":462,"body":{"plain":19,"titled":17,"titledUnit":16},"note":{"plain":21,"titled":19,"titledUnit":18}},"accepts":["html.table","kit.comparisonTable"],"style":"plain"},{"box":{"x":949,"y":160,"width":291,"height":486},"lines":{"module":486,"inner":462,"body":{"plain":19,"titled":17,"titledUnit":16},"note":{"plain":21,"titled":19,"titledUnit":18}},"accepts":null,"style":"finding"}]},"4x3":{"fillRatio":1,"modules":[{"box":{"x":40,"y":152,"width":704,"height":560},"lines":{"module":560,"inner":536,"body":{"plain":22,"titled":20,"titledUnit":19},"note":{"plain":24,"titled":22,"titledUnit":21}},"accepts":["html.table","kit.comparisonTable"],"style":"plain"},{"box":{"x":760,"y":152,"width":224,"height":560},"lines":{"module":560,"inner":536,"body":{"plain":22,"titled":20,"titledUnit":19},"note":{"plain":24,"titled":22,"titledUnit":21}},"accepts":null,"style":"finding"}]}}},{"id":"L18","family":"甲","familyName":"单证据统领","master":"analysis","name":"证据全幅 + 底部解读","use":"宽图、长时间序列或复杂比较需要完整横向空间。适合趋势研究和分布分析。","path":"标题 → 全幅证据 → 左下事实说明 → 右下行动含义。","trade":"上方主图跨 12 栏占 4 行；下方 8+4 栏各占 2 行。图表本身应保持视觉中心。","avoid":"全幅证据必须一条说明读得完；需要两三个并列发现时改 L03。","fill":"tiled","modules":[{"c":1,"r":1,"w":12,"h":4,"slot":"chart","role":"primary","title":"全幅证据"},{"c":1,"r":5,"w":8,"h":2,"slot":"annotation","role":"support","title":"底部解读"},{"c":9,"r":5,"w":4,"h":2,"slot":"text","role":"implication","title":"含义"}],"measured":{"16x9":{"fillRatio":1,"modules":[{"box":{"x":40,"y":160,"width":1200,"height":320},"lines":{"module":320,"inner":296,"body":{"plain":12,"titled":10,"titledUnit":9},"note":{"plain":13,"titled":11,"titledUnit":10}},"accepts":null,"style":"plain"},{"box":{"x":40,"y":492,"width":796,"height":154},"lines":{"module":154,"inner":130,"body":{"plain":5,"titled":4,"titledUnit":2},"note":{"plain":5,"titled":4,"titledUnit":3}},"accepts":null,"style":"plain"},{"box":{"x":848,"y":492,"width":392,"height":154},"lines":{"module":154,"inner":130,"body":{"plain":5,"titled":4,"titledUnit":2},"note":{"plain":5,"titled":4,"titledUnit":3}},"accepts":null,"style":"plain"}]},"4x3":{"fillRatio":1,"modules":[{"box":{"x":40,"y":152,"width":944,"height":368},"lines":{"module":368,"inner":344,"body":{"plain":14,"titled":12,"titledUnit":11},"note":{"plain":15,"titled":14,"titledUnit":12}},"accepts":null,"style":"plain"},{"box":{"x":40,"y":536,"width":624,"height":176},"lines":{"module":176,"inner":152,"body":{"plain":6,"titled":4,"titledUnit":3},"note":{"plain":6,"titled":5,"titledUnit":4}},"accepts":null,"style":"plain"},{"box":{"x":680,"y":536,"width":304,"height":176},"lines":{"module":176,"inner":152,"body":{"plain":6,"titled":4,"titledUnit":3},"note":{"plain":6,"titled":5,"titledUnit":4}},"accepts":null,"style":"plain"}]}}},{"id":"L19","family":"丙","familyName":"矩阵与分面","master":"analysis","name":"多对象 × 多指标总表","use":"对象与指标都较多，需要读者交叉查阅。适合区域经营、产品组合与渠道绩效。","path":"指标表头 → 重点对象 → 同列差异 → 底部结论带。","trade":"总表占上方 4 行、使用独立列比例；底部两行留给整张表的读法。金额、比例与周期分列；新增字段导致长句换行时，应分组或拆表。","avoid":"指标超过 8 列时读者无法横向比对；需要分组小计就拆两页。","fill":"tiled","modules":[{"c":1,"r":1,"w":12,"h":4,"slot":"table","role":"primary","title":"多对象总表","accepts":["html.table","kit.comparisonTable","html.matrix"]},{"c":1,"r":5,"w":12,"h":2,"slot":"panel","role":"implication","title":"结论带","style":"finding"}],"constraint":"一列一种单位；缺失、零值与不适用必须能区分，不能都留空。结论带是通用格——一整页总表不给读法是让读者自己找答案，那一带要给出跨列读出来的东西（几张卡、一个小图或一段判断），不能把表格里已经写过的字再抄一遍。","measured":{"16x9":{"fillRatio":1,"modules":[{"box":{"x":40,"y":160,"width":1200,"height":320},"lines":{"module":320,"inner":296,"body":{"plain":12,"titled":10,"titledUnit":9},"note":{"plain":13,"titled":11,"titledUnit":10}},"accepts":["html.table","kit.comparisonTable","html.matrix"],"style":"plain"},{"box":{"x":40,"y":492,"width":1200,"height":154},"lines":{"module":154,"inner":130,"body":{"plain":5,"titled":4,"titledUnit":2},"note":{"plain":5,"titled":4,"titledUnit":3}},"accepts":null,"style":"finding"}]},"4x3":{"fillRatio":1,"modules":[{"box":{"x":40,"y":152,"width":944,"height":368},"lines":{"module":368,"inner":344,"body":{"plain":14,"titled":12,"titledUnit":11},"note":{"plain":15,"titled":14,"titledUnit":12}},"accepts":["html.table","kit.comparisonTable","html.matrix"],"style":"plain"},{"box":{"x":40,"y":536,"width":944,"height":176},"lines":{"module":176,"inner":152,"body":{"plain":6,"titled":4,"titledUnit":3},"note":{"plain":6,"titled":5,"titledUnit":4}},"accepts":null,"style":"finding"}]}}},{"id":"L20","family":"丙","familyName":"矩阵与分面","master":"analysis","name":"三对象 × 三维度九格","use":"三个对象在三个维度上的定性比较。适合供应商、技术方案与市场进入路径。","path":"第一行识别方案 → 同行比较 → 沿列汇总取舍。","trade":"九格各占 4 栏 × 2 行；单格适合短判断。需长论证时减少维度，或采用完整表格加解读。","avoid":"维度之间有先后依赖时不要用矩阵：九格默认三个维度可以并排比较。","fill":"tiled","modules":[{"c":1,"r":1,"w":4,"h":2,"slot":"chart","role":"primary","title":"对象一·维度一"},{"c":5,"r":1,"w":4,"h":2,"slot":"chart","role":"evidence","title":"对象二·维度一"},{"c":9,"r":1,"w":4,"h":2,"slot":"chart","role":"evidence","title":"对象三·维度一"},{"c":1,"r":3,"w":4,"h":2,"slot":"chart","role":"evidence","title":"对象一·维度二"},{"c":5,"r":3,"w":4,"h":2,"slot":"chart","role":"evidence","title":"对象二·维度二"},{"c":9,"r":3,"w":4,"h":2,"slot":"chart","role":"evidence","title":"对象三·维度二"},{"c":1,"r":5,"w":4,"h":2,"slot":"chart","role":"evidence","title":"对象一·维度三"},{"c":5,"r":5,"w":4,"h":2,"slot":"chart","role":"evidence","title":"对象二·维度三"},{"c":9,"r":5,"w":4,"h":2,"slot":"chart","role":"evidence","title":"对象三·维度三"}],"constraint":"九格必须共用同一量尺；行列表头写清对象与维度口径。","measured":{"16x9":{"fillRatio":1,"modules":[{"box":{"x":40,"y":160,"width":392,"height":154},"lines":{"module":154,"inner":130,"body":{"plain":5,"titled":4,"titledUnit":2},"note":{"plain":5,"titled":4,"titledUnit":3}},"accepts":null,"style":"plain"},{"box":{"x":444,"y":160,"width":392,"height":154},"lines":{"module":154,"inner":130,"body":{"plain":5,"titled":4,"titledUnit":2},"note":{"plain":5,"titled":4,"titledUnit":3}},"accepts":null,"style":"plain"},{"box":{"x":848,"y":160,"width":392,"height":154},"lines":{"module":154,"inner":130,"body":{"plain":5,"titled":4,"titledUnit":2},"note":{"plain":5,"titled":4,"titledUnit":3}},"accepts":null,"style":"plain"},{"box":{"x":40,"y":326,"width":392,"height":154},"lines":{"module":154,"inner":130,"body":{"plain":5,"titled":4,"titledUnit":2},"note":{"plain":5,"titled":4,"titledUnit":3}},"accepts":null,"style":"plain"},{"box":{"x":444,"y":326,"width":392,"height":154},"lines":{"module":154,"inner":130,"body":{"plain":5,"titled":4,"titledUnit":2},"note":{"plain":5,"titled":4,"titledUnit":3}},"accepts":null,"style":"plain"},{"box":{"x":848,"y":326,"width":392,"height":154},"lines":{"module":154,"inner":130,"body":{"plain":5,"titled":4,"titledUnit":2},"note":{"plain":5,"titled":4,"titledUnit":3}},"accepts":null,"style":"plain"},{"box":{"x":40,"y":492,"width":392,"height":154},"lines":{"module":154,"inner":130,"body":{"plain":5,"titled":4,"titledUnit":2},"note":{"plain":5,"titled":4,"titledUnit":3}},"accepts":null,"style":"plain"},{"box":{"x":444,"y":492,"width":392,"height":154},"lines":{"module":154,"inner":130,"body":{"plain":5,"titled":4,"titledUnit":2},"note":{"plain":5,"titled":4,"titledUnit":3}},"accepts":null,"style":"plain"},{"box":{"x":848,"y":492,"width":392,"height":154},"lines":{"module":154,"inner":130,"body":{"plain":5,"titled":4,"titledUnit":2},"note":{"plain":5,"titled":4,"titledUnit":3}},"accepts":null,"style":"plain"}]},"4x3":{"fillRatio":1,"modules":[{"box":{"x":40,"y":152,"width":304,"height":176},"lines":{"module":176,"inner":152,"body":{"plain":6,"titled":4,"titledUnit":3},"note":{"plain":6,"titled":5,"titledUnit":4}},"accepts":null,"style":"plain"},{"box":{"x":360,"y":152,"width":304,"height":176},"lines":{"module":176,"inner":152,"body":{"plain":6,"titled":4,"titledUnit":3},"note":{"plain":6,"titled":5,"titledUnit":4}},"accepts":null,"style":"plain"},{"box":{"x":680,"y":152,"width":304,"height":176},"lines":{"module":176,"inner":152,"body":{"plain":6,"titled":4,"titledUnit":3},"note":{"plain":6,"titled":5,"titledUnit":4}},"accepts":null,"style":"plain"},{"box":{"x":40,"y":344,"width":304,"height":176},"lines":{"module":176,"inner":152,"body":{"plain":6,"titled":4,"titledUnit":3},"note":{"plain":6,"titled":5,"titledUnit":4}},"accepts":null,"style":"plain"},{"box":{"x":360,"y":344,"width":304,"height":176},"lines":{"module":176,"inner":152,"body":{"plain":6,"titled":4,"titledUnit":3},"note":{"plain":6,"titled":5,"titledUnit":4}},"accepts":null,"style":"plain"},{"box":{"x":680,"y":344,"width":304,"height":176},"lines":{"module":176,"inner":152,"body":{"plain":6,"titled":4,"titledUnit":3},"note":{"plain":6,"titled":5,"titledUnit":4}},"accepts":null,"style":"plain"},{"box":{"x":40,"y":536,"width":304,"height":176},"lines":{"module":176,"inner":152,"body":{"plain":6,"titled":4,"titledUnit":3},"note":{"plain":6,"titled":5,"titledUnit":4}},"accepts":null,"style":"plain"},{"box":{"x":360,"y":536,"width":304,"height":176},"lines":{"module":176,"inner":152,"body":{"plain":6,"titled":4,"titledUnit":3},"note":{"plain":6,"titled":5,"titledUnit":4}},"accepts":null,"style":"plain"},{"box":{"x":680,"y":536,"width":304,"height":176},"lines":{"module":176,"inner":152,"body":{"plain":6,"titled":4,"titledUnit":3},"note":{"plain":6,"titled":5,"titledUnit":4}},"accepts":null,"style":"plain"}]}}},{"id":"L21","family":"戊","familyName":"主辅互补","master":"analysis","name":"双明细表 + 共用判断","use":"两组明细需要并读，但不适合塞进同一张宽表。适合成本收益、供需与前后期核对。","path":"左表投入 → 右表收益 → 底部共同判断。","trade":"双表各占 6 栏 × 5 行，底部占 1 行。行对齐只表示阅读节奏，不表示左右项目一一因果对应。","avoid":"两张表口径不同时共用判断会站不住；表一表二必须是同一口径下的两个切片。","fill":"tiled","modules":[{"c":1,"r":1,"w":6,"h":5,"slot":"table","role":"primary","title":"明细表一"},{"c":7,"r":1,"w":6,"h":5,"slot":"table","role":"evidence","title":"明细表二"},{"c":1,"r":6,"w":12,"h":1,"slot":"text","role":"implication","title":"共用判断","style":"nohead"}],"measured":{"16x9":{"fillRatio":1,"modules":[{"box":{"x":40,"y":160,"width":594,"height":403},"lines":{"module":403,"inner":379,"body":{"plain":15,"titled":14,"titledUnit":13},"note":{"plain":17,"titled":15,"titledUnit":14}},"accepts":null,"style":"plain"},{"box":{"x":646,"y":160,"width":594,"height":403},"lines":{"module":403,"inner":379,"body":{"plain":15,"titled":14,"titledUnit":13},"note":{"plain":17,"titled":15,"titledUnit":14}},"accepts":null,"style":"plain"},{"box":{"x":40,"y":575,"width":1200,"height":71},"lines":{"module":71,"inner":47,"body":{"plain":1,"titled":0,"titledUnit":0},"note":{"plain":2,"titled":0,"titledUnit":0}},"accepts":null,"style":"nohead"}]},"4x3":{"fillRatio":1,"modules":[{"box":{"x":40,"y":152,"width":464,"height":464},"lines":{"module":464,"inner":440,"body":{"plain":18,"titled":16,"titledUnit":15},"note":{"plain":20,"titled":18,"titledUnit":17}},"accepts":null,"style":"plain"},{"box":{"x":520,"y":152,"width":464,"height":464},"lines":{"module":464,"inner":440,"body":{"plain":18,"titled":16,"titledUnit":15},"note":{"plain":20,"titled":18,"titledUnit":17}},"accepts":null,"style":"plain"},{"box":{"x":40,"y":632,"width":944,"height":80},"lines":{"module":80,"inner":56,"body":{"plain":2,"titled":0,"titledUnit":0},"note":{"plain":2,"titled":1,"titledUnit":0}},"accepts":null,"style":"nohead"}]}}},{"id":"L22","family":"乙","familyName":"并列与对照","master":"analysis","name":"六组同尺度小图","use":"多个同口径序列需要并行比较。适合区域、产品线与客户分群的小多图。","path":"逐行扫描变化 → 定位差异群体 → 阅读对应解释。","trade":"每格 4 栏 × 3 行，比较轨道与图注共用起点。序列过多或需时间趋势时，减少小图数量。","avoid":"六格口径不一致时不要用：不同尺的小图并排会被读成同一尺下的差异。","fill":"tiled","modules":[{"c":1,"r":1,"w":4,"h":3,"slot":"chart","role":"primary","title":"小图一","accepts":["svg.custom","recipe.timeSeries"]},{"c":5,"r":1,"w":4,"h":3,"slot":"chart","role":"evidence","title":"小图二","accepts":["svg.custom","recipe.timeSeries"]},{"c":9,"r":1,"w":4,"h":3,"slot":"chart","role":"evidence","title":"小图三","accepts":["svg.custom","recipe.timeSeries"]},{"c":1,"r":4,"w":4,"h":3,"slot":"chart","role":"evidence","title":"小图四","accepts":["svg.custom","recipe.timeSeries"]},{"c":5,"r":4,"w":4,"h":3,"slot":"chart","role":"evidence","title":"小图五","accepts":["svg.custom","recipe.timeSeries"]},{"c":9,"r":4,"w":4,"h":3,"slot":"chart","role":"evidence","title":"小图六","accepts":["svg.custom","recipe.timeSeries"]}],"constraint":"六格必须共用同一量尺与同一坐标范围；各自独立缩放会让读者读出并不存在的差异。","measured":{"16x9":{"fillRatio":1,"modules":[{"box":{"x":40,"y":160,"width":392,"height":237},"lines":{"module":237,"inner":213,"body":{"plain":8,"titled":7,"titledUnit":6},"note":{"plain":9,"titled":8,"titledUnit":7}},"accepts":["svg.custom","recipe.timeSeries"],"style":"plain"},{"box":{"x":444,"y":160,"width":392,"height":237},"lines":{"module":237,"inner":213,"body":{"plain":8,"titled":7,"titledUnit":6},"note":{"plain":9,"titled":8,"titledUnit":7}},"accepts":["svg.custom","recipe.timeSeries"],"style":"plain"},{"box":{"x":848,"y":160,"width":392,"height":237},"lines":{"module":237,"inner":213,"body":{"plain":8,"titled":7,"titledUnit":6},"note":{"plain":9,"titled":8,"titledUnit":7}},"accepts":["svg.custom","recipe.timeSeries"],"style":"plain"},{"box":{"x":40,"y":409,"width":392,"height":237},"lines":{"module":237,"inner":213,"body":{"plain":8,"titled":7,"titledUnit":6},"note":{"plain":9,"titled":8,"titledUnit":7}},"accepts":["svg.custom","recipe.timeSeries"],"style":"plain"},{"box":{"x":444,"y":409,"width":392,"height":237},"lines":{"module":237,"inner":213,"body":{"plain":8,"titled":7,"titledUnit":6},"note":{"plain":9,"titled":8,"titledUnit":7}},"accepts":["svg.custom","recipe.timeSeries"],"style":"plain"},{"box":{"x":848,"y":409,"width":392,"height":237},"lines":{"module":237,"inner":213,"body":{"plain":8,"titled":7,"titledUnit":6},"note":{"plain":9,"titled":8,"titledUnit":7}},"accepts":["svg.custom","recipe.timeSeries"],"style":"plain"}]},"4x3":{"fillRatio":1,"modules":[{"box":{"x":40,"y":152,"width":304,"height":272},"lines":{"module":272,"inner":248,"body":{"plain":10,"titled":8,"titledUnit":7},"note":{"plain":11,"titled":9,"titledUnit":8}},"accepts":["svg.custom","recipe.timeSeries"],"style":"plain"},{"box":{"x":360,"y":152,"width":304,"height":272},"lines":{"module":272,"inner":248,"body":{"plain":10,"titled":8,"titledUnit":7},"note":{"plain":11,"titled":9,"titledUnit":8}},"accepts":["svg.custom","recipe.timeSeries"],"style":"plain"},{"box":{"x":680,"y":152,"width":304,"height":272},"lines":{"module":272,"inner":248,"body":{"plain":10,"titled":8,"titledUnit":7},"note":{"plain":11,"titled":9,"titledUnit":8}},"accepts":["svg.custom","recipe.timeSeries"],"style":"plain"},{"box":{"x":40,"y":440,"width":304,"height":272},"lines":{"module":272,"inner":248,"body":{"plain":10,"titled":8,"titledUnit":7},"note":{"plain":11,"titled":9,"titledUnit":8}},"accepts":["svg.custom","recipe.timeSeries"],"style":"plain"},{"box":{"x":360,"y":440,"width":304,"height":272},"lines":{"module":272,"inner":248,"body":{"plain":10,"titled":8,"titledUnit":7},"note":{"plain":11,"titled":9,"titledUnit":8}},"accepts":["svg.custom","recipe.timeSeries"],"style":"plain"},{"box":{"x":680,"y":440,"width":304,"height":272},"lines":{"module":272,"inner":248,"body":{"plain":10,"titled":8,"titledUnit":7},"note":{"plain":11,"titled":9,"titledUnit":8}},"accepts":["svg.custom","recipe.timeSeries"],"style":"plain"}]}}},{"id":"L23","family":"甲","familyName":"单证据统领","master":"analysis","name":"主图 + 四项辅助证据","use":"一个主问题需要四个局部切片解释。适合总体趋势与区域、渠道或客户群核对。","path":"左侧趋势 → 右侧四项证据 → 检查解释是否一致。","trade":"主图跨 6 栏通高，右侧每格 3 栏 × 3 行。主图保留坐标空间，小格只承载短证据。","avoid":"辅助格里塞第二张图：它会被主图压到读不出细节，也会让主次消失。","fill":"tiled","modules":[{"c":1,"r":1,"w":6,"h":6,"slot":"chart","role":"primary","title":"主图"},{"c":7,"r":1,"w":3,"h":3,"slot":"kpi","role":"support","title":"辅助一"},{"c":10,"r":1,"w":3,"h":3,"slot":"kpi","role":"support","title":"辅助二"},{"c":7,"r":4,"w":3,"h":3,"slot":"kpi","role":"support","title":"辅助三"},{"c":10,"r":4,"w":3,"h":3,"slot":"kpi","role":"support","title":"辅助四"}],"constraint":"四个辅助格内区只有 267×213，放不下带坐标轴的图：格里只放指标卡、单一数值或一行标签。","measured":{"16x9":{"fillRatio":1,"modules":[{"box":{"x":40,"y":160,"width":594,"height":486},"lines":{"module":486,"inner":462,"body":{"plain":19,"titled":17,"titledUnit":16},"note":{"plain":21,"titled":19,"titledUnit":18}},"accepts":null,"style":"plain"},{"box":{"x":646,"y":160,"width":291,"height":237},"lines":{"module":237,"inner":213,"body":{"plain":8,"titled":7,"titledUnit":6},"note":{"plain":9,"titled":8,"titledUnit":7}},"accepts":null,"style":"plain"},{"box":{"x":949,"y":160,"width":291,"height":237},"lines":{"module":237,"inner":213,"body":{"plain":8,"titled":7,"titledUnit":6},"note":{"plain":9,"titled":8,"titledUnit":7}},"accepts":null,"style":"plain"},{"box":{"x":646,"y":409,"width":291,"height":237},"lines":{"module":237,"inner":213,"body":{"plain":8,"titled":7,"titledUnit":6},"note":{"plain":9,"titled":8,"titledUnit":7}},"accepts":null,"style":"plain"},{"box":{"x":949,"y":409,"width":291,"height":237},"lines":{"module":237,"inner":213,"body":{"plain":8,"titled":7,"titledUnit":6},"note":{"plain":9,"titled":8,"titledUnit":7}},"accepts":null,"style":"plain"}]},"4x3":{"fillRatio":1,"modules":[{"box":{"x":40,"y":152,"width":464,"height":560},"lines":{"module":560,"inner":536,"body":{"plain":22,"titled":20,"titledUnit":19},"note":{"plain":24,"titled":22,"titledUnit":21}},"accepts":null,"style":"plain"},{"box":{"x":520,"y":152,"width":224,"height":272},"lines":{"module":272,"inner":248,"body":{"plain":10,"titled":8,"titledUnit":7},"note":{"plain":11,"titled":9,"titledUnit":8}},"accepts":null,"style":"plain"},{"box":{"x":760,"y":152,"width":224,"height":272},"lines":{"module":272,"inner":248,"body":{"plain":10,"titled":8,"titledUnit":7},"note":{"plain":11,"titled":9,"titledUnit":8}},"accepts":null,"style":"plain"},{"box":{"x":520,"y":440,"width":224,"height":272},"lines":{"module":272,"inner":248,"body":{"plain":10,"titled":8,"titledUnit":7},"note":{"plain":11,"titled":9,"titledUnit":8}},"accepts":null,"style":"plain"},{"box":{"x":760,"y":440,"width":224,"height":272},"lines":{"module":272,"inner":248,"body":{"plain":10,"titled":8,"titledUnit":7},"note":{"plain":11,"titled":9,"titledUnit":8}},"accepts":null,"style":"plain"}]}}},{"id":"L24","family":"己","familyName":"综合与研判","master":"analysis","name":"议题—证据—含义双轨","use":"同页讨论两个相关议题，每个都需要独立证据和解读。适合专题诊断与投后跟踪。","path":"第一行从左向右 → 第二行同路径 → 比较两项优先级。","trade":"每轨占 3 行，列分别用于议题、证据和含义。保持行内对应，复杂议题可独立成页。","avoid":"两条轨同等重要才值得并排；两轨结论一致时改单轨，否则读者会问为什么分两行。","fill":"tiled","modules":[{"c":1,"r":1,"w":3,"h":3,"slot":"text","role":"context","title":"议题一"},{"c":4,"r":1,"w":5,"h":3,"slot":"chart","role":"primary","title":"证据一"},{"c":9,"r":1,"w":4,"h":3,"slot":"text","role":"implication","title":"含义一"},{"c":1,"r":4,"w":3,"h":3,"slot":"text","role":"context","title":"议题二"},{"c":4,"r":4,"w":5,"h":3,"slot":"chart","role":"evidence","title":"证据二"},{"c":9,"r":4,"w":4,"h":3,"slot":"text","role":"implication","title":"含义二"}],"measured":{"16x9":{"fillRatio":1,"modules":[{"box":{"x":40,"y":160,"width":291,"height":237},"lines":{"module":237,"inner":213,"body":{"plain":8,"titled":7,"titledUnit":6},"note":{"plain":9,"titled":8,"titledUnit":7}},"accepts":null,"style":"plain"},{"box":{"x":343,"y":160,"width":493,"height":237},"lines":{"module":237,"inner":213,"body":{"plain":8,"titled":7,"titledUnit":6},"note":{"plain":9,"titled":8,"titledUnit":7}},"accepts":null,"style":"plain"},{"box":{"x":848,"y":160,"width":392,"height":237},"lines":{"module":237,"inner":213,"body":{"plain":8,"titled":7,"titledUnit":6},"note":{"plain":9,"titled":8,"titledUnit":7}},"accepts":null,"style":"plain"},{"box":{"x":40,"y":409,"width":291,"height":237},"lines":{"module":237,"inner":213,"body":{"plain":8,"titled":7,"titledUnit":6},"note":{"plain":9,"titled":8,"titledUnit":7}},"accepts":null,"style":"plain"},{"box":{"x":343,"y":409,"width":493,"height":237},"lines":{"module":237,"inner":213,"body":{"plain":8,"titled":7,"titledUnit":6},"note":{"plain":9,"titled":8,"titledUnit":7}},"accepts":null,"style":"plain"},{"box":{"x":848,"y":409,"width":392,"height":237},"lines":{"module":237,"inner":213,"body":{"plain":8,"titled":7,"titledUnit":6},"note":{"plain":9,"titled":8,"titledUnit":7}},"accepts":null,"style":"plain"}]},"4x3":{"fillRatio":1,"modules":[{"box":{"x":40,"y":152,"width":224,"height":272},"lines":{"module":272,"inner":248,"body":{"plain":10,"titled":8,"titledUnit":7},"note":{"plain":11,"titled":9,"titledUnit":8}},"accepts":null,"style":"plain"},{"box":{"x":280,"y":152,"width":384,"height":272},"lines":{"module":272,"inner":248,"body":{"plain":10,"titled":8,"titledUnit":7},"note":{"plain":11,"titled":9,"titledUnit":8}},"accepts":null,"style":"plain"},{"box":{"x":680,"y":152,"width":304,"height":272},"lines":{"module":272,"inner":248,"body":{"plain":10,"titled":8,"titledUnit":7},"note":{"plain":11,"titled":9,"titledUnit":8}},"accepts":null,"style":"plain"},{"box":{"x":40,"y":440,"width":224,"height":272},"lines":{"module":272,"inner":248,"body":{"plain":10,"titled":8,"titledUnit":7},"note":{"plain":11,"titled":9,"titledUnit":8}},"accepts":null,"style":"plain"},{"box":{"x":280,"y":440,"width":384,"height":272},"lines":{"module":272,"inner":248,"body":{"plain":10,"titled":8,"titledUnit":7},"note":{"plain":11,"titled":9,"titledUnit":8}},"accepts":null,"style":"plain"},{"box":{"x":680,"y":440,"width":304,"height":272},"lines":{"module":272,"inner":248,"body":{"plain":10,"titled":8,"titledUnit":7},"note":{"plain":11,"titled":9,"titledUnit":8}},"accepts":null,"style":"plain"}]}}},{"id":"L25","family":"庚","familyName":"执行与治理","master":"analysis","name":"工作包 × 责任矩阵","use":"多个角色参与多个工作包。适合 RACI 分工、项目治理和跨团队交接。","path":"工作包 → 最终批准者 → 执行者 → 右侧例外与交接。","trade":"矩阵占 9 栏，例外占 3 栏。用共享角色表头节省重复文字；矩阵表达职责，不表达工作先后。","avoid":"角色超过 6 个或工作包超过 12 行时矩阵失去可读性；改用 L27 行动台账。","fill":"tiled","modules":[{"c":1,"r":1,"w":9,"h":6,"slot":"table","role":"primary","title":"责任矩阵","accepts":["html.matrix","html.table"]},{"c":10,"r":1,"w":3,"h":6,"slot":"panel","role":"support","title":"例外与交接"}],"constraint":"行是工作包、列是角色，格内写 R/A/C/I；空白格表示不参与，须在口径里说明。右栏是通用格：写职责口径、需要单独确认的格，或把责任分布做成一组卡。与 L17 同骨架而主格不同——主证据是矩阵选本条，是对照表选 L17。","measured":{"16x9":{"fillRatio":1,"modules":[{"box":{"x":40,"y":160,"width":897,"height":486},"lines":{"module":486,"inner":462,"body":{"plain":19,"titled":17,"titledUnit":16},"note":{"plain":21,"titled":19,"titledUnit":18}},"accepts":["html.matrix","html.table"],"style":"plain"},{"box":{"x":949,"y":160,"width":291,"height":486},"lines":{"module":486,"inner":462,"body":{"plain":19,"titled":17,"titledUnit":16},"note":{"plain":21,"titled":19,"titledUnit":18}},"accepts":null,"style":"plain"}]},"4x3":{"fillRatio":1,"modules":[{"box":{"x":40,"y":152,"width":704,"height":560},"lines":{"module":560,"inner":536,"body":{"plain":22,"titled":20,"titledUnit":19},"note":{"plain":24,"titled":22,"titledUnit":21}},"accepts":["html.matrix","html.table"],"style":"plain"},{"box":{"x":760,"y":152,"width":224,"height":560},"lines":{"module":560,"inner":536,"body":{"plain":22,"titled":20,"titledUnit":19},"note":{"plain":24,"titled":22,"titledUnit":21}},"accepts":null,"style":"plain"}]}}},{"id":"L26","family":"庚","familyName":"执行与治理","master":"analysis","name":"路线图 + 风险与门槛","use":"计划、风险与决策门槛需要同页管理。适合试点推广、系统迁移和项目评审。","path":"左上目标 → 左下阶段 → 右上风险 → 右下门槛。","trade":"左侧 8 栏按 2+4 行组织，右侧 4 栏按 4+2 行组织。风险不是额外流程节点，保持独立归属。","avoid":"不要把风险和里程碑画在同一根时间轴上：量尺不同，合并会让门槛看起来像里程碑。","fill":"tiled","modules":[{"c":1,"r":1,"w":8,"h":2,"slot":"timeline","role":"primary","title":"路线图主带","accepts":["svg.custom","diagram.process","kit.processFlow"]},{"c":1,"r":3,"w":8,"h":4,"slot":"table","role":"support","title":"里程碑与依赖"},{"c":9,"r":1,"w":4,"h":4,"slot":"table","role":"support","title":"风险清单"},{"c":9,"r":5,"w":4,"h":2,"slot":"text","role":"implication","title":"门槛与触发条件"}],"measured":{"16x9":{"fillRatio":1,"modules":[{"box":{"x":40,"y":160,"width":796,"height":154},"lines":{"module":154,"inner":130,"body":{"plain":5,"titled":4,"titledUnit":2},"note":{"plain":5,"titled":4,"titledUnit":3}},"accepts":["svg.custom","diagram.process","kit.processFlow"],"style":"plain"},{"box":{"x":40,"y":326,"width":796,"height":320},"lines":{"module":320,"inner":296,"body":{"plain":12,"titled":10,"titledUnit":9},"note":{"plain":13,"titled":11,"titledUnit":10}},"accepts":null,"style":"plain"},{"box":{"x":848,"y":160,"width":392,"height":320},"lines":{"module":320,"inner":296,"body":{"plain":12,"titled":10,"titledUnit":9},"note":{"plain":13,"titled":11,"titledUnit":10}},"accepts":null,"style":"plain"},{"box":{"x":848,"y":492,"width":392,"height":154},"lines":{"module":154,"inner":130,"body":{"plain":5,"titled":4,"titledUnit":2},"note":{"plain":5,"titled":4,"titledUnit":3}},"accepts":null,"style":"plain"}]},"4x3":{"fillRatio":1,"modules":[{"box":{"x":40,"y":152,"width":624,"height":176},"lines":{"module":176,"inner":152,"body":{"plain":6,"titled":4,"titledUnit":3},"note":{"plain":6,"titled":5,"titledUnit":4}},"accepts":["svg.custom","diagram.process","kit.processFlow"],"style":"plain"},{"box":{"x":40,"y":344,"width":624,"height":368},"lines":{"module":368,"inner":344,"body":{"plain":14,"titled":12,"titledUnit":11},"note":{"plain":15,"titled":14,"titledUnit":12}},"accepts":null,"style":"plain"},{"box":{"x":680,"y":152,"width":304,"height":368},"lines":{"module":368,"inner":344,"body":{"plain":14,"titled":12,"titledUnit":11},"note":{"plain":15,"titled":14,"titledUnit":12}},"accepts":null,"style":"plain"},{"box":{"x":680,"y":536,"width":304,"height":176},"lines":{"module":176,"inner":152,"body":{"plain":6,"titled":4,"titledUnit":3},"note":{"plain":6,"titled":5,"titledUnit":4}},"accepts":null,"style":"plain"}]}}},{"id":"L27","family":"庚","familyName":"执行与治理","master":"analysis","name":"行动台账 + 双侧约束","use":"多项短行动需要责任与时限，同时保留共同约束。适合复盘整改、运营例会和交付跟踪。","path":"左侧排序依据 → 中部逐项行动 → 右侧升级规则。","trade":"台账占 6 栏，双侧各占 3 栏。明细长句应改用全幅表格，不靠压缩字号承载。","avoid":"台账行数超过 12 行时一页读不完；按责任人或阶段拆两页，不要压缩行高。","fill":"tiled","modules":[{"c":1,"r":1,"w":3,"h":6,"slot":"text","role":"context","title":"约束与前提","style":"compact"},{"c":4,"r":1,"w":6,"h":6,"slot":"table","role":"primary","title":"行动台账"},{"c":10,"r":1,"w":3,"h":6,"slot":"text","role":"implication","title":"责任与验收","style":"compact"}],"measured":{"16x9":{"fillRatio":1,"modules":[{"box":{"x":40,"y":160,"width":291,"height":486},"lines":{"module":486,"inner":462,"body":{"plain":19,"titled":17,"titledUnit":16},"note":{"plain":21,"titled":19,"titledUnit":18}},"accepts":null,"style":"compact"},{"box":{"x":343,"y":160,"width":594,"height":486},"lines":{"module":486,"inner":462,"body":{"plain":19,"titled":17,"titledUnit":16},"note":{"plain":21,"titled":19,"titledUnit":18}},"accepts":null,"style":"plain"},{"box":{"x":949,"y":160,"width":291,"height":486},"lines":{"module":486,"inner":462,"body":{"plain":19,"titled":17,"titledUnit":16},"note":{"plain":21,"titled":19,"titledUnit":18}},"accepts":null,"style":"compact"}]},"4x3":{"fillRatio":1,"modules":[{"box":{"x":40,"y":152,"width":224,"height":560},"lines":{"module":560,"inner":536,"body":{"plain":22,"titled":20,"titledUnit":19},"note":{"plain":24,"titled":22,"titledUnit":21}},"accepts":null,"style":"compact"},{"box":{"x":280,"y":152,"width":464,"height":560},"lines":{"module":560,"inner":536,"body":{"plain":22,"titled":20,"titledUnit":19},"note":{"plain":24,"titled":22,"titledUnit":21}},"accepts":null,"style":"plain"},{"box":{"x":760,"y":152,"width":224,"height":560},"lines":{"module":560,"inner":536,"body":{"plain":22,"titled":20,"titledUnit":19},"note":{"plain":24,"titled":22,"titledUnit":21}},"accepts":null,"style":"compact"}]}}},{"id":"L28","family":"辛","familyName":"论述与查证","master":"analysis","name":"三栏研究论述","use":"文字论述多于数值比较。适合研究发现、访谈归纳、政策解读与方法说明。","path":"左栏现象 → 中栏解释 → 右栏边界与待验证事项。","trade":"三栏通高保持适宜行长，段落内部连续阅读。需要更长论证时拆页；引用和正文保持可辨识层级。","avoid":"三栏连续段落只适合无共同维度的论述；有可比数值时不要用文字排三栏。","fill":"tiled","modules":[{"c":1,"r":1,"w":4,"h":6,"slot":"text","role":"primary","title":"论点一"},{"c":5,"r":1,"w":4,"h":6,"slot":"text","role":"evidence","title":"论点二"},{"c":9,"r":1,"w":4,"h":6,"slot":"text","role":"support","title":"论点三"}],"measured":{"16x9":{"fillRatio":1,"modules":[{"box":{"x":40,"y":160,"width":392,"height":486},"lines":{"module":486,"inner":462,"body":{"plain":19,"titled":17,"titledUnit":16},"note":{"plain":21,"titled":19,"titledUnit":18}},"accepts":null,"style":"plain"},{"box":{"x":444,"y":160,"width":392,"height":486},"lines":{"module":486,"inner":462,"body":{"plain":19,"titled":17,"titledUnit":16},"note":{"plain":21,"titled":19,"titledUnit":18}},"accepts":null,"style":"plain"},{"box":{"x":848,"y":160,"width":392,"height":486},"lines":{"module":486,"inner":462,"body":{"plain":19,"titled":17,"titledUnit":16},"note":{"plain":21,"titled":19,"titledUnit":18}},"accepts":null,"style":"plain"}]},"4x3":{"fillRatio":1,"modules":[{"box":{"x":40,"y":152,"width":304,"height":560},"lines":{"module":560,"inner":536,"body":{"plain":22,"titled":20,"titledUnit":19},"note":{"plain":24,"titled":22,"titledUnit":21}},"accepts":null,"style":"plain"},{"box":{"x":360,"y":152,"width":304,"height":560},"lines":{"module":560,"inner":536,"body":{"plain":22,"titled":20,"titledUnit":19},"note":{"plain":24,"titled":22,"titledUnit":21}},"accepts":null,"style":"plain"},{"box":{"x":680,"y":152,"width":304,"height":560},"lines":{"module":560,"inner":536,"body":{"plain":22,"titled":20,"titledUnit":19},"note":{"plain":24,"titled":22,"titledUnit":21}},"accepts":null,"style":"plain"}]}}},{"id":"L29","family":"戊","familyName":"主辅互补","master":"analysis","name":"决策摘要 + 证据与异议","use":"决策者需要快速阅读结论，同时能检查主要证据与反对意见。适合立项与投资评审备忘录。","path":"顶部状态 → 左侧两组证据 → 右侧异议与条件。","trade":"摘要占 1 行；下方证据分 3+2 行，条件栏通高 5 行。状态只是入口，正文保留判断依据。","avoid":"决策摘要只能写一句可判断的话；写不下时说明这不是摘要，而是分析正文。","fill":"tiled","modules":[{"c":1,"r":1,"w":12,"h":1,"slot":"text","role":"primary","title":"决策摘要","style":"nohead"},{"c":1,"r":2,"w":8,"h":3,"slot":"chart","role":"support","title":"证据"},{"c":1,"r":5,"w":8,"h":2,"slot":"text","role":"support","title":"异议与限制"},{"c":9,"r":2,"w":4,"h":5,"slot":"kpi","role":"context","title":"关键指标"}],"measured":{"16x9":{"fillRatio":1,"modules":[{"box":{"x":40,"y":160,"width":1200,"height":71},"lines":{"module":71,"inner":47,"body":{"plain":1,"titled":0,"titledUnit":0},"note":{"plain":2,"titled":0,"titledUnit":0}},"accepts":null,"style":"nohead"},{"box":{"x":40,"y":243,"width":796,"height":237},"lines":{"module":237,"inner":213,"body":{"plain":8,"titled":7,"titledUnit":6},"note":{"plain":9,"titled":8,"titledUnit":7}},"accepts":null,"style":"plain"},{"box":{"x":40,"y":492,"width":796,"height":154},"lines":{"module":154,"inner":130,"body":{"plain":5,"titled":4,"titledUnit":2},"note":{"plain":5,"titled":4,"titledUnit":3}},"accepts":null,"style":"plain"},{"box":{"x":848,"y":243,"width":392,"height":403},"lines":{"module":403,"inner":379,"body":{"plain":15,"titled":14,"titledUnit":13},"note":{"plain":17,"titled":15,"titledUnit":14}},"accepts":null,"style":"plain"}]},"4x3":{"fillRatio":1,"modules":[{"box":{"x":40,"y":152,"width":944,"height":80},"lines":{"module":80,"inner":56,"body":{"plain":2,"titled":0,"titledUnit":0},"note":{"plain":2,"titled":1,"titledUnit":0}},"accepts":null,"style":"nohead"},{"box":{"x":40,"y":248,"width":624,"height":272},"lines":{"module":272,"inner":248,"body":{"plain":10,"titled":8,"titledUnit":7},"note":{"plain":11,"titled":9,"titledUnit":8}},"accepts":null,"style":"plain"},{"box":{"x":40,"y":536,"width":624,"height":176},"lines":{"module":176,"inner":152,"body":{"plain":6,"titled":4,"titledUnit":3},"note":{"plain":6,"titled":5,"titledUnit":4}},"accepts":null,"style":"plain"},{"box":{"x":680,"y":248,"width":304,"height":464},"lines":{"module":464,"inner":440,"body":{"plain":18,"titled":16,"titledUnit":15},"note":{"plain":20,"titled":18,"titledUnit":17}},"accepts":null,"style":"plain"}]}}},{"id":"L30","family":"己","familyName":"综合与研判","master":"analysis","name":"双方案 + 三项敏感条件","use":"两项方案的优劣取决于多个外部条件。适合采购、架构选型和资源配置。","path":"上部对照方案 → 下部逐项核验条件 → 回到选择。","trade":"上下各占 3 行，上部双栏、下部三栏。下部条件共同作用于方案，不暗示一一对应。","avoid":"两个方案必须用同一评价框架；各自挑对自己有利的指标比法会读成两组数据。","fill":"tiled","modules":[{"c":1,"r":1,"w":6,"h":3,"slot":"chart","role":"primary","title":"方案 A"},{"c":7,"r":1,"w":6,"h":3,"slot":"chart","role":"evidence","title":"方案 B"},{"c":1,"r":4,"w":4,"h":3,"slot":"text","role":"support","title":"敏感条件一"},{"c":5,"r":4,"w":4,"h":3,"slot":"text","role":"support","title":"敏感条件二"},{"c":9,"r":4,"w":4,"h":3,"slot":"text","role":"support","title":"敏感条件三"}],"measured":{"16x9":{"fillRatio":1,"modules":[{"box":{"x":40,"y":160,"width":594,"height":237},"lines":{"module":237,"inner":213,"body":{"plain":8,"titled":7,"titledUnit":6},"note":{"plain":9,"titled":8,"titledUnit":7}},"accepts":null,"style":"plain"},{"box":{"x":646,"y":160,"width":594,"height":237},"lines":{"module":237,"inner":213,"body":{"plain":8,"titled":7,"titledUnit":6},"note":{"plain":9,"titled":8,"titledUnit":7}},"accepts":null,"style":"plain"},{"box":{"x":40,"y":409,"width":392,"height":237},"lines":{"module":237,"inner":213,"body":{"plain":8,"titled":7,"titledUnit":6},"note":{"plain":9,"titled":8,"titledUnit":7}},"accepts":null,"style":"plain"},{"box":{"x":444,"y":409,"width":392,"height":237},"lines":{"module":237,"inner":213,"body":{"plain":8,"titled":7,"titledUnit":6},"note":{"plain":9,"titled":8,"titledUnit":7}},"accepts":null,"style":"plain"},{"box":{"x":848,"y":409,"width":392,"height":237},"lines":{"module":237,"inner":213,"body":{"plain":8,"titled":7,"titledUnit":6},"note":{"plain":9,"titled":8,"titledUnit":7}},"accepts":null,"style":"plain"}]},"4x3":{"fillRatio":1,"modules":[{"box":{"x":40,"y":152,"width":464,"height":272},"lines":{"module":272,"inner":248,"body":{"plain":10,"titled":8,"titledUnit":7},"note":{"plain":11,"titled":9,"titledUnit":8}},"accepts":null,"style":"plain"},{"box":{"x":520,"y":152,"width":464,"height":272},"lines":{"module":272,"inner":248,"body":{"plain":10,"titled":8,"titledUnit":7},"note":{"plain":11,"titled":9,"titledUnit":8}},"accepts":null,"style":"plain"},{"box":{"x":40,"y":440,"width":304,"height":272},"lines":{"module":272,"inner":248,"body":{"plain":10,"titled":8,"titledUnit":7},"note":{"plain":11,"titled":9,"titledUnit":8}},"accepts":null,"style":"plain"},{"box":{"x":360,"y":440,"width":304,"height":272},"lines":{"module":272,"inner":248,"body":{"plain":10,"titled":8,"titledUnit":7},"note":{"plain":11,"titled":9,"titledUnit":8}},"accepts":null,"style":"plain"},{"box":{"x":680,"y":440,"width":304,"height":272},"lines":{"module":272,"inner":248,"body":{"plain":10,"titled":8,"titledUnit":7},"note":{"plain":11,"titled":9,"titledUnit":8}},"accepts":null,"style":"plain"}]}}},{"id":"L31","family":"结","familyName":"结构页","master":"cover","name":"封面 · 三段式","use":"报告封面。识别报告、范围与核心命题，并给出阅读标记。","path":"顶栏识别 → 中下部标题组（报告名、核心主张）→ 钉底元信息。","trade":"报告名是唯一视觉焦点；不出现页结论标题、模块标题、卡片或图表。","avoid":"封面不出现页结论标题、模块标题、卡片或图表；也不要把目录塞进封面。","fill":"open","modules":[{"c":1,"r":1,"w":12,"h":1,"slot":"text","role":"context","title":"顶栏识别","style":"nohead"},{"c":1,"r":2,"w":9,"h":3,"slot":"text","role":"primary","title":"报告名与核心命题","style":"nohead"},{"c":1,"r":6,"w":12,"h":1,"slot":"text","role":"context","title":"元信息","style":"nohead"}],"openWhy":"封面靠大面留白把报告名推成唯一焦点；填满网格会让封面读成正文第一页。","measured":{"16x9":{"fillRatio":0.7083333333333334,"modules":[{"box":{"x":40,"y":160,"width":1200,"height":71},"lines":{"module":71,"inner":47,"body":{"plain":1,"titled":0,"titledUnit":0},"note":{"plain":2,"titled":0,"titledUnit":0}},"accepts":null,"style":"nohead"},{"box":{"x":40,"y":243,"width":897,"height":237},"lines":{"module":237,"inner":213,"body":{"plain":8,"titled":7,"titledUnit":6},"note":{"plain":9,"titled":8,"titledUnit":7}},"accepts":null,"style":"nohead"},{"box":{"x":40,"y":575,"width":1200,"height":71},"lines":{"module":71,"inner":47,"body":{"plain":1,"titled":0,"titledUnit":0},"note":{"plain":2,"titled":0,"titledUnit":0}},"accepts":null,"style":"nohead"}]},"4x3":{"fillRatio":0.7083333333333334,"modules":[{"box":{"x":40,"y":152,"width":944,"height":80},"lines":{"module":80,"inner":56,"body":{"plain":2,"titled":0,"titledUnit":0},"note":{"plain":2,"titled":1,"titledUnit":0}},"accepts":null,"style":"nohead"},{"box":{"x":40,"y":248,"width":704,"height":272},"lines":{"module":272,"inner":248,"body":{"plain":10,"titled":8,"titledUnit":7},"note":{"plain":11,"titled":9,"titledUnit":8}},"accepts":null,"style":"nohead"},{"box":{"x":40,"y":632,"width":944,"height":80},"lines":{"module":80,"inner":56,"body":{"plain":2,"titled":0,"titledUnit":0},"note":{"plain":2,"titled":1,"titledUnit":0}},"accepts":null,"style":"nohead"}]}}},{"id":"L32","family":"结","familyName":"结构页","master":"contents","name":"目录 · 结构面 + 章详","use":"全篇路线图。让读者在进入正文前看到章节顺序、每章问题与页范围。","path":"页标题与范围 → 六章结构条（章号、章名、页范围）→ 每章问题与结论。","trade":"章节导航占满内容区；不在此页展开证据，不暗示行业必然发展阶段。","avoid":"章节超过 6 章时目录会挤；改 L33 问题横带，或把章详拆两页。","fill":"tiled","modules":[{"c":1,"r":1,"w":12,"h":2,"slot":"text","role":"primary","title":"结构面"},{"c":1,"r":3,"w":4,"h":2,"slot":"text","role":"support","title":"章详一"},{"c":5,"r":3,"w":4,"h":2,"slot":"text","role":"support","title":"章详二"},{"c":9,"r":3,"w":4,"h":2,"slot":"text","role":"support","title":"章详三"},{"c":1,"r":5,"w":4,"h":2,"slot":"text","role":"support","title":"章详四"},{"c":5,"r":5,"w":4,"h":2,"slot":"text","role":"support","title":"章详五"},{"c":9,"r":5,"w":4,"h":2,"slot":"text","role":"support","title":"章详六"}],"measured":{"16x9":{"fillRatio":1,"modules":[{"box":{"x":40,"y":160,"width":1200,"height":154},"lines":{"module":154,"inner":130,"body":{"plain":5,"titled":4,"titledUnit":2},"note":{"plain":5,"titled":4,"titledUnit":3}},"accepts":null,"style":"plain"},{"box":{"x":40,"y":326,"width":392,"height":154},"lines":{"module":154,"inner":130,"body":{"plain":5,"titled":4,"titledUnit":2},"note":{"plain":5,"titled":4,"titledUnit":3}},"accepts":null,"style":"plain"},{"box":{"x":444,"y":326,"width":392,"height":154},"lines":{"module":154,"inner":130,"body":{"plain":5,"titled":4,"titledUnit":2},"note":{"plain":5,"titled":4,"titledUnit":3}},"accepts":null,"style":"plain"},{"box":{"x":848,"y":326,"width":392,"height":154},"lines":{"module":154,"inner":130,"body":{"plain":5,"titled":4,"titledUnit":2},"note":{"plain":5,"titled":4,"titledUnit":3}},"accepts":null,"style":"plain"},{"box":{"x":40,"y":492,"width":392,"height":154},"lines":{"module":154,"inner":130,"body":{"plain":5,"titled":4,"titledUnit":2},"note":{"plain":5,"titled":4,"titledUnit":3}},"accepts":null,"style":"plain"},{"box":{"x":444,"y":492,"width":392,"height":154},"lines":{"module":154,"inner":130,"body":{"plain":5,"titled":4,"titledUnit":2},"note":{"plain":5,"titled":4,"titledUnit":3}},"accepts":null,"style":"plain"},{"box":{"x":848,"y":492,"width":392,"height":154},"lines":{"module":154,"inner":130,"body":{"plain":5,"titled":4,"titledUnit":2},"note":{"plain":5,"titled":4,"titledUnit":3}},"accepts":null,"style":"plain"}]},"4x3":{"fillRatio":1,"modules":[{"box":{"x":40,"y":152,"width":944,"height":176},"lines":{"module":176,"inner":152,"body":{"plain":6,"titled":4,"titledUnit":3},"note":{"plain":6,"titled":5,"titledUnit":4}},"accepts":null,"style":"plain"},{"box":{"x":40,"y":344,"width":304,"height":176},"lines":{"module":176,"inner":152,"body":{"plain":6,"titled":4,"titledUnit":3},"note":{"plain":6,"titled":5,"titledUnit":4}},"accepts":null,"style":"plain"},{"box":{"x":360,"y":344,"width":304,"height":176},"lines":{"module":176,"inner":152,"body":{"plain":6,"titled":4,"titledUnit":3},"note":{"plain":6,"titled":5,"titledUnit":4}},"accepts":null,"style":"plain"},{"box":{"x":680,"y":344,"width":304,"height":176},"lines":{"module":176,"inner":152,"body":{"plain":6,"titled":4,"titledUnit":3},"note":{"plain":6,"titled":5,"titledUnit":4}},"accepts":null,"style":"plain"},{"box":{"x":40,"y":536,"width":304,"height":176},"lines":{"module":176,"inner":152,"body":{"plain":6,"titled":4,"titledUnit":3},"note":{"plain":6,"titled":5,"titledUnit":4}},"accepts":null,"style":"plain"},{"box":{"x":360,"y":536,"width":304,"height":176},"lines":{"module":176,"inner":152,"body":{"plain":6,"titled":4,"titledUnit":3},"note":{"plain":6,"titled":5,"titledUnit":4}},"accepts":null,"style":"plain"},{"box":{"x":680,"y":536,"width":304,"height":176},"lines":{"module":176,"inner":152,"body":{"plain":6,"titled":4,"titledUnit":3},"note":{"plain":6,"titled":5,"titledUnit":4}},"accepts":null,"style":"plain"}]}}},{"id":"L33","family":"结","familyName":"结构页","master":"contents","name":"路线图 · 六问题横带","use":"章节路线较窄或章节更多时的横向替代；每章一条结构带加一句问题。","path":"页标题 → 六条横带（章号、章名、页范围、问题）。","trade":"横向密度更高，不再承载每章结论；与 atlas-32 二选一。 参考版此处为六问横带；本版按 6 行网格给 1 条主张带 + 4 行问题位，超过 4 个问题分两页。","avoid":"问题超过 4 个时不要硬压：横带的每一行都要能一眼读完。","fill":"tiled","modules":[{"c":1,"r":1,"w":12,"h":2,"slot":"text","role":"primary","title":"路线图主张","style":"nohead"},{"c":1,"r":3,"w":12,"h":1,"slot":"text","role":"support","title":"问题一"},{"c":1,"r":4,"w":12,"h":1,"slot":"text","role":"support","title":"问题二"},{"c":1,"r":5,"w":12,"h":1,"slot":"text","role":"support","title":"问题三"},{"c":1,"r":6,"w":12,"h":1,"slot":"text","role":"support","title":"问题四"}],"measured":{"16x9":{"fillRatio":1,"modules":[{"box":{"x":40,"y":160,"width":1200,"height":154},"lines":{"module":154,"inner":130,"body":{"plain":5,"titled":4,"titledUnit":2},"note":{"plain":5,"titled":4,"titledUnit":3}},"accepts":null,"style":"nohead"},{"box":{"x":40,"y":326,"width":1200,"height":71},"lines":{"module":71,"inner":47,"body":{"plain":1,"titled":0,"titledUnit":0},"note":{"plain":2,"titled":0,"titledUnit":0}},"accepts":null,"style":"plain"},{"box":{"x":40,"y":409,"width":1200,"height":71},"lines":{"module":71,"inner":47,"body":{"plain":1,"titled":0,"titledUnit":0},"note":{"plain":2,"titled":0,"titledUnit":0}},"accepts":null,"style":"plain"},{"box":{"x":40,"y":492,"width":1200,"height":71},"lines":{"module":71,"inner":47,"body":{"plain":1,"titled":0,"titledUnit":0},"note":{"plain":2,"titled":0,"titledUnit":0}},"accepts":null,"style":"plain"},{"box":{"x":40,"y":575,"width":1200,"height":71},"lines":{"module":71,"inner":47,"body":{"plain":1,"titled":0,"titledUnit":0},"note":{"plain":2,"titled":0,"titledUnit":0}},"accepts":null,"style":"plain"}]},"4x3":{"fillRatio":1,"modules":[{"box":{"x":40,"y":152,"width":944,"height":176},"lines":{"module":176,"inner":152,"body":{"plain":6,"titled":4,"titledUnit":3},"note":{"plain":6,"titled":5,"titledUnit":4}},"accepts":null,"style":"nohead"},{"box":{"x":40,"y":344,"width":944,"height":80},"lines":{"module":80,"inner":56,"body":{"plain":2,"titled":0,"titledUnit":0},"note":{"plain":2,"titled":1,"titledUnit":0}},"accepts":null,"style":"plain"},{"box":{"x":40,"y":440,"width":944,"height":80},"lines":{"module":80,"inner":56,"body":{"plain":2,"titled":0,"titledUnit":0},"note":{"plain":2,"titled":1,"titledUnit":0}},"accepts":null,"style":"plain"},{"box":{"x":40,"y":536,"width":944,"height":80},"lines":{"module":80,"inner":56,"body":{"plain":2,"titled":0,"titledUnit":0},"note":{"plain":2,"titled":1,"titledUnit":0}},"accepts":null,"style":"plain"},{"box":{"x":40,"y":632,"width":944,"height":80},"lines":{"module":80,"inner":56,"body":{"plain":2,"titled":0,"titledUnit":0},"note":{"plain":2,"titled":1,"titledUnit":0}},"accepts":null,"style":"plain"}]}}},{"id":"L34","family":"结","familyName":"结构页","master":"divider","name":"章节导读 · 章号主导","use":"章节转场。让读者知道进入第几章、这一章解决什么问题、结论是什么。","path":"大章号（作背景层级）→ 章名 → 本章问题 → 本章结论；页范围钉右上。","trade":"单轴布局，右侧留白属于设计；不在此页放证据或图表。","avoid":"导读页不要放证据或图表；本章的具体判断留给正文第一页。","fill":"open","modules":[{"c":1,"r":1,"w":5,"h":3,"slot":"text","role":"primary","title":"章号与章名","style":"nohead"},{"c":1,"r":4,"w":12,"h":1,"slot":"text","role":"support","title":"本章要回答的问题"},{"c":1,"r":5,"w":12,"h":2,"slot":"text","role":"support","title":"看完能判断什么"}],"openWhy":"章节导读靠留白建立节奏：它不承担证据，只建立阅读预期。","measured":{"16x9":{"fillRatio":0.7083333333333334,"modules":[{"box":{"x":40,"y":160,"width":493,"height":237},"lines":{"module":237,"inner":213,"body":{"plain":8,"titled":7,"titledUnit":6},"note":{"plain":9,"titled":8,"titledUnit":7}},"accepts":null,"style":"nohead"},{"box":{"x":40,"y":409,"width":1200,"height":71},"lines":{"module":71,"inner":47,"body":{"plain":1,"titled":0,"titledUnit":0},"note":{"plain":2,"titled":0,"titledUnit":0}},"accepts":null,"style":"plain"},{"box":{"x":40,"y":492,"width":1200,"height":154},"lines":{"module":154,"inner":130,"body":{"plain":5,"titled":4,"titledUnit":2},"note":{"plain":5,"titled":4,"titledUnit":3}},"accepts":null,"style":"plain"}]},"4x3":{"fillRatio":0.7083333333333334,"modules":[{"box":{"x":40,"y":152,"width":384,"height":272},"lines":{"module":272,"inner":248,"body":{"plain":10,"titled":8,"titledUnit":7},"note":{"plain":11,"titled":9,"titledUnit":8}},"accepts":null,"style":"nohead"},{"box":{"x":40,"y":440,"width":944,"height":80},"lines":{"module":80,"inner":56,"body":{"plain":2,"titled":0,"titledUnit":0},"note":{"plain":2,"titled":1,"titledUnit":0}},"accepts":null,"style":"plain"},{"box":{"x":40,"y":536,"width":944,"height":176},"lines":{"module":176,"inner":152,"body":{"plain":6,"titled":4,"titledUnit":3},"note":{"plain":6,"titled":5,"titledUnit":4}},"accepts":null,"style":"plain"}]}}},{"id":"L35","family":"结","familyName":"结构页","master":"divider","name":"章节导读 · 章号 + 判断清单","use":"章内子问题较多时，在导读页列出本章将展开的判断（须来自已冻结内容）。","path":"章号 → 章名 → 本章问题 → 本章将展开的判断（逐条一行）。","trade":"判断条目必须是主笔产出的冻结内容，不能由排版环节概括生成。","avoid":"判断清单超过 4 条时改正文页：导读页的判断只是本章结论的预告，不是完整论证。","fill":"open","modules":[{"c":1,"r":1,"w":5,"h":2,"slot":"text","role":"primary","title":"章号与章名","style":"nohead"},{"c":1,"r":3,"w":10,"h":1,"slot":"text","role":"support","title":"本章要回答的问题"},{"c":1,"r":4,"w":9,"h":1,"slot":"text","role":"support","title":"判断清单一"},{"c":1,"r":5,"w":9,"h":2,"slot":"text","role":"support","title":"判断清单二"}],"openWhy":"章号与判断清单之外保持空白，读者才不会把导读页当成结论页。","measured":{"16x9":{"fillRatio":0.6527777777777778,"modules":[{"box":{"x":40,"y":160,"width":493,"height":154},"lines":{"module":154,"inner":130,"body":{"plain":5,"titled":4,"titledUnit":2},"note":{"plain":5,"titled":4,"titledUnit":3}},"accepts":null,"style":"nohead"},{"box":{"x":40,"y":326,"width":998,"height":71},"lines":{"module":71,"inner":47,"body":{"plain":1,"titled":0,"titledUnit":0},"note":{"plain":2,"titled":0,"titledUnit":0}},"accepts":null,"style":"plain"},{"box":{"x":40,"y":409,"width":897,"height":71},"lines":{"module":71,"inner":47,"body":{"plain":1,"titled":0,"titledUnit":0},"note":{"plain":2,"titled":0,"titledUnit":0}},"accepts":null,"style":"plain"},{"box":{"x":40,"y":492,"width":897,"height":154},"lines":{"module":154,"inner":130,"body":{"plain":5,"titled":4,"titledUnit":2},"note":{"plain":5,"titled":4,"titledUnit":3}},"accepts":null,"style":"plain"}]},"4x3":{"fillRatio":0.6527777777777778,"modules":[{"box":{"x":40,"y":152,"width":384,"height":176},"lines":{"module":176,"inner":152,"body":{"plain":6,"titled":4,"titledUnit":3},"note":{"plain":6,"titled":5,"titledUnit":4}},"accepts":null,"style":"nohead"},{"box":{"x":40,"y":344,"width":784,"height":80},"lines":{"module":80,"inner":56,"body":{"plain":2,"titled":0,"titledUnit":0},"note":{"plain":2,"titled":1,"titledUnit":0}},"accepts":null,"style":"plain"},{"box":{"x":40,"y":440,"width":704,"height":80},"lines":{"module":80,"inner":56,"body":{"plain":2,"titled":0,"titledUnit":0},"note":{"plain":2,"titled":1,"titledUnit":0}},"accepts":null,"style":"plain"},{"box":{"x":40,"y":536,"width":704,"height":176},"lines":{"module":176,"inner":152,"body":{"plain":6,"titled":4,"titledUnit":3},"note":{"plain":6,"titled":5,"titledUnit":4}},"accepts":null,"style":"plain"}]}}},{"id":"L36","family":"己","familyName":"综合与研判","master":"closing","name":"结论 · 结论面 + 行动分条","use":"给出结论与下一步，并说明触发条件。","path":"页结论 → 主证据或阶段链 → 结论面 → 三栏条件与行动。","trade":"条件与行动必须与结论面同级可见，不能压进来源区。","avoid":"行动条目不写负责人与时限就只是愿望；超过三条时改 L27 行动台账。","fill":"tiled","modules":[{"c":1,"r":1,"w":12,"h":4,"slot":"text","role":"primary","title":"结论面","style":"finding"},{"c":1,"r":5,"w":4,"h":2,"slot":"text","role":"support","title":"行动一"},{"c":5,"r":5,"w":4,"h":2,"slot":"text","role":"support","title":"行动二"},{"c":9,"r":5,"w":4,"h":2,"slot":"text","role":"support","title":"行动三"}],"measured":{"16x9":{"fillRatio":1,"modules":[{"box":{"x":40,"y":160,"width":1200,"height":320},"lines":{"module":320,"inner":296,"body":{"plain":12,"titled":10,"titledUnit":9},"note":{"plain":13,"titled":11,"titledUnit":10}},"accepts":null,"style":"finding"},{"box":{"x":40,"y":492,"width":392,"height":154},"lines":{"module":154,"inner":130,"body":{"plain":5,"titled":4,"titledUnit":2},"note":{"plain":5,"titled":4,"titledUnit":3}},"accepts":null,"style":"plain"},{"box":{"x":444,"y":492,"width":392,"height":154},"lines":{"module":154,"inner":130,"body":{"plain":5,"titled":4,"titledUnit":2},"note":{"plain":5,"titled":4,"titledUnit":3}},"accepts":null,"style":"plain"},{"box":{"x":848,"y":492,"width":392,"height":154},"lines":{"module":154,"inner":130,"body":{"plain":5,"titled":4,"titledUnit":2},"note":{"plain":5,"titled":4,"titledUnit":3}},"accepts":null,"style":"plain"}]},"4x3":{"fillRatio":1,"modules":[{"box":{"x":40,"y":152,"width":944,"height":368},"lines":{"module":368,"inner":344,"body":{"plain":14,"titled":12,"titledUnit":11},"note":{"plain":15,"titled":14,"titledUnit":12}},"accepts":null,"style":"finding"},{"box":{"x":40,"y":536,"width":304,"height":176},"lines":{"module":176,"inner":152,"body":{"plain":6,"titled":4,"titledUnit":3},"note":{"plain":6,"titled":5,"titledUnit":4}},"accepts":null,"style":"plain"},{"box":{"x":360,"y":536,"width":304,"height":176},"lines":{"module":176,"inner":152,"body":{"plain":6,"titled":4,"titledUnit":3},"note":{"plain":6,"titled":5,"titledUnit":4}},"accepts":null,"style":"plain"},{"box":{"x":680,"y":536,"width":304,"height":176},"lines":{"module":176,"inner":152,"body":{"plain":6,"titled":4,"titledUnit":3},"note":{"plain":6,"titled":5,"titledUnit":4}},"accepts":null,"style":"plain"}]}}},{"id":"L37","family":"己","familyName":"综合与研判","master":"closing","name":"结论 · 假设—验证—反证三轨","use":"投资或行动假设需要同时呈现支持与反对证据时使用。","path":"页结论 → 逐组三轨（假设、可验证证据、反证或边界）。","trade":"三轨必须共用同一字段结构；不得只列支持证据。","avoid":"反证轨必须真的能推翻结论；只写“风险可控”会让整页失去可证伪性。","fill":"tiled","modules":[{"c":1,"r":1,"w":12,"h":1,"slot":"text","role":"primary","title":"结论","style":"nohead"},{"c":1,"r":2,"w":12,"h":2,"slot":"table","role":"support","title":"假设与验证"},{"c":1,"r":4,"w":12,"h":3,"slot":"chart","role":"support","title":"反证与边界"}],"measured":{"16x9":{"fillRatio":1,"modules":[{"box":{"x":40,"y":160,"width":1200,"height":71},"lines":{"module":71,"inner":47,"body":{"plain":1,"titled":0,"titledUnit":0},"note":{"plain":2,"titled":0,"titledUnit":0}},"accepts":null,"style":"nohead"},{"box":{"x":40,"y":243,"width":1200,"height":154},"lines":{"module":154,"inner":130,"body":{"plain":5,"titled":4,"titledUnit":2},"note":{"plain":5,"titled":4,"titledUnit":3}},"accepts":null,"style":"plain"},{"box":{"x":40,"y":409,"width":1200,"height":237},"lines":{"module":237,"inner":213,"body":{"plain":8,"titled":7,"titledUnit":6},"note":{"plain":9,"titled":8,"titledUnit":7}},"accepts":null,"style":"plain"}]},"4x3":{"fillRatio":1,"modules":[{"box":{"x":40,"y":152,"width":944,"height":80},"lines":{"module":80,"inner":56,"body":{"plain":2,"titled":0,"titledUnit":0},"note":{"plain":2,"titled":1,"titledUnit":0}},"accepts":null,"style":"nohead"},{"box":{"x":40,"y":248,"width":944,"height":176},"lines":{"module":176,"inner":152,"body":{"plain":6,"titled":4,"titledUnit":3},"note":{"plain":6,"titled":5,"titledUnit":4}},"accepts":null,"style":"plain"},{"box":{"x":40,"y":440,"width":944,"height":272},"lines":{"module":272,"inner":248,"body":{"plain":10,"titled":8,"titledUnit":7},"note":{"plain":11,"titled":9,"titledUnit":8}},"accepts":null,"style":"plain"}]}}},{"id":"L38","family":"辛","familyName":"论述与查证","master":"references","name":"附录 · 全宽来源索引表","use":"附录的来源定位与复算入口，供读者精确检索。","path":"页结论 → 全宽表头带 → 来源索引表 → 复核说明。","trade":"稳定表格层级与单位规则优先于视觉变化；不留无用途空带。","avoid":"来源索引要能被逐条核对：缺页码、缺口径、缺发布日期的条目不要放进索引。","fill":"tiled","modules":[{"c":1,"r":1,"w":12,"h":4,"slot":"table","role":"primary","title":"来源索引表","accepts":["html.table"]},{"c":1,"r":5,"w":6,"h":2,"slot":"text","role":"context","title":"口径与术语"},{"c":7,"r":5,"w":6,"h":2,"slot":"text","role":"context","title":"未采用材料"}],"measured":{"16x9":{"fillRatio":1,"modules":[{"box":{"x":40,"y":160,"width":1200,"height":320},"lines":{"module":320,"inner":296,"body":{"plain":12,"titled":10,"titledUnit":9},"note":{"plain":13,"titled":11,"titledUnit":10}},"accepts":["html.table"],"style":"plain"},{"box":{"x":40,"y":492,"width":594,"height":154},"lines":{"module":154,"inner":130,"body":{"plain":5,"titled":4,"titledUnit":2},"note":{"plain":5,"titled":4,"titledUnit":3}},"accepts":null,"style":"plain"},{"box":{"x":646,"y":492,"width":594,"height":154},"lines":{"module":154,"inner":130,"body":{"plain":5,"titled":4,"titledUnit":2},"note":{"plain":5,"titled":4,"titledUnit":3}},"accepts":null,"style":"plain"}]},"4x3":{"fillRatio":1,"modules":[{"box":{"x":40,"y":152,"width":944,"height":368},"lines":{"module":368,"inner":344,"body":{"plain":14,"titled":12,"titledUnit":11},"note":{"plain":15,"titled":14,"titledUnit":12}},"accepts":["html.table"],"style":"plain"},{"box":{"x":40,"y":536,"width":464,"height":176},"lines":{"module":176,"inner":152,"body":{"plain":6,"titled":4,"titledUnit":3},"note":{"plain":6,"titled":5,"titledUnit":4}},"accepts":null,"style":"plain"},{"box":{"x":520,"y":536,"width":464,"height":176},"lines":{"module":176,"inner":152,"body":{"plain":6,"titled":4,"titledUnit":3},"note":{"plain":6,"titled":5,"titledUnit":4}},"accepts":null,"style":"plain"}]}}}]}
+</script>
 <script>
-"use strict";
-const CAT = JSON.parse(document.getElementById('layout-catalog').textContent);
-const FAMS = [...new Set(CAT.map(e => e.family))];
+'use strict';
+const D = JSON.parse(document.getElementById('atlas-data').textContent);
+const SLOT_COLOR = {chart:'#000080',table:'#007A78',diagram:'#8652A0',kpi:'#9C5C14',
+  timeline:'#1F6FB2',text:'#50606E',annotation:'#9B4566',panel:'#445563'};
+const FORM_LABEL = Object.fromEntries(D.forms.all.map(f => [f.id, f.label || f.id]));
+const FAMILY_LABEL = D.forms.families;
+const slotColor = slot => SLOT_COLOR[slot] || '#667586';
+const byId = Object.fromEntries(D.layouts.map(l => [l.id, l]));
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
-/* 几何：与 assets/consulting-layouts.css / deck-typography.js 逐字对齐 */
-const G = {
-  W:1280, H:720, padT:32, padX:40, padB:26, contentW:1200, contentH:662,
-  titleLH:32*1.28, titleMB:8, leadLH:15*1.45, bodyMT:16, bodyGap:20, srcLH:12*1.35, srcMT:12
+/* 可填形式：目录写了 accepts 就按 accepts 收窄，没写就是整个槽位能装的形式。
+   这正是作者选型时要看的那句话——"这一格我能放什么"。 */
+const acceptsText = (mod, accepts, slot) => {
+  if (accepts && accepts.length) {
+    return accepts.map(t => t.indexOf('family:') === 0 ? (FAMILY_LABEL[t.slice(7)] || t) + '（整族）' : (FORM_LABEL[t] || t)).join('、');
+  }
+  const pool = D.forms.slotForms[slot] || [];
+  return pool.length ? '槽位通用：' + pool.map(f => FORM_LABEL[f] || f).join('、') : '槽位不接受形式声明';
 };
-const bodyH = n => G.contentH - (n*G.titleLH + G.titleMB + G.leadLH) - G.bodyMT;
-const budget = (n, srcIn) => srcIn
-  ? bodyH(n) - G.bodyGap - (G.srcLH + G.srcMT)
-  : bodyH(n) - G.srcMT - G.srcLH;
 
-const TITLE = {
-  page:{ one:'商超渠道是净下滑的主要来源',
-         two:'商超渠道是净下滑的主要来源，电商增长只能抵消约三分之一，且新增门店尚未进入成熟期' },
-  chapter:{ one:'第三章 渠道结构的变化',
-            two:'第三章 渠道结构的变化，以及它对三年增长目标的实际影响与仍需继续验证的假设' }
-};
-const LEAD = '口径：2023–2025 年可比口径，含直营与经销；样本为 12 个重点城市。';
-const SRC  = '来源：公司年报（2025）、渠道调研访谈（n=18）；完整口径见附录 A。';
+const state = {ratio:'16x9', mode:'wire', grid:true, safe:true, current:null, view:'detail', master:'all', query:''};
 
-/* 形式 → 示意图形。未列出的走 chart。 */
-const GLYPH = {
-  'html.text':'text','html.table':'table','html.matrix':'table','kit.comparisonTable':'table',
-  'html.kpi':'kpi','kit.bullet':'bulletbar','kit.dumbbell':'dumbbell','kit.slope':'slope',
-  'kit.waterfall':'waterfall','precision.waterfall':'waterfall','kit.stacked':'stack',
-  'kit.mekko':'stack','recipe.composition':'stack','precision.stacked':'stack','kit.heatmap':'heatmap',
-  'recipe.heatmap':'heatmap','recipe.timeSeries':'line','recipe.rankedBar':'bars',
-  'recipe.groupedBar':'bars','precision.columns':'bars','recipe.histogram':'hist',
-  'recipe.scatter':'scatter','recipe.sankey':'sankey','recipe.tree':'tree','kit.tree':'tree',
-  'kit.processFlow':'flow','kit.swimlane':'flow','diagram.process':'flow','diagram.swimlane':'flow',
-  'diagram.mechanism':'flow','diagram.hierarchy':'tree','diagram.condition':'text',
-  'svg.custom':'custom'
-};
-const glyphOf = f => GLYPH[f] || 'chart';
-const resolveForm = (e, r) => (r.form === '<本页 form>' ? (e.forms[0] ? e.forms[0].name : 'recipe.timeSeries') : r.form);
-
-const TITLES = {
-  text:['解释与边界','结论与含义','研究发现'],
-  table:['明细对照','口径与数据','逐项核对'],
-  kpi:['关键指标','目标达成','核心读数'],
-  other:['主要证据','分布与差异','结构与变化']
-};
-const pick = (arr, i) => arr[i % arr.length];
-function headFor(form, i){
-  const g = glyphOf(form);
-  if (g === 'text') return pick(TITLES.text, i);
-  if (g === 'table') return pick(TITLES.table, i);
-  if (g === 'kpi' || g === 'bulletbar') return pick(TITLES.kpi, i);
-  return pick(TITLES.other, i);
-}
-
-const SENT = [
-  '下滑集中在华南与华东两个大区，合计解释了净减少的七成以上。',
-  '电商增量主要来自新客，但客单价低于线下约三成，未能等额补回。',
-  '新增门店在第 9 个月后才进入成熟期，本期内尚未贡献可比增量。',
-  '若把口径改为同店可比，降幅收窄约 2.1 个百分点，方向不变。',
-  '经销商库存周转天数上升，说明压力部分停留在渠道而非终端。',
-  '访谈中反复出现的解释是租金上涨与到店频次下降同时发生。'
-];
-
-/* ——— 示意图形（纯 SVG，不引 ECharts）——— */
-const S = (inner, vb) => `<svg viewBox="${vb || '0 0 320 180'}" preserveAspectRatio="xMidYMid meet" aria-hidden="true">${inner}</svg>`;
-const AX = '<line x1="26" y1="150" x2="304" y2="150" stroke="#BFCBD2"/><line x1="26" y1="14" x2="26" y2="150" stroke="#BFCBD2"/>';
-function drawLine(n){
-  let polylines = '';
-  const cols = ['#000080','#007A78','#8652A0'];
-  for (let s = 0; s < n; s++){
-    const pts = [];
-    for (let i = 0; i <= 10; i++){
-      const y = 118 - s*12 - Math.abs(Math.sin(i*0.7 + s*1.9))*62 - i*1.1;
-      pts.push(`${26 + i*27.8},${Math.max(18, y).toFixed(1)}`);
+/* —— 线框：每个模块按目录算出的矩形落位，槽位决定颜色 —— */
+function wireframe(layout, opts) {
+  const o = opts || {};
+  const R = D.ratios[state.ratio], W = R.canvas.width, H = R.canvas.height;
+  const M = layout.measured[state.ratio];
+  const c = R.content, body = R.body;
+  const hatch = 'hatch-' + layout.id + '-' + state.ratio;
+  const parts = [];
+  parts.push('<rect x="0" y="0" width="' + W + '" height="' + H + '" fill="#FFFFFF"/>');
+  // 网格线：12 栏 × 6 行。模块必须落在这些线上，所以先把线画出来。
+  if (state.grid && !o.mini) {
+    const g = [];
+    for (let i = 0; i <= D.grid.columns; i++) {
+      const x = body.x + i * R.columnWidth + i * R.gutter - (i ? R.gutter / 2 : 0);
+      g.push('<line x1="' + x + '" y1="' + body.y + '" x2="' + x + '" y2="' + (body.y + body.height) + '"/>');
     }
-    polylines += `<polyline points="${pts.join(' ')}" fill="none" stroke="${cols[s%3]}" stroke-width="2.2"/>`;
+    for (let j = 0; j <= D.grid.rows; j++) {
+      const y = body.y + j * R.rowHeight + j * R.gutter - (j ? R.gutter / 2 : 0);
+      g.push('<line x1="' + body.x + '" y1="' + y + '" x2="' + (body.x + body.width) + '" y2="' + y + '"/>');
+    }
+    // 线画在格间空隙的中线上：模块矩形之间本来就有 gutter，中线才是"格线"。
+    parts.push('<g stroke="#E2E7EA" stroke-width="1" stroke-dasharray="3 4">' + g.join('') + '</g>');
   }
-  return S(AX + polylines);
-}
-function drawBars(){
-  let r = '';
-  for (let i = 0; i < 8; i++){
-    const h = 22 + ((i*37) % 96);
-    r += `<rect x="${38 + i*33}" y="${150-h}" width="21" height="${h}" fill="#000080" opacity="${i === 6 ? 1 : .78}"/>`;
+  if (state.safe && !o.mini) {
+    parts.push('<rect x="' + c.x + '" y="' + c.y + '" width="' + c.width + '" height="' + c.height + '" fill="none" stroke="#BFCBD2" stroke-width="1"/>');
   }
-  return S(AX + r);
-}
-function drawStack(){
-  let r = '';
-  for (let i = 0; i < 7; i++){
-    let y = 150; const segs = [30 + (i*13)%34, 24 + (i*19)%30, 18 + (i*11)%26];
-    segs.forEach((h, k) => { y -= h; r += `<rect x="${40 + i*36}" y="${y}" width="24" height="${h}" fill="${['#000080','#007A78','#BFCBD2'][k]}"/>`; });
-  }
-  return S(AX + r);
-}
-function drawHist(){
-  let r = '';
-  const hs = [16,34,58,84,104,92,70,52,34,22,14,9];
-  hs.forEach((h,i) => { r += `<rect x="${30 + i*22.5}" y="${150-h}" width="20" height="${h}" fill="#000080" opacity=".8"/>`; });
-  return S(AX + r);
-}
-function drawScatter(){
-  let r = '';
-  for (let i = 0; i < 42; i++){
-    const x = 36 + ((i*61) % 262), y = 148 - ((i*97) % 128);
-    r += `<circle cx="${x}" cy="${y}" r="3.1" fill="#000080" opacity=".55"/>`;
-  }
-  return S(AX + r);
-}
-function drawHeatmap(){
-  let r = '', seq = ['#D9D9EC','#A3A3D1','#6D6DB6','#36369B','#000080'];
-  for (let i = 0; i < 7; i++) for (let k = 0; k < 5; k++)
-    r += `<rect x="${34 + i*38}" y="${20 + k*25}" width="34" height="21" fill="${seq[(i*3+k*2)%5]}"/>`;
-  return S(r, '0 0 320 160');
-}
-function drawWaterfall(){
-  let r = '', up = true; const hs = [46,38,-26,34,-18,30,-24,42];
-  for (let i = 0; i < hs.length; i++){
-    const h = Math.abs(hs[i]) * 1.5;
-    const y = hs[i] > 0 ? 138 - h : 138;
-    r += `<rect x="${34 + i*33}" y="${y}" width="22" height="${h}" fill="${hs[i] > 0 ? '#000080' : '#9C5C14'}"/>`;
-  }
-  return S(AX + r);
-}
-function drawDumbbell(){
-  let r = '';
-  for (let i = 0; i < 5; i++){
-    const y = 32 + i*24, x1 = 60 + ((i*47) % 70), x2 = 190 + ((i*29) % 80);
-    r += `<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="#BFCBD2" stroke-width="2.4"/>`
-       + `<circle cx="${x1}" cy="${y}" r="5.4" fill="#BFCBD2"/><circle cx="${x2}" cy="${y}" r="5.4" fill="#000080"/>`;
-  }
-  return S(r, '0 0 320 170');
-}
-function drawSlope(){
-  let r = '';
-  for (let i = 0; i < 5; i++){
-    const y1 = 30 + i*25, y2 = 30 + ((i*3 + 1) % 5)*25;
-    r += `<line x1="72" y1="${y1}" x2="248" y2="${y2}" stroke="#000080" stroke-width="1.9" opacity=".5"/>`
-       + `<circle cx="72" cy="${y1}" r="5" fill="#BFCBD2"/><circle cx="248" cy="${y2}" r="5" fill="#000080"/>`;
-  }
-  return S(r, '0 0 320 170');
-}
-function drawBulletbar(){
-  let r = '';
-  for (let i = 0; i < 4; i++){
-    const y = 26 + i*34, w = 110 + ((i*53) % 140);
-    r += `<rect x="40" y="${y}" width="240" height="15" fill="#F2F5F7"/>`
-       + `<rect x="40" y="${y}" width="${w}" height="15" fill="#000080" opacity=".82"/>`
-       + `<line x1="${40 + 190}" y1="${y-4}" x2="${40 + 190}" y2="${y+19}" stroke="#9C5C14" stroke-width="2.4"/>`;
-  }
-  return S(r, '0 0 320 170');
-}
-function drawFlow(){
-  let r = '';
-  for (let i = 0; i < 4; i++){
-    r += `<rect x="${24 + i*74}" y="62" width="54" height="46" rx="2" fill="#000080" opacity="${.82 - i*0.11}"/>`;
-    if (i < 3) r += `<polygon points="${82 + i*74},80 ${92 + i*74},85 ${82 + i*74},90" fill="#50606E"/>`;
-  }
-  return S(r + '<line x1="24" y1="132" x2="296" y2="132" stroke="#BFCBD2" stroke-dasharray="4 4"/>', '0 0 320 170');
-}
-function drawTree(){
-  let r = `<rect x="14" y="72" width="62" height="30" fill="#000080"/>`;
-  [26, 72, 118].forEach(y => {
-    r += `<line x1="76" y1="87" x2="118" y2="${y+15}" stroke="#BFCBD2"/>`
-       + `<rect x="118" y="${y}" width="72" height="30" fill="#6D6DB6"/>`
-       + `<line x1="190" y1="${y+15}" x2="228" y2="${y+15}" stroke="#BFCBD2"/>`
-       + `<rect x="228" y="${y}" width="76" height="30" fill="#D9D9EC" stroke="#BFCBD2"/>`;
-  });
-  return S(r, '0 0 320 170');
-}
-function drawSankey(){
-  return S('<path d="M20 30 L120 52 L120 118 L20 140 Z" fill="#000080" opacity=".75"/>'
-    + '<path d="M200 44 L300 62 L300 108 L200 126 Z" fill="#007A78" opacity=".75"/>'
-    + '<path d="M120 52 C160 52 160 62 200 62 L200 108 C160 108 160 118 120 118 Z" fill="#BFCBD2" opacity=".8"/>', '0 0 320 170');
-}
-function drawCustom(){
-  return S(drawLine(2).replace(/^<svg[^>]*>|<\/svg>$/g, '') + '<rect x="150" y="20" width="120" height="60" fill="none" stroke="#000080" stroke-dasharray="3 3"/>', '0 0 320 180');
-}
-function drawTable(n){
-  let r = '<rect x="0" y="0" width="320" height="24" fill="#000080" opacity=".9"/>', y = 24;
-  for (let i = 0; i < n; i++){
-    if (i % 2 === 0) r += `<rect x="0" y="${y}" width="320" height="26" fill="#F2F5F7"/>`;
-    r += `<line x1="0" y1="${y+26}" x2="320" y2="${y+26}" stroke="#BFCBD2" opacity=".6"/>`;
-    y += 26;
-  }
-  return S(r, `0 0 320 ${y}`);
-}
-function drawKpi(){
-  let r = '';
-  [0,1,2].forEach(i => {
-    const x = 10 + i*104;
-    r += `<text x="${x}" y="66" font-size="34" font-weight="600" fill="#000080">${['−18.4','+6.1','0.72'][i]}</text>`
-       + `<rect x="${x}" y="80" width="66" height="7" fill="#D9D9EC"/>`
-       + `<text x="${x}" y="102" font-size="12" fill="#50606E">${['净下滑','电商增量','达成率'][i]}</text>`;
-  });
-  return S(r, '0 0 320 120');
-}
-function drawText(n){
-  let r = '', y = 14;
-  for (let i = 0; i < n; i++){
-    const w = 200 + ((i*67) % 110);
-    r += `<rect x="0" y="${y}" width="${w}" height="8" rx="2" fill="#BFCBD2"/>`;
-    y += 17;
-  }
-  return S(r, `0 0 320 ${y}`);
-}
-function glyphSVG(g, seed){
-  switch (g){
-    case 'line': return drawLine(2);
-    case 'bars': return drawBars();
-    case 'stack': return drawStack();
-    case 'hist': return drawHist();
-    case 'scatter': return drawScatter();
-    case 'heatmap': return drawHeatmap();
-    case 'waterfall': return drawWaterfall();
-    case 'dumbbell': return drawDumbbell();
-    case 'slope': return drawSlope();
-    case 'bulletbar': return drawBulletbar();
-    case 'flow': return drawFlow();
-    case 'tree': return drawTree();
-    case 'sankey': return drawSankey();
-    case 'custom': return drawCustom();
-    case 'table': return drawTable(4 + (seed % 3));
-    case 'kpi': return drawKpi();
-    case 'text': return drawText(4 + (seed % 3));
-    default: return drawLine(3);
-  }
-}
+  // 标题带与来源带：它们不是模块，但占掉正文以外的全部高度，必须画出来才对得上账。
+  parts.push('<rect x="' + c.x + '" y="' + c.y + '" width="' + c.width + '" height="' + R.titleBand + '" fill="#F2F5F7" stroke="#DCE0E3"/>');
+  if (!o.mini) parts.push('<text x="' + (c.x + 10) + '" y="' + (c.y + 26) + '" font-size="15" fill="#6C7780">标题带 · ' + R.titleBand + 'px（1 行 87 / 2 行 112 都装得下，正文起点恒定）</text>');
+  const srcY = body.y + body.height;
+  parts.push('<rect x="' + c.x + '" y="' + srcY + '" width="' + c.width + '" height="' + R.sourceBand + '" fill="#F2F5F7" stroke="#DCE0E3"/>');
+  if (!o.mini) parts.push('<text x="' + (c.x + 10) + '" y="' + (srcY + R.sourceBand / 2 + 5) + '" font-size="13" fill="#6C7780">来源带 · ' + R.sourceBand + 'px</text>');
 
-/* ——— 分区渲染 ——— */
-function textBlock(seed){
-  let h = `<div class="region__h">${pick(TITLES.text, seed)}</div>`;
-  const n = 3 + (seed % 2);
-  for (let i = 0; i < n; i++) h += `<p class="p">${pick(SENT, seed + i)}</p>`;
-  return h;
-}
-function innerHTML(kind, seed){
-  const box = (i, txt) => `<div class="ibox${txt ? ' ibox--txt' : ''}">${txt
-    ? `<p class="p">${pick(SENT, i)}</p>` : glyphSVG(glyphOf('recipe.timeSeries'), i)}</div>`;
-  if (kind === 'quad')  return `<div class="inner inner--quad">${[0,1,2,3].map(i => box(i)).join('')}</div>`;
-  if (kind === 'grid9') return `<div class="inner inner--grid9">${[0,1,2,3,4,5,6,7,8].map(i => box(i, i % 3 === 0)).join('')}</div>`;
-  if (kind === 'stack2') return `<div class="inner inner--stack2">${[0,1].map(i => box(i, true)).join('')}</div>`;
-  if (kind === 'stack3') return `<div class="inner inner--stack3">${[0,1,2].map(i => box(i, true)).join('')}</div>`;
-  if (kind === 'smallmultiples') return `<div class="inner inner--sm">${[0,1,2,3,4,5].map(i => box(i)).join('')}</div>`;
-  return '';
-}
-
-function regionContent(e, i, mode){
-  const r = e.regions[i], form = resolveForm(e, r);
-  const g = glyphOf(form);
-  if (mode === 'wire'){
-    const inner = e.inner && e.inner[i];
-    return `<div class="wire__tag"><em>${r.slot} · ${r.role} · span ${r.span}</em></div>`
-      + `<div class="wire__meta">${e.build.kind === 'class' ? '.' + e.build.cls + '　' : ''}${e.build.grid || ''}</div>`
-      + `<div class="wire__form">建议 ${form}${form !== r.form ? '（本页 form 占位）' : ''}</div>`
-      + (inner ? `<div class="wire__inner">${'<div class="wire__slot"></div>'.repeat(inner === 'grid9' ? 9 : inner === 'quad' ? 4 : inner === 'smallmultiples' ? 6 : inner === 'stack3' ? 3 : 2)}</div>` : '');
-  }
-  const inner = e.inner && e.inner[i];
-  const body = inner ? innerHTML(inner, i)
-    : (g === 'text' ? textBlock(i) : `<div class="glyph">${glyphSVG(g, i)}</div>`);
-  const head = inner ? '' : (g === 'text' ? '' : `<div class="region__h">${headFor(form, i)}</div>`);
-  return head + body
-    + `<div class="cap">${form}${r.role === 'primary' ? ' · 第一落点' : ''}</div>`;
-}
-
-function rowColsOf(e, ids){
-  if (e.rowCols && e.rowCols[String(ids[0])] && ids.length === 1) return e.rowCols[String(ids[0])];
-  let order = ids.slice();
-  if (e.place && order.every(i => e.place[i] && e.place[i].col)){
-    order = order.slice().sort((a, b) => e.place[a].col - e.place[b].col);
-  }
-  return order.map(i => `minmax(0,${e.regions[i].span}fr)`).join(' ');
-}
-
-function rowsHTML(e){
-  const gap = e.build.gap;
-  if (e.flat){
-    const cells = e.regions.map((r, i) => {
-      const p = (e.place && e.place[i]) || { col:i+1, row:1 };
-      const sp = p.rowSpan ? ` / span ${p.rowSpan}` : '';
-      return `<div class="region" data-slot="${r.slot}" data-role="${r.role}" style="grid-column:${p.col};grid-row:${p.row}${sp}">${regionContent(e, i, state.mode)}</div>`;
-    }).join('');
-    const rt = (e.rowFr || Array(e.rowCount).fill(1))
-      .map(f => typeof f === 'number' ? `minmax(0,${f}fr)` : f).join(' ');
-    return `<div class="rows" style="grid-template-columns:${e.cols};grid-template-rows:${rt};gap:${gap}px">${cells}</div>`;
-  }
-  const rows = e.rows && e.rows.length ? e.rows : [e.regions.map((_, i) => i)];
-  const fr = e.rowFr || rows.map(() => 1);
-  const html = rows.map((ids, ri) => {
-    const cells = ids.map(i => {
-      const r = e.regions[i];
-      const p = e.place && e.place[i];
-      /* place 只给列号时必须同时钉住行号：一行内只写 grid-column 会让自动放置把靠左的项挤到下一行 */
-      const st = p && p.col ? ` style="grid-column:${p.col};grid-row:1"` : '';
-      return `<div class="region" data-slot="${r.slot}" data-role="${r.role}"${st}>${regionContent(e, i, state.mode)}</div>`;
-    }).join('');
-    return `<div class="row${gap <= 20 ? ' row--tight' : ''}" data-row="${ri}" style="grid-template-columns:${rowColsOf(e, ids)}">${cells}</div>`;
-  }).join('');
-  return `<div class="rows" style="grid-template-rows:${fr.map(f => `minmax(0,${f}fr)`).join(' ')};gap:20px">${html}</div>`;
-}
-
-function contractHTML(e){
-  const page = {
-    page: 1, proves: e.use, form: e.regions.find(r => r.role === 'primary').form,
-    regions: e.regions
-  };
-  const skel = `<section class="slide reading" data-frame-boundary="line">
-  <div class="slide__frame" aria-hidden="true"></div>
-  <div class="slide__tracker">章节名称</div>
-  <header class="slide__header">
-    <h1 class="slide__title">本页主判断</h1>
-    <p class="slide__lead">必要范围或解释</p>
-  </header>
-  <div class="slide__body">
-${rowsSkeleton(e)}
-    <div class="source">来源与边界</div>
-  </div>
-  <div class="slide__page">01</div>
-</section>`;
-  return `<div class="contract">
-    <h4>pages.json</h4><pre>${esc(JSON.stringify(page, null, 2))}</pre>
-    <h4>HTML 骨架</h4><pre>${esc(skel)}</pre>
-    <h4>CSS</h4><pre>${esc(cssFor(e))}</pre>
-    <h4>来源位置</h4><pre>${esc(state.srcIn
-      ? '.slide__body{display:grid;grid-template-rows:minmax(0,1fr) auto;gap:20px}   /* 来源放 body 内，主体 ' + budget(state.titleLines, true).toFixed(1) + 'px */'
-      : '.slide__body{flex:1;min-height:0;display:grid}   /* 来源留在 body 之后，主体 ' + budget(state.titleLines, false).toFixed(1) + 'px */')}</pre>
-  </div>`;
-}
-const esc = s => String(s).replace(/[&<>]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;' }[c]));
-
-function rowsSkeleton(e){
-  const rows = e.flat ? [e.regions.map((_, i) => i)] : (e.rows || [e.regions.map((_, i) => i)]);
-  return rows.map(ids => `    <div style="display:grid;grid-template-columns:${rowColsOf(e, ids)};gap:${e.build.gap}px">\n`
-    + ids.map(i => `      <div data-region="${e.regions[i].slot}">…</div>`).join('\n')
-    + `\n    </div>`).join('\n');
-}
-function cssFor(e){
-  return e.build.kind === 'class'
-    ? `/* assets/consulting-layouts.css */\n.${e.build.cls}{display:grid;${
-        e.build.axis === 'rows' ? 'grid-template-rows' : 'grid-template-columns'}:${e.build.grid};gap:${e.build.gap}px;min-height:0}`
-    : `display:grid;grid-template-columns:${e.build.grid};gap:${e.build.gap}px;min-height:0;`;
-}
-
-function overlaysHTML(e){
-  if (!state.safe && !state.tracks) return '';
-  let h = '';
-  if (state.safe){
-    h += `<div class="ov__pad" style="left:0;top:0;width:40px;height:720px"></div>`
-      +  `<div class="ov__pad" style="left:1240px;top:0;width:40px;height:720px"></div>`
-      +  `<div class="ov__pad" style="left:0;top:0;width:1280px;height:32px"></div>`
-      +  `<div class="ov__pad" style="left:0;top:694px;width:1280px;height:26px"></div>`
-      +  `<div class="ov__safe"></div>`
-      +  `<div class="ov__note">安全区 1200×662（左右 40 / 上 32 / 下 26）· 标题区高度随「标题行数」重算</div>`;
-  }
-  if (state.tracks){
-    if (e.build.cls === 'evidence-grid'){
-      for (let i = 0; i < 12; i++){
-        const w = (1200 - 11*20) / 12;
-        h += `<div class="ov__col" style="left:${40 + i*(w+20)}px;width:${w}px"></div>`;
+  layout.modules.forEach((m, i) => {
+    const box = M.modules[i].box, color = slotColor(m.slot);
+    const primary = m.role === 'primary';
+    parts.push('<rect x="' + box.x + '" y="' + box.y + '" width="' + box.width + '" height="' + box.height
+      + '" fill="' + color + '" fill-opacity="' + (primary ? '.10' : '.055') + '" stroke="' + color
+      + '" stroke-width="' + (primary ? 2 : 1.2) + '"' + (m.slot === 'panel' ? ' stroke-dasharray="6 4"' : '') + '/>');
+    if (m.slot === 'panel') parts.push('<rect x="' + (box.x + 5) + '" y="' + (box.y + 5) + '" width="' + (box.width - 10) + '" height="' + (box.height - 10) + '" fill="none" stroke="' + color + '" stroke-opacity=".35" stroke-dasharray="2 3"/>');
+    if (o.mini) return;
+    const pad = D.grid.module.pad, tx = box.x + pad, ty = box.y + pad;
+    parts.push('<text x="' + tx + '" y="' + (ty + 17) + '" font-size="18" font-weight="600" fill="#172C3B">' + esc(m.title) + '</text>');
+    parts.push('<text x="' + tx + '" y="' + (ty + 36) + '" font-size="12" fill="' + color + '">'
+      + esc(m.slot) + ' · ' + esc(m.role) + ' · 第 ' + (i + 1) + ' 格 · ' + m.w + '栏×' + m.h + '行 · '
+      + box.width + '×' + box.height + 'px</text>');
+    if (state.mode === 'capacity') {
+      const cap = M.modules[i].lines;
+      // 矮格（h=1）塞不下三行标注，压成一行；标注溢出模块就成了图谱自己在违反它要教的事。
+      if (cap.inner < 100) {
+        parts.push('<text x="' + tx + '" y="' + (ty + 58) + '" font-size="11.5" fill="#50606E">内区 '
+          + cap.inner + 'px，正文 ' + cap.body.plain + ' / 注释 ' + cap.note.plain + ' 行</text>');
+      } else {
+        parts.push('<text x="' + tx + '" y="' + (ty + 58) + '" font-size="12" fill="#50606E">内区 ' + cap.inner + 'px 高，可放：</text>');
+        ['正文 ' + cap.body.plain + ' 行 / 带标题 ' + cap.body.titled + ' / 带标题与单位 ' + cap.body.titledUnit,
+          '注释 ' + cap.note.plain + ' / ' + cap.note.titled + ' / ' + cap.note.titledUnit]
+          .forEach((line, k) => parts.push('<text x="' + tx + '" y="' + (ty + 76 + k * 17) + '" font-size="12" fill="#50606E">' + esc(line) + '</text>'));
       }
-      h += `<div class="ov__note" style="top:706px">12 栏 + gap 20 —— .evidence-grid 独有，不是全局网格</div>`;
-    } else {
-      h += `<div class="ov__note" style="top:706px">该结构没有栏轨道可叠：本 skill 不存在全局列网格，页级布局是 fr 比例</div>`;
+    }
+  });
+  // 未铺满的格：留白要么被声明，要么就是漏洞。这里把没被占的格点出来。
+  if (layout.fill === 'open' && !o.mini) {
+    const used = new Set();
+    layout.modules.forEach(m => { for (let dc = 0; dc < m.w; dc++) for (let dr = 0; dr < m.h; dr++) used.add((m.c + dc) + ',' + (m.r + dr)); });
+    for (let rr = 1; rr <= D.grid.rows; rr++) for (let cc = 1; cc <= D.grid.columns; cc++) {
+      if (used.has(cc + ',' + rr)) continue;
+      const x = body.x + (cc - 1) * (R.columnWidth + R.gutter), y = body.y + (rr - 1) * (R.rowHeight + R.gutter);
+      parts.push('<rect x="' + x + '" y="' + y + '" width="' + R.columnWidth + '" height="' + R.rowHeight + '" fill="url(#' + hatch + ')" stroke="none"/>');
     }
   }
-  return h ? `<div class="ov">${h}</div>` : '';
+  // 图案 id 必须逐图唯一：总览里一页几十个 SVG，同名 id 会让 url(#…) 全部指向文档里第一个，
+  // 那一张一旦被重绘，其余的留白就悄悄变成实心。
+  const defs = '<defs><pattern id="' + hatch + '" width="8" height="8" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">'
+    + '<line x1="0" y1="0" x2="0" y2="8" stroke="#BFCBD2" stroke-width="1"/></pattern></defs>';
+  return '<svg class="stage" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(layout.id + ' ' + layout.name) + ' 结构线框">'
+    + defs + parts.join('') + '</svg>';
 }
 
-/* ——— 渲染 ——— */
-const state = { i:0, mode:'content', safe:true, lines:false, tracks:false, titleLines:2, srcIn:true, overview:false };
-const stage = document.getElementById('stage'), wrap = document.getElementById('wrap'), stager = document.getElementById('stager');
+/* 页面骨架：作者真正要抄的那几行。刻意不给 grid-column / grid-row——
+   几何由 data-layout 从 CSS 取，写进页面只会与目录漂移。 */
+function skeleton(layout) {
+  /* 换行一律双写反斜杠。本函数是外层模板字面量的一部分，单写的转义序列会在生成期就展开成
+     真换行，落进页面里的单引号字符串就是语法错误；注释里同样不能出现单写的转义序列。 */
+  return '<section class="slide reading" data-layout="' + layout.id + '" data-form="…">\n'
+    + '  <div class="slide__body">\n'
+    + layout.modules.map(m => '    <div data-module="' + m.slot + '">' + m.title + '</div>').join('\n')
+    + '\n  </div>\n</section>';
+}
 
-function renderStage(){
-  const e = CAT[state.i];
-  document.body.classList.toggle('overview', state.overview);
-  if (state.overview){ renderOverview(); return; }
-  stager.style.maxWidth = '1280px';
-  if (state.mode === 'contract'){
-    stage.style.width = '1280px'; stage.style.height = '720px';
-    stage.className = 'stage'; stage.innerHTML = contractHTML(e);
-    fit(); return;
+/* —— 详情 —— */
+function detail(layout) {
+  const R = D.ratios[state.ratio], M = layout.measured[state.ratio];
+  const fill = layout.fill === 'open'
+    ? '<span class="badge open">有意留白 ' + Math.round(M.fillRatio * 100) + '%</span>'
+    : '<span class="badge tiled">铺满 ' + Math.round(M.fillRatio * 100) + '%</span>';
+  const rows = layout.modules.map((m, i) => {
+    const box = M.modules[i].box, cap = M.modules[i].lines;
+    return '<tr' + (m.role === 'primary' ? ' class="primary-row"' : '') + '>'
+      + '<td class="num">' + (i + 1) + '</td>'
+      + '<td><b>' + esc(m.title) + '</b>' + (m.style ? '<br><span class="role">样式 ' + esc(m.style) + '</span>' : '') + '</td>'
+      + '<td><span class="slot" style="background:' + slotColor(m.slot) + '">' + esc(m.slot) + '</span><br><span class="role">' + esc(m.role) + '</span></td>'
+      + '<td class="num">' + m.c + ',' + m.r + '<br>' + m.w + '×' + m.h + '</td>'
+      + '<td class="num">' + box.width + '×' + box.height + '<br><span class="role">内 ' + cap.inner + 'px</span></td>'
+      + '<td class="num">' + cap.body.plain + ' / ' + cap.body.titled + ' / ' + cap.body.titledUnit + '<br><span class="role">注释 ' + cap.note.plain + ' / ' + cap.note.titled + ' / ' + cap.note.titledUnit + '</span></td>'
+      + '<td class="acc">' + esc(acceptsText(m, M.modules[i].accepts, m.slot)) + '</td></tr>';
+  }).join('');
+  // 同几何的兄弟布局：几何一样、语义不同，选错就是选错，所以明说。
+  const sig = l => l.modules.map(m => [m.c, m.r, m.w, m.h].join(',')).join('|');
+  const twins = D.layouts.filter(l => l.id !== layout.id && sig(l) === sig(layout)).map(l => l.id + ' ' + l.name);
+
+  return '<div class="stagebox">' + wireframe(layout) + '</div>'
+    + '<div class="cols">'
+    + '<div class="card"><h3>这条布局怎么用</h3><dl class="field">'
+    + '<div class="field"><dt>用在哪里</dt><dd>' + esc(layout.use) + '</dd></div>'
+    + '<div class="field"><dt>阅读路径</dt><dd>' + esc(layout.path) + '</dd></div>'
+    + '<div class="field"><dt>代价</dt><dd>' + esc(layout.trade) + '</dd></div>'
+    + '<div class="field"><dt>不要这样用</dt><dd class="warn">' + esc(layout.avoid) + '</dd></div>'
+    + (layout.constraint ? '<div class="field"><dt>布局约束</dt><dd class="constraint">' + esc(layout.constraint) + '</dd></div>' : '')
+    + (layout.fill === 'open' ? '<div class="field"><dt>留白理由</dt><dd>' + esc(layout.openWhy) + '</dd></div>' : '')
+    + '</dl></div>'
+    + '<div class="card"><h3>选型要看的几件事</h3><dl class="field">'
+    + '<div class="field"><dt>所属母版</dt><dd>' + esc(D.masters.find(x => x.id === layout.master).name)
+    + ' <span class="role">（' + esc(layout.master) + '）</span></dd></div>'
+    + '<div class="field"><dt>族</dt><dd>' + esc(layout.family) + '　' + esc(layout.familyName) + '</dd></div>'
+    + '<div class="field"><dt>模块数</dt><dd>' + layout.modules.length + ' 格，主展品在第 ' + (layout.modules.findIndex(m => m.role === 'primary') + 1) + ' 格</dd></div>'
+    + '<div class="field"><dt>填充</dt><dd>' + fill + '</dd></div>'
+    + '<div class="field"><dt>页面骨架</dt><dd><code class="skeleton">' + esc(skeleton(layout)) + '</code>'
+    + '<br><span class="role">照抄这行，把每一格的内容填进对应模块。几何不用你写——'
+    + '落位规则由 build_layout_css.cjs 从目录生成。</span></dd></div>'
+    + '<div class="field"><dt>画幅</dt><dd>' + esc(R.canvas.width + '×' + R.canvas.height) + '　正文区 ' + R.body.width + '×' + R.body.height
+    + '　栏宽 ' + R.columnWidth + '　行高 ' + R.rowHeight + '　间距 ' + R.gutter + '</dd></div>'
+    + (twins.length ? '<div class="field"><dt>同几何的其他布局</dt><dd>' + esc(twins.join('、')) + '<br><span class="role">几何相同、语义不同，按论证需要选，不要按长相选。</span></dd></div>' : '')
+    + '</dl></div></div>'
+    + '<div class="card"><h3>逐格：这一格装什么、装得下多少</h3>'
+    + '<table class="grid"><thead><tr><th>#</th><th>模块</th><th>槽位 / 角色</th><th>栏,行<br>跨</th>'
+    + '<th>尺寸<br>px</th><th>正文行<br>（素/带标题/带单位）</th><th>可填形式</th></tr></thead><tbody>' + rows + '</tbody></table>'
+    + '<p class="hint" style="margin-top:10px">容量按行高算出：正文行 ' + D.grid.lines.body + 'px、注释行 ' + D.grid.lines.note
+    + 'px，模块内边距 ' + D.grid.module.pad + 'px、标题带 ' + D.grid.module.titleBand + 'px、单位行 ' + D.grid.module.unitBand
+    + 'px。装不下就换布局，不要缩字号。</p></div>';
+}
+
+/* —— 总览 —— */
+function overview() {
+  return D.masters.map(master => {
+    const items = D.layouts.filter(l => l.master === master.id);
+    if (!items.length) return '';
+    return '<section class="wall"><h3>' + esc(master.name) + '（' + esc(master.id) + '） · ' + items.length + ' 条</h3>'
+      + '<p>' + esc(master.readerTask) + '　<span class="hint">' + esc(master.notes) + '</span></p><div class="tiles">'
+      + items.map(l => '<button class="tile" data-go="' + l.id + '">' + wireframe(l, {mini: true})
+        + '<span class="tile__id">' + l.id + '</span><span class="tile__name">' + esc(l.name) + '</span>'
+        + '<span class="tile__use">' + esc(l.use) + '</span></button>').join('')
+      + '</div></section>';
+  }).join('');
+}
+
+/* —— 方法：网格算术、容量表、槽位表、填充规则 —— */
+function method() {
+  const ratioBlocks = Object.values(D.ratios).map(R => {
+    const head = '<tr><th>行高 h</th>' + [1,2,3,4,5,6].map(h => '<th>' + h + ' 行<br>' + R.capacity[h-1].module + 'px</th>').join('') + '</tr>';
+    const line = (label, pick) => '<tr><td>' + label + '</td>' + R.capacity.map(c => '<td class="num">' + pick(c) + '</td>').join('') + '</tr>';
+    return '<h4>' + esc(R.id) + ' · ' + R.canvas.width + '×' + R.canvas.height
+      + '　版心 ' + R.content.width + '×' + R.content.height + '　正文区 ' + R.body.width + '×' + R.body.height + '</h4>'
+      + '<p>栏：12 × ' + R.columnWidth + ' + 11 × ' + R.gutter + ' = ' + R.body.width
+      + '　行：6 × ' + R.rowHeight + ' + 5 × ' + R.gutter + ' = ' + R.body.height
+      + '　纵向：标题带 ' + R.titleBand + ' + 正文 ' + R.body.height + ' + 来源带 ' + R.sourceBand + ' = ' + R.content.height + '</p>'
+      + '<table class="grid">' + head
+      + line('正文行（素）', c => c.body.plain)
+      + line('正文行（带模块标题）', c => c.body.titled)
+      + line('正文行（带标题 + 单位行）', c => c.body.titledUnit)
+      + line('注释行（素）', c => c.note.plain)
+      + line('注释行（带模块标题）', c => c.note.titled)
+      + line('注释行（带标题 + 单位行）', c => c.note.titledUnit)
+      + '</table>';
+  }).join('');
+
+  const slotRows = D.grid.slots.map(slot => {
+    const pool = D.forms.slotForms[slot] || [];
+    return '<tr><td><span class="slot" style="background:' + slotColor(slot) + '">' + slot + '</span></td>'
+      + '<td>' + esc(D.slotNotes[slot] || '') + '</td>'
+      + '<td class="acc">' + (pool.length ? pool.map(f => esc(FORM_LABEL[f] || f)).join('、') : '不接受形式声明') + '</td></tr>';
+  }).join('');
+
+  const masterRows = D.masters.map(m => '<tr><td><b>' + esc(m.name) + '</b><br><span class="role">' + esc(m.id) + '</span></td>'
+    + '<td class="acc">' + (m.pageRoles.length ? m.pageRoles.map(esc).join('、') : '（未接入）') + '</td>'
+    + '<td>' + esc(m.readerTask) + '</td><td class="acc">' + esc(m.notes) + '</td></tr>').join('');
+
+  const open = D.layouts.filter(l => l.fill === 'open');
+
+  return '<section class="method" id="method">'
+    + '<h2>网格与容量</h2>'
+    + '<p>布局先约束，内容才好填。目录里每条布局只写模块占第几栏第几行、跨几栏几行（<code>c/r/w/h</code>），'
+    + '像素由栅格算出，画幅只换像素不换拓扑——同一份布局目录同时服务 16:9 与 4:3。'
+    + '作者选布局时就能知道每一格装得下几行字，不必等排完版才发现放不下。</p>'
+    + ratioBlocks
+    + '<h4>槽位：一格允许装什么</h4>'
+    + '<p>槽位是布局对内容的约束。表格位填不了图，图表位也顶不了表——这不是排版偏好，是"这一格在论证里干什么"。</p>'
+    + '<table class="grid"><thead><tr><th>槽位</th><th>它意味着什么</th><th>槽位允许的已登记形式</th></tr></thead><tbody>' + slotRows + '</tbody></table>'
+    + '<h4>母版：先定这是哪种页</h4>'
+    + '<p>母版决定这一页要替读者完成什么。选布局之前先落母版，落错了母版，布局选得再对也是错的。</p>'
+    + '<table class="grid"><thead><tr><th>母版</th><th>页面角色</th><th>读者这一页要拿到什么</th><th>边界</th></tr></thead><tbody>' + masterRows + '</tbody></table>'
+    + '<h4>留白：要么铺满，要么说出理由</h4>'
+    + '<p>每条布局声明 <code>fill</code>。<code>tiled</code> 表示模块铺满 12×6 的每一格；'
+    + '<code>open</code> 表示有意留白，必须在 <code>openWhy</code> 里说清为什么这块空是设计而不是漏洞——'
+    + '本轮共 ' + open.length + ' 条声明了留白：'
+    + open.map(l => l.id + '（' + Math.round(l.measured['16x9'].fillRatio * 100) + '%）').join('、')
+    + '。其余 ' + (D.layouts.length - open.length) + ' 条铺满。没被声明又空着的格，在线框里会被画成斜线。</p>'
+    + '</section>';
+}
+
+/* —— 渲染与交互 —— */
+const scroll = document.getElementById('scroll');
+const listEl = document.getElementById('list');
+
+function renderList() {
+  const q = state.query.trim().toLowerCase();
+  const hit = l => !q || (l.id + ' ' + l.name + ' ' + l.use + ' ' + l.familyName + ' ' + l.master).toLowerCase().indexOf(q) >= 0;
+  listEl.innerHTML = D.masters.map(master => {
+    const items = D.layouts.filter(l => l.master === master.id && hit(l));
+    if (!items.length) return '';
+    return '<div class="grp">' + esc(master.name) + '<span>' + items.length + '</span></div>'
+      + items.map(l => '<button class="item" data-go="' + l.id + '" aria-current="' + (l.id === state.current) + '">'
+        + '<span class="item__id">' + l.id + '</span><span class="item__name">' + esc(l.name) + '</span>'
+        + '<span class="item__use">' + esc(l.use) + '</span></button>').join('');
+  }).join('');
+}
+
+/* keepScroll：切换网格线、容量这类"就地重绘"不该把读者弹回页首，只有换布局/换视图才回到顶部。 */
+function render(keepScroll) {
+  const top = scroll.scrollTop;
+  renderList();
+  const bar = document.getElementById('bar-id'), name = document.getElementById('bar-name'), tag = document.getElementById('bar-tag');
+  if (state.view === 'overview' || !state.current) {
+    bar.textContent = '总览'; name.textContent = state.ratio === '16x9' ? '1280×720' : '1024×768';
+    tag.textContent = D.layouts.length + ' 条布局 · 按母版分组';
+    scroll.innerHTML = overview() + method();
+  } else {
+    const layout = byId[state.current];
+    bar.textContent = layout.id; name.textContent = layout.name;
+    tag.textContent = D.masters.find(m => m.id === layout.master).name + ' · ' + layout.family + ' ' + layout.familyName;
+    scroll.innerHTML = detail(layout) + method();
   }
-  const tk = TITLE[e.titleKind || 'page'][state.titleLines === 1 ? 'one' : 'two'];
-  stage.style.width = '1280px'; stage.style.height = '720px';
-  stage.className = 'stage' + (state.mode === 'wire' ? ' wire' : '') + (state.lines ? ' lines-on' : '');
-  stage.innerHTML = `<section class="slide reading">
-    <div class="slide__tracker">${e.family}</div>
-    <header class="slide__header">
-      <h1 class="slide__title" style="--lineh:${G.titleLH}px">${tk}</h1>
-      <p class="slide__lead" style="--lineh:${G.leadLH}px">${LEAD}</p>
-    </header>
-    <div class="slide__body ${state.srcIn ? 'source-in' : ''}">
-      ${rowsHTML(e)}
-      ${state.srcIn ? `<div class="source">${SRC}</div>` : ''}
-    </div>
-    ${state.srcIn ? '' : `<div class="source">${SRC}</div>`}
-    <div class="slide__page">01</div>
-  </section>${overlaysHTML(e)}`;
-  document.querySelectorAll('.region').forEach((el, i) => {
-    el.style.setProperty('--lineh', (17*1.5) + 'px');
-    const b = document.createElement('span');
-    b.className = 'region__cnt';
-    el.appendChild(b);
-  });
-  if (state.lines) requestAnimationFrame(countLines);
-  fit();
+  scroll.scrollTop = keepScroll ? top : 0;
 }
-function countLines(){
-  document.querySelectorAll('.region').forEach(el => {
-    const b = el.querySelector('.region__cnt'); if (!b) return;
-    const h = el.getBoundingClientRect().height / scale;
-    b.textContent = '≈ ' + Math.max(0, Math.floor((h - 40) / (17*1.5))) + ' 行';
-  });
-}
-function renderOverview(){
-  stager.style.maxWidth = 'none';
-  stage.className = 'stage'; stage.style.width = 'auto'; stage.style.height = 'auto';
-  stage.style.transform = 'none';
-  stage.innerHTML = `<div class="grid-ov">${CAT.map((e, i) => `
-    <button class="ovcard" data-go="${i}">
-      <div class="ovcard__box">${thumb(e)}</div>
-      <div class="ovcard__t"><span class="nav__id">${e.id}</span>${e.name}</div>
-      <div class="ovcard__s">${e.family}</div>
-    </button>`).join('')}</div>`;
-  stage.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { go(+b.dataset.go); setOverview(false); });
-  wrap.style.height = '';
-}
-function thumb(e){
-  const rows = e.flat ? [e.regions.map((_, i) => i)] : (e.rows || [e.regions.map((_, i) => i)]);
-  const fr = e.rowFr || rows.map(() => 1);
-  return `<div style="position:absolute;left:3.1%;top:4.4%;width:93.8%;height:91.2%;display:grid;
-      grid-template-rows:${fr.map(f => `${f}fr`).join(' ')};gap:3px">`
-    + rows.map(ids => `<div style="display:grid;gap:3px;grid-template-columns:${rowColsOf(e, ids)}">`
-        + ids.map(i => {
-            const p = e.place && e.place[i];
-            const st = p && p.col ? `grid-column:${p.col};` : '';
-            return `<div style="${st}background:${e.regions[i].role === 'primary' ? 'rgba(0,0,128,.30)' : 'rgba(0,0,128,.13)'};border:1px solid rgba(0,0,128,.35);border-radius:1px"></div>`;
-          }).join('')
-        + `</div>`).join('')
-    + `</div>`;
-}
-function fit(){
-  if (state.overview) return;
-  const avail = wrap.clientWidth - 40;
-  scale = Math.max(.28, Math.min(1, avail / 1280));
-  stage.style.transform = `scale(${scale})`;
-  stager.style.height = (stage.offsetHeight * scale) + 'px';
-}
-let scale = 1;
 
-/* ——— 导航与状态 ——— */
-const navlist = document.getElementById('navlist');
-function renderNav(){
-  let h = '', last = null;
-  CAT.forEach((e, i) => {
-    if (e.family !== last){ h += `<div class="nav__fam">${e.family}</div>`; last = e.family; }
-    h += `<button class="nav__item" data-go="${i}" aria-current="${i === state.i}">
-      <span class="ovcard__box" style="background:#fff">${thumb(e)}</span>
-      <span class="nav__name"><span class="nav__id">${e.id}</span>${e.name}</span></button>`;
-  });
-  navlist.innerHTML = h;
-  navlist.querySelectorAll('[data-go]').forEach(b => b.onclick = () => go(+b.dataset.go));
-}
-function renderNotes(){
-  const e = CAT[state.i];
-  const forms = e.forms.map(f => `<code>${f.name}</code>${f.dagger ? '†' : ''}`).join('　');
-  document.getElementById('notes').innerHTML = `
-    <dl><dt>读者任务</dt><dd>${e.use}</dd></dl>
-    <dl><dt>阅读路径</dt><dd>${e.path}</dd></dl>
-    <dl><dt>取舍</dt><dd>${e.trade}</dd></dl>
-    <dl><dt>什么时候不该用</dt><dd class="no">${e.avoid}</dd>
-      <dt style="margin-top:8px">常见 form</dt><dd>${forms}</dd></dl>`;
-}
-function syncBar(){
-  const e = CAT[state.i];
-  document.getElementById('bid').textContent = e.id;
-  document.getElementById('bname').textContent = ' ' + e.name + ' · ' + e.family;
-  document.querySelectorAll('#modes button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === state.mode)));
-  document.querySelectorAll('#tlines button').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.lines === state.titleLines)));
-  document.getElementById('togSafe').checked = state.safe;
-  document.getElementById('togLines').checked = state.lines;
-  document.getElementById('togTracks').checked = state.tracks;
-  document.getElementById('togSrc').checked = state.srcIn;
-  document.getElementById('btnOverview').setAttribute('aria-pressed', String(state.overview));
-  const b = budget(state.titleLines, state.srcIn);
-  document.getElementById('budget').innerHTML =
-    `主体可用 <b>${b.toFixed(1)}px</b> · 标题区 ${(state.titleLines*G.titleLH + G.titleMB + G.leadLH).toFixed(1)}px · 内容盒 1200×662`;
-}
-function render(){ renderNav(); syncBar(); renderNotes(); renderStage(); location.hash = '#' + CAT[state.i].id; }
-function go(i){ state.i = (i + CAT.length) % CAT.length; if (state.overview) state.overview = false; render(); }
-function setMode(m){ state.mode = m; render(); }
-function setOverview(v){ state.overview = v; render(); }
+function go(id) { state.view = 'detail'; state.current = id; render(); }
 
-document.querySelectorAll('#modes button').forEach(b => b.onclick = () => setMode(b.dataset.mode));
-document.querySelectorAll('#tlines button').forEach(b => b.onclick = () => { state.titleLines = +b.dataset.lines; render(); });
-document.getElementById('togSafe').onchange = ev => { state.safe = ev.target.checked; renderStage(); };
-document.getElementById('togLines').onchange = ev => { state.lines = ev.target.checked; renderStage(); };
-document.getElementById('togTracks').onchange = ev => { state.tracks = ev.target.checked; renderStage(); };
-document.getElementById('togSrc').onchange = ev => { state.srcIn = ev.target.checked; render(); };
-document.getElementById('btnPrev').onclick = () => go(state.i - 1);
-document.getElementById('btnNext').onclick = () => go(state.i + 1);
-document.getElementById('btnOverview').onclick = () => setOverview(!state.overview);
-addEventListener('keydown', ev => {
-  if (ev.target.tagName === 'INPUT') return;
-  if (ev.key === 'ArrowLeft') go(state.i - 1);
-  else if (ev.key === 'ArrowRight') go(state.i + 1);
-  else if (ev.key === '1') setMode('wire');
-  else if (ev.key === '2') setMode('content');
-  else if (ev.key === '3') setMode('contract');
-  else if (ev.key === '0') setOverview(!state.overview);
+/* 侧栏条目与总览磁贴都带 data-go，用同一个委托监听，避免两条路径各接一次而漏掉一条。 */
+document.addEventListener('click', event => {
+  const target = event.target.closest('[data-go]');
+  if (target) go(target.dataset.go);
 });
-addEventListener('resize', fit);
-/* 深链：#甲-1 可直接打开；地址栏改 hash 或浏览器前进后退都跟着走。
-   render() 写的 hash 与当前条目相同，不会回环。 */
-addEventListener('hashchange', () => {
-  const i = CAT.findIndex(e => e.id === hashId());
-  if (i >= 0 && i !== state.i){ state.i = i; state.overview = false; render(); }
+document.querySelector('.side__foot').addEventListener('click', event => {
+  const link = event.target.closest('[data-view="overview"]');
+  if (link) { event.preventDefault(); state.view = 'overview'; render(); }
 });
-/* location.hash 会返回百分号编码（#%E7%94%B2-1），必须解码后再比对中文 id */
-const hashId = () => { try { return decodeURIComponent(location.hash.replace(/^#/, '')); } catch (err) { return ''; } };
-const fromHash = () => { const i = CAT.findIndex(e => e.id === hashId()); return i < 0 ? 0 : i; };
-state.i = fromHash();
+document.getElementById('ratio').addEventListener('click', event => {
+  const button = event.target.closest('button'); if (!button) return;
+  state.ratio = button.dataset.ratio;
+  [...event.currentTarget.querySelectorAll('button')].forEach(b => b.setAttribute('aria-pressed', b === button));
+  render();
+});
+document.getElementById('mode').addEventListener('click', event => {
+  const button = event.target.closest('button'); if (!button) return;
+  state.mode = button.dataset.mode;
+  [...event.currentTarget.querySelectorAll('button')].forEach(b => b.setAttribute('aria-pressed', b === button));
+  render(true);
+});
+document.getElementById('togGrid').addEventListener('change', e => { state.grid = e.target.checked; render(true); });
+document.getElementById('togSafe').addEventListener('change', e => { state.safe = e.target.checked; render(true); });
+document.getElementById('q').addEventListener('input', e => { state.query = e.target.value; renderList(); });
+const step = delta => {
+  const index = D.layouts.findIndex(l => l.id === state.current);
+  const next = index < 0 ? (delta > 0 ? 0 : D.layouts.length - 1) : (index + delta + D.layouts.length) % D.layouts.length;
+  go(D.layouts[next].id);
+};
+document.getElementById('btnPrev').addEventListener('click', () => step(-1));
+document.getElementById('btnNext').addEventListener('click', () => step(1));
+document.addEventListener('keydown', event => {
+  if (event.target.tagName === 'INPUT') return;
+  if (event.key === 'ArrowLeft') step(-1);
+  else if (event.key === 'ArrowRight') step(1);
+  else if (event.key === 'Escape') { state.view = 'overview'; render(); }
+});
+document.getElementById('link-catalog').addEventListener('click', event => {
+  event.preventDefault();
+  alert('目录唯一权威：' + D.source + '\n本页由 scripts/build_layout_atlas.cjs 生成，改目录后重新生成即可。');
+});
+
+document.getElementById('n-layouts').textContent = D.layouts.length;
+document.getElementById('n-families').textContent = new Set(D.layouts.map(l => l.family)).size;
+document.getElementById('n-masters').textContent = D.masters.length;
+state.current = D.layouts[0].id;
 render();
 </script>
 </body>

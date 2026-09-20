@@ -110,8 +110,15 @@ function parseArgs(argv){
    for(const page of doc.pages){
     const expected=layoutApi.resolveModules(page,taskContract.ratio);
     if(!expected.length)continue;
-    const row=rows.find(item=>item.page===page.page);
+    /* 修复：pages.json 的 page 序号是正文页相对序号，必须经首尾页过滤后再映射到成稿页；
+       直接用 page.page 当成成稿索引会在有封面/章节页的册子上量到错误的页。 */
+    const contentRows=rows.filter(item=>!['cover','references','back-cover','divider'].includes(item.bookends&&item.bookends.role));
+    const row=contentRows[page.page-1];
     if(!row){all.push('page '+page.page+' 的布局 '+page.layout+' 无法对账：成稿里找不到这一页');continue;}
+    /* 声明了 html.finding 就得真有 .finding。不能拿 r.form 判——那是页面级 data-form，
+       而"这一格用什么形式"写在 pages.json 的 regions 里；两者混用会让这条检查永远不触发。 */
+    if((page.regions||[]).some(g=>g&&g.form==='html.finding')&&!((row.finding||[]).length))
+      all.push('page '+page.page+' 的 regions 声明了 html.finding（判断／依据／限定），成稿这一页却没有 .finding 组件：三级骨架不是可选装饰');
     const measured=await p.locator('.slide').nth(row.page-1).evaluate(geometry.inspectModules,expected.map((m,i)=>({index:i,slot:m.slot,title:m.title,box:m.box})));
     row.layoutCheck={layout:page.layout,name:layoutApi.get(page.layout).name,...measured};
     measured.errors.forEach(e=>all.push('page '+page.page+' 布局 '+page.layout+'：'+e.detail+'（'+(e.code==='M-GRID'?'期望 '+JSON.stringify(e.want)+'，实际 '+JSON.stringify(e.got):e.code)+'）'));
@@ -128,6 +135,17 @@ function parseArgs(argv){
   if(!r.form)continue;let entry=null;try{entry=deckForms.get(r.form);}catch(e){warnings.push('第'+r.page+'页的形式 '+r.form+' 不在 deck-forms 词汇表内：该页未做"图形实现必须有 SVG"核对，请确认装配期已拦截');continue;}
   if(entry.kind==='svg'&&!r.shapes.svg)errors.push('第'+r.page+'页声明 '+r.form+'（'+entry.label+'）是图形实现，但正文里没有 SVG'+(r.shapes.tables?'，只有表格（含 '+(r.shapes.sparklines||0)+' 个表格内数据条）':'')+'：图型不因容量不足被替换');
   for(const c of r.charts||[])if(c.risks)warnings.push('第'+r.page+'页图表预算提示：'+c.risks);
+  /* 声明了 html.finding 就要真的三级俱全。缺哪一级就报哪一级——
+     报"结构不完整"没用，作者得知道是判断、依据还是限定没写。 */
+  for(const f of r.finding||[]){
+   if(!f.verdict)errors.push('第'+r.page+'页的 .finding 缺「判断」一级（.finding__verdict）：没有判断，依据就只是一堆事实');
+   if(f.grounds.length<3)errors.push('第'+r.page+'页的 .finding 只有 '+f.grounds.length+' 条依据（.finding__step），下限 3 条：不足 3 条说明这一格还没拆开');
+   const broken=f.grounds.findIndex(g=>!g.label||!g.why);
+   if(broken>=0)errors.push('第'+r.page+'页第 '+(broken+1)+' 条依据缺标签（.finding__label）或说明（.finding__why）');
+   const misrank=f.grounds.findIndex((g,i)=>g.rank!==0&&g.rank<i+1);
+   if(misrank>=0)errors.push('第'+r.page+'页第 '+(misrank+1)+' 条依据的档位条只有 '+f.grounds[misrank].rank+' 格，少于其次序 '+((misrank+1))+'：档位条只标「第几档」，第 k 条至少亮 k 格');
+   if(!f.limit)errors.push('第'+r.page+'页的 .finding 缺「限定」一级（.finding__limit）：不写限定，判断就没有边界');
+  }
  }
  let printCheck={status:'NOT_CHECKED',reason:'iteration 档不做打印媒体复检'},pdfRows=[],evidenceManifest=null;
  let pdfPages=null,pdfFonts=null,pdfArtifact={skipped:true,reason:'tier='+tier},navigation={skipped:true,reason:'tier='+tier},offlineState={skipped:true,reason:'tier='+tier};

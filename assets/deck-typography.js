@@ -26,8 +26,8 @@ body{font-family:var(--font-body);font-synthesis:none}
 .type-latin{font-weight:var(--weight-title-latin)}
 .cover-title{font-size:46px;line-height:1.2}.divider-name{font-size:38px;line-height:1.25}
 .slide h2,.slide h3,.analytical-table caption{font-family:var(--font-body);font-weight:600}
-b,strong,.data-table th,.row-label,.status-label,.evidence-note strong,.analytical-table .total td,.kpi-card .kpi-val,.divider-num{font-weight:600}
-.num,.kpi-val,.kpi-delta{font-family:var(--font-num);font-variant-numeric:lining-nums tabular-nums}
+b,strong,.data-table th,.row-label,.status-label,.evidence-note strong,.analytical-table .total td,.kpi-card .kpi-val,.kpi-card .kpi-value,.divider-num{font-weight:600}
+.num,.kpi-val,.kpi-value,.kpi-delta{font-family:var(--font-num);font-variant-numeric:lining-nums tabular-nums}
 .slide svg{font-synthesis:none;text-rendering:geometricPrecision}.slide svg text{font-variant-numeric:lining-nums tabular-nums}.slide svg text[font-weight="700"]{font-weight:600}
 .type-note{font-size:14px;line-height:1.5}.source{font-size:12px}
 ${id==='legacy-system'?'.reading .slide__title{font-size:30px;line-height:1.22}':''}`;}

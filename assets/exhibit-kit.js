@@ -364,6 +364,110 @@
       return '<tr'+(row.kind==='total'?' class="total"':row.selected?' class="selected"':'')+'>'+columns.map(col=>cell(row,col)).join('')+'</tr>';
     }).join('')}</tbody></table>`;
   }
+  /* 单期横向构成条：一个整体切成几块，回答"这份钱/量去了哪几块"。
+     与 kit.stacked 的分工——那道是纵向多列、比列与列之间的构成差异；
+     这道是横向单条，段内直接标注，放不下的段走条上方的引线通道。
+     正因为段内能直接标，它不需要图例：图例占的那一行在窄模块里就是纯损失。 */
+  function shareBar(s) {
+    const c = canvas(s), data = list(s.items, 'items');
+    if (data.length > 2) throw new Error('横向构成条一次最多 2 条；三期以上请改用 kit.stacked 逐列比较');
+    if (s.mode !== undefined) throw new Error('构成条只做 100% 构成；要按绝对值跨期比较请用 kit.stacked');
+    if (s.labels !== undefined) throw new Error('构成条不提供改表开关：段内放不下的标注改走条上方引线通道');
+    const content = s.labelContent || 'share';
+    if (!['share','value','both'].includes(content)) throw new Error('labelContent 应为 share/value/both');
+    const names = [];
+    data.forEach((v, i) => {
+      /* 单条时类别标签必是模块标题的复述，省略；两条以上不写就分不清哪条是哪条。 */
+      const labelNeeded = data.length > 1;
+      if (labelNeeded && (v.label === undefined || String(v.label).trim() === '')) throw new Error('两条以上时每条都要有类别标签，否则分不清哪条是哪条');
+      const segs = list(v.segments, 'items[' + i + '].segments');
+      if (segs.length < 2) throw new Error('构成条至少两段；只有一段时请用 KPI 或单个数字');
+      const seen = new Set();
+      segs.forEach(g => {
+        if (!g.label || !String(g.label).trim()) throw new Error('系列名称不能为空');
+        if (seen.has(g.label)) throw new Error('系列名称须列内唯一：' + g.label);
+        seen.add(g.label); num(g.value, 'segments.value');
+        if (g.value < 0) throw new Error('构成条不接受负值；缺失不等于零，请单独编码');
+        if (!names.includes(g.label)) names.push(g.label);
+      });
+      if (segs.length !== names.length) throw new Error('每条须显式列出全部系列；零值填 0，未知值不能当作 0');
+    });
+    if (names.length > 6) throw new Error('系列 ≤ 6；更多请把次要项并为"其他"或改用表格');
+    const totals = data.map(v => v.segments.reduce((a, g) => a + g.value, 0));
+    totals.forEach((v, i) => { if (!(v > 0)) throw new Error('items[' + i + '] 总量须大于 0，构成比才有定义'); });
+    const shareOf = (g, i) => g.value / totals[i];
+    const shareText = (g, i) => formatNumber(shareOf(g, i) * 100, { decimals: s.shareDecimals === undefined ? 1 : s.shareDecimals, suffix: '%' });
+    const textOf = (g, i) => content === 'value' ? formatNumber(g.value, s.format) : content === 'both' ? formatNumber(g.value, s.format) + ' · ' + shareText(g, i) : shareText(g, i);
+    const colorOf = j => c.p.series[j % c.p.series.length];
+
+    const PAD = 10, capH = c.fs * 1.5, rowH = c.fs * 1.45, gapToBar = 6;
+    const bandGap = c.fs * 1.4;
+    /* 条的厚度不承载信息（段宽才是份额），所以按容器宽度定，不按可用高度反推：
+       反推出来是一块填满格子的实心方块，会和相邻的柱状图抢重量。 */
+    const barH = Math.min(Math.max(34, (c.w - PAD * 2) / 5), 84);
+    const bandH = (c.h - PAD * 2 - bandGap * (data.length - 1)) / data.length;
+    if (bandH - barH < gapToBar) throw new Error('构成条高度不足：' + data.length + ' 条至少需要 ' + Math.ceil((barH + gapToBar) * data.length + bandGap * (data.length - 1) + PAD * 2) + 'px，当前仅 ' + Math.round(c.h) + 'px；请减少条数或改用 kit.stacked');
+    /* 段内两行（名称在上、数值在下）的高度门槛：条太薄时一律改走引线通道，不让字压出条外。 */
+    const twoLineH = capH + rowH;
+    const bands = data.map((v, i) => {
+      const usable = c.w - PAD * 2;
+      const segs = v.segments;
+      const widths = segs.map(g => shareOf(g, i) * usable);
+      const centers = widths.map((w, j) => PAD + widths.slice(0, j).reduce((a, x) => a + x, 0) + w / 2);
+      const inside = segs.map((g, j) => barH >= twoLineH + 6 && Math.max(textWidth(g.label, c.fs), textWidth(textOf(g, i), c.fs)) + 16 <= widths[j]);
+      const leader = inside.map(ok => !ok);
+      /* 引线标注本来贴在段中心，靠边时回拉到画布内——回拉后的位置才是它真正占的横向区间。 */
+      const labelText = segs.map(g => g.label + ' ' + textOf(g, i));
+      const halfOf = j => textWidth(labelText[j], c.fs) / 2;
+      const labelX = centers.map((cx, j) => Math.max(PAD + halfOf(j), Math.min(c.w - PAD - halfOf(j), cx)));
+      /* 同一通道行里相邻两条标注的实际区间不能相交。分行按真实字宽判断，不能用固定像素差：
+         标签长短随内容变，定长阈值早晚会让长标签直接压字。 */
+      const rows = [], rowRight = [];
+      segs.forEach((g, j) => {
+        if (!leader[j]) return;
+        let r = 0;
+        while (rowRight[r] !== undefined && labelX[j] - halfOf(j) < rowRight[r] + 10) r++;
+        rowRight[r] = labelX[j] + halfOf(j);
+        rows[j] = r;
+      });
+      return { v, i, usable, widths, centers, inside, leader, labelText, labelX, rows, leaderRows: rowRight.length };
+    });
+    let y = PAD;
+    bands.forEach(band => {
+      const { v, i, usable, widths, centers, inside, leader, labelText, labelX, rows, leaderRows } = band;
+      const hasCap = v.label !== undefined && String(v.label).trim() !== '';
+      const blockH = (hasCap ? capH : 0) + leaderRows * rowH + (leaderRows ? gapToBar : 0) + barH;
+      if (blockH > bandH + 0.5) throw new Error('构成条第 ' + (i + 1) + ' 条的标注通道放不下：需要 ' + Math.ceil(blockH) + 'px，仅 ' + Math.floor(bandH) + 'px；请把这一格加高、减少系列，或改用 kit.stacked');
+      const bandTop = y + (bandH - blockH) / 2;
+      const capY = bandTop + c.fs * 1.1;
+      if (hasCap) c.text(PAD, capY, v.label, 'start', c.p.ink, 'font-weight="600"');
+      const barTop = bandTop + (hasCap ? capH : 0) + leaderRows * rowH + (leaderRows ? gapToBar : 0);
+      let x = PAD;
+      v.segments.forEach((g, j) => {
+        const w = widths[j], j0 = x; let aw = '';
+        c.rect(j0, barTop, w, barH, colorOf(j), (leader[j] ? '' : `${aw} `) + `data-value="${g.value}"`);
+        if (!leader[j]) aw = c.anchor({ id: 'seg:' + v.label + '|' + g.label, x: centers[j], y: barTop + barH / 2, side: 'right', value: g.value, label: g.label, box: { x: j0, y: barTop, width: w, height: barH }, group: 'seg:' + v.label, fill: colorOf(j) });
+        x += w;
+      });
+      // 段内两行：名称在上、数值在下；对比色按各自填充色算，不写死。
+      v.segments.forEach((g, j) => {
+        if (!inside[j]) return;
+        const fg = cellText(colorOf(j), 1, c.p.ink);
+        c.text(centers[j], barTop + barH / 2 - c.fs * 0.12, g.label, 'middle', fg);
+        c.text(centers[j], barTop + barH / 2 + c.fs * 1.28, textOf(g, i), 'middle', fg, 'font-weight="600"');
+      });
+      // 段外引线：从条上方引到该段中心，标注落在通道行里，不横穿其他段。
+      v.segments.forEach((g, j) => {
+        if (!leader[j]) return;
+        const ty = bandTop + (hasCap ? capH : 0) + rows[j] * rowH + c.fs * 0.9;
+        c.line(centers[j], ty + 4, centers[j], barTop - 3, c.p.grid);
+        c.text(labelX[j], ty, labelText[j], 'middle', c.p.muted);
+      });
+      y = bandTop + blockH + bandGap;
+    });
+    return c.end();
+  }
+
   function wrappedText(c,x,y,value,width,maxLines=3,color=c.p.ink) {
     if(value===undefined||value===null||String(value).trim()==='')throw new Error('流程文字不能为空');
     const lines=[];let line='';
@@ -386,5 +490,5 @@
     });
     return c.end();
   }
-  return {waterfall,dumbbell,slope,bullet,heatmap,mekko,tree,swimlane,stacked,comparisonTable,processFlow,formatNumber,difference};
+  return {shareBar,waterfall,dumbbell,slope,bullet,heatmap,mekko,tree,swimlane,stacked,comparisonTable,processFlow,formatNumber,difference};
 });

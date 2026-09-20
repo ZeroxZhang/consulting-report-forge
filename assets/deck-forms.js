@@ -16,6 +16,9 @@ const FORMS = {
   'kit.heatmap': { family: 'correlation', label: '矩阵热力图', kind: 'svg', module: 'exhibit-kit', export: 'heatmap', annotation: 'layer', capacity: '≤ 160 格；固定 domain；只接受有限数值，未观察／缺失用自定义 SVG 或 HTML 单独编码' },
   'kit.mekko': { family: 'composition', label: '百分轴 Mekko', kind: 'svg', module: 'exhibit-kit', export: 'mekko', annotation: 'layer', capacity: '列 ≤ 6；窄列与小片自动改走同侧引线通道，通道放不下时报错' },
   'kit.stacked': { family: 'composition', label: '堆积构成', kind: 'svg', module: 'exhibit-kit', export: 'stacked', annotation: 'layer', capacity: '列 ≤ 12 × 系列 ≤ 6；仅非负组成；小片与零值走引线通道' },
+  /* shareBar 与 stacked 的分工写进两条 capacity：一条比「一份里分成哪几块」，一条比「几期之间怎么变」。
+     单期就该用 shareBar——它段内直标、不要图例，而图例那一行在四格宽的模块里正是最贵的一行。 */
+  'kit.shareBar': { family: 'composition', label: '单期构成条', kind: 'svg', module: 'exhibit-kit', export: 'shareBar', annotation: 'layer', capacity: '1–2 条 × 系列 ≤ 6；段宽即份额，单条时省略类别行；三期以上改用 kit.stacked；两条更吃格子，标注通道放不下会报错' },
   'kit.tree': { family: 'hierarchy', label: '层级树', kind: 'svg', module: 'exhibit-kit', export: 'tree', annotation: null, capacity: '≤ 48 节点；每层同一拆分逻辑' },
   'kit.swimlane': { family: 'diagram', label: '泳道图', kind: 'svg', module: 'exhibit-kit', export: 'swimlane', annotation: null, capacity: '单元格仅 1 节点；复杂分支换专门路径' },
   'kit.processFlow': { family: 'diagram', label: '阶段流程', kind: 'svg', module: 'exhibit-kit', export: 'processFlow', annotation: null, capacity: '3–6 段线性；等宽不表示等时长' },
@@ -49,6 +52,10 @@ const FORMS = {
   'html.matrix': { family: 'table', label: '评估矩阵／RACI', kind: 'html', annotation: null, capacity: '权重与评分锚点须透明' },
   'html.kpi': { family: 'kpi', label: 'KPI 卡组', kind: 'html', annotation: null, capacity: '≤ 5 张卡；每张须有目标线' },
   'html.text': { family: 'text', label: '结构化文字／证据组', kind: 'html', annotation: null, capacity: '无共同维度时保留结构化文字' },
+  /* finding 与 text 的差别是「依据能不能数」：text 是一段散文，finding 把同一段话拆成
+     判断一句 + 依据 N 条 + 限定一句；三级缺一就退化成散文，而散文不构成证据。
+     依据有序时用档位条标次序，但档位条只数「第几档」、不量值——长度会把它谎报成测得的量级。 */
+  'html.finding': { family: 'text', label: '判断／依据／限定', kind: 'html', annotation: null, capacity: '依据 3–5 条；三级缺一即退化为散文；有序依据用档位条标次序' },
   'svg.custom': { family: 'custom', label: '自定义矢量构图', kind: 'svg', annotation: null, capacity: '几何与语义由作者负责，须实际看图' },
 };
 

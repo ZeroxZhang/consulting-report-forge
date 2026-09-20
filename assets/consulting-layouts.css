@@ -22,6 +22,37 @@
 .evidence-note{font-size:16px;line-height:1.5;color:var(--gray-1);padding:12px 0;border-bottom:1px solid var(--gray-3)}
 .evidence-note strong{display:block;color:var(--brand);font-size:18px;margin-bottom:5px}
 .decision-strip{background:var(--brand);color:var(--on-brand);padding:12px 16px;font-size:17px;line-height:1.4}
+/* 判断／依据／限定：text 槽位的三级骨架。做成组件而不是让每份报告手搓 .takeaway/.note-line，
+   是因为「依据有几条」得数得出来——散文数不出条数，也就无从判断这一格是不是只装了三分之一。
+   三级缺一即退化为散文；validation 由 qa_deck 按 html.finding 声明核对，不靠自觉。 */
+.finding{display:flex;flex-direction:column;gap:14px;min-height:0}
+.finding__verdict{margin:0;font-size:17px;line-height:1.5;color:var(--ink);font-weight:600}
+.finding__verdict::before{content:"";display:block;width:34px;height:3px;background:var(--brand);margin-bottom:10px}
+.finding__grounds{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
+.finding__step{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:11px;row-gap:3px;align-items:baseline}
+/* 档位条三格等宽，第 k 项亮 k 格。等宽是关键：长度会承载量级，格数只承载「在第几档」。
+   有序但没测过倍数的依据，只能用格数说，不能用长度说。 */
+.finding__rank{display:flex;gap:2px;align-self:center;padding-top:1px}
+.finding__rank i{width:7px;height:11px;background:var(--gray-4)}
+.finding__step:nth-child(1) .finding__rank i:nth-child(-n+1){background:var(--seq-3)}
+.finding__step:nth-child(2) .finding__rank i:nth-child(-n+2),
+.finding__step:nth-child(3) .finding__rank i:nth-child(-n+3),
+.finding__step:nth-child(4) .finding__rank i:nth-child(-n+4),
+.finding__step:nth-child(5) .finding__rank i:nth-child(-n+5){background:var(--seq-4)}
+.finding__step:nth-child(3) .finding__rank i:nth-child(-n+3),
+.finding__step:nth-child(4) .finding__rank i:nth-child(-n+4),
+.finding__step:nth-child(5) .finding__rank i:nth-child(-n+5){background:var(--seq-5)}
+.finding__label{font-size:15px;font-weight:600;color:var(--brand)}
+.finding__why{grid-column:2;font-size:14px;line-height:1.5;color:var(--gray-1)}
+.finding__limit{margin:0;font-size:13px;line-height:1.5;color:var(--gray-2);border-top:1px solid var(--gray-3);padding-top:10px}
+/* KPI 卡组（html.kpi）。卡数由作者决定，栅格就不能写死列数：
+   写死 repeat(4, …) 时 3 张卡会在右侧留一个空列，读者看到的是"少了一张"。
+   按列流铺满整行，n 张卡就是 n 等分。 */
+.kpi-grid{display:grid;gap:12px;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr)}
+.kpi-card{background:var(--gray-4);padding:10px 12px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.kpi-label{font-size:13px;line-height:1.35;color:var(--gray-1)}
+.kpi-value{font-size:23px;line-height:1.15;font-weight:600;color:var(--brand);font-variant-numeric:tabular-nums}
+.kpi-note{font-size:12.5px;line-height:1.4;color:var(--gray-2)}
 .reading .data-table{width:100%;border-collapse:collapse;font-size:var(--fs-data,16px);line-height:1.4;table-layout:fixed}
 .data-table th{font-size:var(--fs-table-head,15px);font-weight:600;text-align:left;color:var(--gray-1);border-bottom:2px solid var(--brand);padding:10px 9px;vertical-align:bottom}
 .data-table td{padding:13px 9px;border-bottom:1px solid var(--gray-3);vertical-align:top;overflow-wrap:anywhere}
@@ -68,6 +99,9 @@
 }
 /* 行高钉到整数：容量核算的分母必须等于真实行高，否则"h 行装几行字"只是估算。 */
 .slide.reading[data-layout] .bullet{line-height:var(--grid-line)}
+.slide.reading[data-layout] .finding__verdict{line-height:var(--grid-line)}
+.slide.reading[data-layout] .finding__why,
+.slide.reading[data-layout] .finding__limit{line-height:var(--grid-note-line)}
 .slide.reading[data-layout] .annotation{line-height:var(--grid-note-line)}
 .slide.reading[data-layout] .exhibit{padding:var(--grid-module-pad)}
 /* 模块标题带 25 + 8 = 33、单位行 18 + 8 = 26：与 deck-grid.js 的 MODULE 常量同值。 */

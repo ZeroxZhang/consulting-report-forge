@@ -98,8 +98,22 @@ function inspectDom(s, wfForms) {
     const cs = getComputedStyle(e);
     if (parseFloat(cs.borderLeftWidth) >= 2 && cs.borderLeftStyle !== 'none' && parseFloat(cs.paddingLeft) < 6 && e.getBoundingClientRect().height > 10) { noteSeen.add(e); notePad.push({cls: String(e.className).slice(0, 40), pad: cs.paddingLeft, text: (e.textContent || '').trim().slice(0, 40)}); }
   }
+  /* 判断／依据／限定不是装饰：三级缺一，这一格就退回散文，而散文数得出字数、数不出依据条数。
+     所以这里数的是结构而不是字数——只有结构判得出「这一格是不是只装了三分之一」。 */
+  const finding = [...s.querySelectorAll('.finding')].map(f => {
+    const txt = el => ((f.querySelector(el) || {}).textContent || '').trim();
+    return {
+      verdict: txt('.finding__verdict').length,
+      limit: txt('.finding__limit').length,
+      grounds: [...f.querySelectorAll('.finding__step')].map(st => ({
+        label: (((st.querySelector('.finding__label') || {}).textContent) || '').trim(),
+        why: (((st.querySelector('.finding__why') || {}).textContent) || '').trim(),
+        rank: st.querySelectorAll('.finding__rank i').length
+      }))
+    };
+  });
   return {
-    exhibits, textEvidence, unreadableText: unreadable, form: s.dataset.form || null, visual: s.dataset.visual || '', proves: s.dataset.proves || '', densityProfile: s.dataset.densityProfile || '',
+    exhibits, finding, textEvidence, unreadableText: unreadable, form: s.dataset.form || null, visual: s.dataset.visual || '', proves: s.dataset.proves || '', densityProfile: s.dataset.densityProfile || '',
     // v3 布局绑定：QA 拿它和 pages.json、布局目录三方对账。
     layout: s.dataset.layout || '', modules: [...s.querySelectorAll('[data-module]')].map(e => e.dataset.module || ''),
     waterfall,

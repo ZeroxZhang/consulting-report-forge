@@ -49,7 +49,7 @@ const SLOTS = ['head', 'chart', 'diagram', 'table', 'kpi', 'timeline', 'text', '
    html.kpi（卡片组）只进 kpi 槽——按族判会把这两件事混成一件。 */
 const FORM_SLOTS = {  'kit.waterfall': ['chart'], 'kit.dumbbell': ['chart'], 'kit.slope': ['chart'],
   'kit.bullet': ['chart', 'kpi'], 'kit.heatmap': ['chart', 'table'], 'kit.mekko': ['chart'],
-  'kit.stacked': ['chart'], 'kit.tree': ['diagram'],
+  'kit.stacked': ['chart'], 'kit.shareBar': ['chart'], 'kit.tree': ['diagram'],
   'kit.swimlane': ['timeline', 'diagram'], 'kit.processFlow': ['diagram', 'timeline'],
   'kit.comparisonTable': ['table'],
   'recipe.rankedBar': ['chart'], 'recipe.groupedBar': ['chart'], 'recipe.timeSeries': ['chart'],
@@ -61,7 +61,7 @@ const FORM_SLOTS = {  'kit.waterfall': ['chart'], 'kit.dumbbell': ['chart'], 'ki
   'diagram.swimlane': ['timeline', 'diagram'], 'diagram.hierarchy': ['diagram'],
   'diagram.condition': ['diagram'],
   'html.table': ['table'], 'html.matrix': ['table'], 'html.kpi': ['kpi'],
-  'html.text': ['text', 'annotation'],
+  'html.text': ['text', 'annotation'], 'html.finding': ['text', 'annotation'],
   // 自定义构图不受槽位限制：它就是"表内形式都不适配"时的出口，几何由作者负责。
   'svg.custom': SLOTS.filter(slot => slot !== 'head' && slot !== 'source')
 };

@@ -88,6 +88,19 @@
 | `panel` | 通用并列格，接受任何已登记形式。论证不依赖某一格的具体形式时用它 |
 | `head` / `source` | 由版心固定占用，不接受形式声明 |
 
+### 类名契约：`html.*` 形式的结构
+
+有些形式是**作者写 HTML、技能只给样式**（`kind: "html"`）。类名对不上就等于没有样式，也不会报错——所以这里是这些形式的唯一权威类名表。技能只样式化下列名字，其余类名由作者自定、技能不管。
+
+| form | 结构 | 校验 |
+|---|---|---|
+| `html.kpi` | `.kpi-grid > .kpi-card > .kpi-label` / `.kpi-value` / `.kpi-note` | 否。卡数上限见容量表；`.kpi-grid` 按列流铺满整行，**不要自己写 `grid-template-columns`**：写死列数时卡数一变就留空列 |
+| `html.finding` | `.finding > .finding__verdict`＋`.finding__grounds > .finding__step`（内含 `.finding__rank` / `.finding__label` / `.finding__why`）＋`.finding__limit` | **是**：判断／限定缺一、依据不足 3 条、档位格数少于其次序，都会报错 |
+| `html.table` | `.data-table`（`th` / `td` / `.num` / `.selected` / `.group`）；带数据条的用 `.analytical-table`（`caption` / `.column-unit` / `.table-bar` / `.total`） | 否 |
+| `html.matrix` | `.evidence-grid`、`.microbar`、`.matrix-note`、`.decision-strip`、`.evidence-note`、`.status-good` / `.status-risk` / `.status-caution` | 否 |
+
+**写样式时的字重陷阱**：`assets/consulting-layouts.css` 里写 `font-weight:700` 是可以的，但**必须同时把选择器加进 `assets/deck-typography.js` 的归一化名单**（`b,strong,.data-table th,.row-label,…` 那一行）——归一化把 700 拉回 600 才是字重合同的落点。名单漏了新选择器，成稿审计就会报"正文字重只能用 400/500/600"。（实测：`.status-label` / `.row-label` / `.analytical-table caption` 都靠这份名单归到 600。）
+
 `panel` 是并列型布局的出口：当几格彼此等价时用它，而不是硬指定 `chart`——否则作者会被迫把表格塞进图表位。代价是约束变弱，所以只用在并列型布局上。
 
 ### 留白：要么铺满，要么说出理由

@@ -109,7 +109,7 @@ function parseArgs(argv){
  }
  // 声明为图的形式必须在成稿里真的出现 SVG：绘图受阻不能退成表格再沿用原图型名称通过。
  if(modern)for(const r of rows){
-  if(!r.form)continue;let entry=null;try{entry=deckForms.get(r.form);}catch(e){continue;}
+  if(!r.form)continue;let entry=null;try{entry=deckForms.get(r.form);}catch(e){warnings.push('第'+r.page+'页的形式 '+r.form+' 不在 deck-forms 词汇表内：该页未做"图形实现必须有 SVG"核对，请确认装配期已拦截');continue;}
   if(entry.kind==='svg'&&!r.shapes.svg)errors.push('第'+r.page+'页声明 '+r.form+'（'+entry.label+'）是图形实现，但正文里没有 SVG'+(r.shapes.tables?'，只有表格（含 '+(r.shapes.sparklines||0)+' 个表格内数据条）':'')+'：图型不因容量不足被替换');
   for(const c of r.charts||[])if(c.risks)warnings.push('第'+r.page+'页图表预算提示：'+c.risks);
  }

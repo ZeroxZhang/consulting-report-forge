@@ -69,7 +69,7 @@ node scripts/verify_blueprint_pages.cjs /任务/deck-blueprint.json /任务/page
 | `kind` | `report`（封面、正文、参考资料、封底）、`fragment` 或 `collection`。它不降低风险复核要求。 |
 | `critical` | 只登记改变判断的期间、分母、状态、否定条件、关键数字或反证；在 HTML 中用 `data-critical-id` 标到相关对象。 |
 
-`pages.json` 的每个正文页必须按从 1 开始的连续顺序声明 `page`、`proves` 与 `form`。手写或原生 SVG 使用 `form: "svg.custom"` 并加 `visual`；多展品页的 `regions` 必须有且仅有一个 `role: "primary"`，且它与页面 `form` 一致。正文 `<section>` 用相同的 `data-form`；`visual` 存在时同时使用相同 `data-visual`。
+`pages.json` 的每个正文页必须按从 1 开始的连续顺序声明 `page`、`proves` 与 `form`。手写或原生 SVG 使用 `form: "svg.custom"` 并加 `visual`；多展品页的 `regions` 必须有且仅有一个 `role: "primary"`，且它与页面 `form` 一致。正文 `<section>` 用相同的 `data-form`；`visual` 存在时同时使用相同 `data-visual`；如果另外写了 `data-proves`，它必须与 `pages.json` 的 `proves` **逐字相同**（不写不报错，但同一句话存在两处，改一处就要同步另一处）。
 
 ### 内容密度与留白合同（新稿使用 `pages.version: 2`）
 

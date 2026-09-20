@@ -5,6 +5,7 @@ const fs = require('node:fs'), path = require('node:path'), crypto = require('no
 const forms = require('../assets/deck-forms.js');
 const layer = require('../assets/annotation-layer.js');
 const densityContract = require('./density_contract.cjs');
+const richness = require('./richness_contract.cjs');
 
 const SLOTS = ['main', 'left', 'right', 'top', 'bottom', 'aside', 'full'];
 const ROLES = ['primary', 'support', 'context', 'evidence'];
@@ -83,13 +84,16 @@ function check(doc) {
     for (let i = 1; i <= numbers.length; i++) if (!numbers.includes(i)) bad('page 序号不连续：缺少 ' + i);
   }
   errors.push(...repetitionErrors(doc));
+  // 与 densityErrors 同一先例：声明质量类合同只对 v2 生效，历史 v1 稿继续可读、重新打包不会因新规则突然失败。
+  if (doc.version === 2) errors.push(...richness.validate(doc));
   return { status: errors.length ? 'FAIL' : 'PASS', errors, inventory: inventory(doc) };
 }
 
 const expression = page => norm(page.visual) || page.form;
 
 /* 重复必须是被解释的决定，不能是默认：同一形式第 3 次起、或连续 3 页同形式，都要写理由。
-   这不是图型配额——不规定用几种、不因数量定级，只要求"你注意到了并说得出为什么"。 */
+   本函数只要求"你注意到了并说得出为什么"，不设数量下限；整册的类型种数下限由
+   richness_contract 单独承担（见下方 check 里对 richness.validate 的调用）。 */
 function repetitionErrors(doc) {
   const errors = [], pages = Array.isArray(doc && doc.pages) ? doc.pages : [];
   const counts = {};
@@ -129,6 +133,9 @@ function inventory(doc) {
     else runs.push({ form: expression(page), pages: [page.page], length: 1 });
   });
   const entries = Object.entries(byForm).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  /* 丰富度的事实与豁免：豁免不是静默放行，要能被审稿人在 audit 里看见。 */
+  const chartTypes = richness.typesOf(doc), diversityRequired = richness.requiredTypes(pages.length);
+  const diversityNote = norm(doc && doc.diversityReason);
   return {
     pages: pages.length,
     forms: Object.fromEntries(entries),
@@ -137,6 +144,11 @@ function inventory(doc) {
     distinctForms: entries.length,
     visuals: byVisual,
     distinctVisuals: Object.keys(byVisual).length,
+    chartTypes,
+    distinctChartTypes: chartTypes.length,
+    diversityRequired,
+    diversityExempt: diversityRequired > 0 && chartTypes.length < diversityRequired && diversityNote.length >= richness.MIN_REASON,
+    diversityNote,
     annotations: annotated,
     regions,
     longestRun: runs.reduce((max, run) => Math.max(max, run.length), 0),

@@ -107,6 +107,9 @@ function parseArgs(argv){
    all.forEach(e=>errors.push('pages合同：'+e));
   }catch(error){pagesCheck={status:'FAIL',errors:[error.message]};errors.push('pages合同：'+error.message);}
  }
+ /* 丰富度豁免必须留痕：没有这条，audit 只看到一次 PASS，看不出类型种数下限是被理由顶掉的。 */
+ const richnessInv=pagesCheck.inventory;
+ if(modern&&richnessInv?.diversityExempt)warnings.push('本稿正文 '+richnessInv.pages+' 页只有 '+richnessInv.distinctChartTypes+' 种图表类型（下限 '+richnessInv.diversityRequired+' 种），已用 pages.diversityReason 豁免：'+richnessInv.diversityNote);
  // 声明为图的形式必须在成稿里真的出现 SVG：绘图受阻不能退成表格再沿用原图型名称通过。
  if(modern)for(const r of rows){
   if(!r.form)continue;let entry=null;try{entry=deckForms.get(r.form);}catch(e){warnings.push('第'+r.page+'页的形式 '+r.form+' 不在 deck-forms 词汇表内：该页未做"图形实现必须有 SVG"核对，请确认装配期已拦截');continue;}

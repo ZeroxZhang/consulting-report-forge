@@ -29,4 +29,10 @@ for (const [mutate, pattern] of cases) {
   assert.equal(result.status, 'FAIL', JSON.stringify(doc));
   assert.ok(result.errors.some(error => pattern.test(error)), JSON.stringify(result.errors));
 }
-console.log(JSON.stringify({pass: true, checks: cases.length + 5, route: template.deck.route}));
+// 已移除字段的残留必须显式报错，不能被静默忽略
+const residual = JSON.parse(JSON.stringify(template));
+residual.deck.route = 'static-report';
+const residualResult = blueprint.validate(residual);
+assert.equal(residualResult.status, 'FAIL');
+assert.ok(residualResult.errors.some(error => /deck\.route 已移除/.test(error)), JSON.stringify(residualResult.errors));
+console.log(JSON.stringify({pass: true, checks: cases.length + 6, residualRouteRejected: true}));

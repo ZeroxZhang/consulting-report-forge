@@ -8,7 +8,6 @@ const contracts=require('./report_contract.cjs');
 const sourceHtml=fs.readFileSync(input,'utf8');
 const defaults={kind:sourceHtml.match(/data-deck-kind=["']([^"']+)/)?.[1]||'fragment',mode:/class=["'][^"']*\breading\b/.test(sourceHtml)?'reading':'presentation',theme:id||sourceHtml.match(/data-theme=["']([^"']+)/)?.[1]||'mckinsey',typography:profile||sourceHtml.match(/data-typography=["']([^"']+)/)?.[1]||'serif-report-bold',ratio:sourceHtml.match(/data-ratio=["']([^"']+)/)?.[1]||'16x9'};
 const task=contractFile?contracts.load(contractFile,output,defaults):contracts.read(sourceHtml)||contracts.normalize({},defaults);
-if(!contractFile&&task.planner.mode==='used')task.planner={...task.planner,record:path.relative(path.dirname(path.resolve(output)),path.resolve(path.dirname(path.resolve(input)),task.planner.record))};
 if(id&&id!==task.theme||profile&&profile!==task.typography)throw Error('主题/字体参数与已有任务合同冲突；有意变更请更新--contract');
 id=task.theme;profile=task.typography;
 let html=themes.apply(sourceHtml,id);

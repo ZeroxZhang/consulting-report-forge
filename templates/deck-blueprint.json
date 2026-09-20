@@ -5,8 +5,7 @@
     "audience": "填写读者与其决策角色",
     "decision": "填写本次材料要支持的具体决策",
     "governingThought": "填写贯穿全篇、可被每页证据支持的总判断",
-    "mode": "presentation",
-    "route": "slides-html"
+    "mode": "presentation"
   },
   "slides": [
     {

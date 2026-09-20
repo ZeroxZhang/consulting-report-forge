@@ -1,4 +1,4 @@
-/* 共享的页面证据密度合同：静态报告、PPT蓝图与QA使用同一组角色和下限，避免规则漂移。 */
+/* 共享的页面证据密度合同：蓝图、pages.json 与 QA 使用同一组角色和下限，避免规则漂移。 */
 'use strict';
 
 const PROFILES = ['dense', 'balanced', 'sparse'];

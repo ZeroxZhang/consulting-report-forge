@@ -1,4 +1,4 @@
-/* 统一的咨询叙事蓝图：在研究、Slides/PPT 与静态报告制作前校验“要证明什么、如何呈现、如何收束”。 */
+/* 统一的咨询叙事蓝图：在静态报告制作前校验“要证明什么、如何呈现、如何收束”。 */
 'use strict';
 const fs = require('node:fs');
 const forms = require('../assets/deck-forms.js');
@@ -19,7 +19,7 @@ function validate(doc, options = {}) {
   else {
     for (const key of ['title', 'audience', 'decision', 'governingThought']) if (!norm(deck[key])) bad('deck.' + key + ' 须为非空文本');
     if (!['presentation', 'reading'].includes(deck.mode)) bad('deck.mode 须为 presentation/reading');
-    if (!['slides-html', 'slides-pptx', 'static-report'].includes(deck.route)) bad('deck.route 须为 slides-html/slides-pptx/static-report');
+    if (deck.route !== undefined) bad('deck.route 已移除：本技能只产出静态报告，请删除该字段');
   }
   if (!Array.isArray(doc.slides) || !doc.slides.length) return {status: 'FAIL', errors: [...errors, 'blueprint.slides 须为非空数组']};
   const ids = new Set(), beats = new Set();
@@ -39,7 +39,7 @@ function validate(doc, options = {}) {
       if (!slide.visual || typeof slide.visual !== 'object') bad(where + '.visual 缺失');
       else {
         if (!norm(slide.visual.form)) bad(where + '.visual.form 须声明表达形式');
-        else if (slide.visual.form !== 'custom') { try { forms.get(slide.visual.form); } catch (error) { bad(where + '.visual.form ' + error.message + '；Slides独有表达可写 custom 并用 rationale 说明'); } }
+        else if (slide.visual.form !== 'custom') { try { forms.get(slide.visual.form); } catch (error) { bad(where + '.visual.form ' + error.message + '；词汇表之外的表达可写 custom 并用 rationale 说明'); } }
         if (!norm(slide.visual.primary)) bad(where + '.visual.primary 须说明第一眼的主展品');
         if (!norm(slide.visual.layout)) bad(where + '.visual.layout 须说明版式模式');
         if (!norm(slide.visual.readingPath)) bad(where + '.visual.readingPath 须写出读者的阅读顺序');

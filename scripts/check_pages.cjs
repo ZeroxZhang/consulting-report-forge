@@ -72,8 +72,8 @@ function check(doc) {
         if (a.of !== undefined && !norm(a.of)) bad(where + ' of 不能为空');
       });
     }
-    // 外部能力 ID 不限制自定义绘制；采用 plan 的版本与落实由专门检查器和实际看图核对。
-    if (page.planner !== undefined && (!page.planner || !norm(page.planner.capability_id))) bad(at + ' planner 须写 capability_id');
+    // 已移除字段的残留必须显式报错：静默忽略会让作者以为声明仍然生效。
+    if (page.planner !== undefined) bad(at + ' 已取消 planner 字段：图表选型由本技能直接完成，请删除该字段及 capability_id');
     if (page.repetitionReason !== undefined && !norm(page.repetitionReason)) bad(at + ' repetitionReason 不能为空');
     // 图型不因容量不足改表：合同里不再有降级出口，放不下时在同一表达内重排、分面或换实现。
     if (page.fallback !== undefined) bad(at + ' 已取消 fallback：容量不足时调整布局、分面、换实现或如实报未完成，不能改表');

@@ -1,5 +1,5 @@
 /* 实现入口登记：组件不是图型全集。其他原生、组合与手写 SVG 走 svg.custom，
-   pages.visual 记录实际表达；入口一致性由 test_pages_contract.cjs 验证。 */
+   pages.visual 记录实际表达；入口一致性由 test_blueprint_pages.cjs 验证。 */
 'use strict';
 
 const FORMS = {

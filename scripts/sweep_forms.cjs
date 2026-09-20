@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* 只读本地实现入口，不加载外部 planner；选型范围见 references/expression-guide.md。 */
+/* 只读本地实现入口；选型范围见 references/expression-guide.md。 */
 'use strict';
 const forms = require('../assets/deck-forms.js');
 function sweep() {

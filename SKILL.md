@@ -1,7 +1,7 @@
 ---
 name: consulting-report-forge
 description: >-
-  Build top-tier consulting-style, evidence-led decision materials from research, data, interviews, financials, or operating evidence. Use for client-ready PPT/PPTX decks, strategy and operating reviews, market/industry research, investment theses, board narratives, and rigorous Chinese or bilingual reports that require a governing storyline, conclusion-led pages, high-density visual evidence, precise layouts, and strict but lightweight QA. For PPT/PPTX or presenter-led decks, create through the Slides skill and Slides MCP; this skill supplies the consulting evidence architecture, page blueprint, and quality gates. Do not use for a single chart, poster, pure copyediting, or mechanical existing-deck conversion.
+  Build top-tier consulting-style, evidence-led decision materials from research, data, interviews, financials, or operating evidence. Use for strategy and operating reviews, market/industry research, investment theses, board narratives, and rigorous Chinese or bilingual reports that require a governing storyline, conclusion-led pages, high-density visual evidence, precise layouts, and strict but lightweight QA. Produces a self-contained HTML report plus a matching PDF through this skill's own Node/HTML/PDF toolchain, with chart and exhibit selection made by this skill itself. Do not use for a single chart, poster, pure copyediting, or mechanical existing-file format conversion.
 ---
 
 # 咨询级材料锻造 · Consulting Deck Forge
@@ -18,15 +18,14 @@ description: >-
 4. **视觉即推理**：关系由位置、长度、共同基线、直接标签、机制结构或精确表格表达；不要用装饰、色块或演讲稿替代证据。
 5. **密度而不拥挤**：每页根据证明任务配置主展品、支持证据和含义；不接受普通分析页的大面积无解释留白，也不接受用卡片、图标或微字伪造饱满。
 
-## 先选路线：一套蓝图，两种生产方式
+## 先选路线
 
 | 用户要的成品 | 路线 | 实际制作工具 | 最终交付 |
 |---|---|---|---|
-| PPT、PPTX、路演、管理层演示、在线演示文稿 | **Slides / PPT 路线** | 先读取 `slides` 技能；必须使用 Slides MCP | Slides resource；用户明确要求时再导出 PDF/PPTX |
-| 可离线阅读、研究型长报告、网页翻阅稿 | **静态报告路线** | 本技能随包 Node / HTML / PDF 工具链 | 自包含 HTML + 同版 PDF |
-| 单张图、海报、纯文案、机械转格式 | 不触发本技能 | 使用图表、设计或写作能力 | 按具体任务 |
+| 可离线阅读、研究型长报告、决策材料、网页翻阅稿 | **静态报告路线** | 本技能随包 Node / HTML / PDF 工具链 | 自包含 HTML + 同版 PDF |
+| 单张图、海报、纯文案、PPT/PPTX、机械转格式 | 不触发本技能 | 使用图表、设计、写作或演示文稿能力 | 按具体任务 |
 
-无论路线如何，先生成同一份**咨询 deck blueprint**，再进入制作。PPT 的页面文件、项目清单和最终交付必须遵循 Slides 技能；静态报告才使用本技能的 `task.json`、`pages.json` 和 QA 脚本。
+本技能只产出静态报告：先生成一份**咨询 deck blueprint**，再进入制作，使用本技能的 `task.json`、`pages.json` 和 QA 脚本。它不产出 PPT/PPTX，也不把静态工具链冒充演示文稿生产。
 
 ## 统一生产闭环
 
@@ -40,7 +39,7 @@ description: >-
 
 从原始材料中提炼关系：对象比较、时间变化、构成、分布、贡献、机制、条件、权衡和行动门槛。完成必要计算与口径核验；不要把相关性写成因果、把样本写成市场、把不同统计身份的数据并成一个总数。
 
-研究型任务先建立来源清单和主张—证据映射，再写正文。PPT 不是在证据不足时逃避研究的捷径。
+研究型任务先建立来源清单和主张—证据映射，再写正文。任何媒介都不是在证据不足时逃避研究的捷径。
 
 ### 3. 写总判断与叙事弧线
 
@@ -73,11 +72,9 @@ node scripts/deck_blueprint.cjs /任务/deck-blueprint.json
 
 默认页面阅读顺序为：**结论标题 → 主展品 → 支持证据/限制 → 含义或行动 → 来源**。可以使用不对称、总览+局部、机制+量化锚点、比较表+标注、优先级矩阵等布局；不要默认左图右文、三栏卡片、金字塔、色条或大图标。
 
-### 6. 执行对应生产路线
+### 6. 执行生产路线
 
-**PPT / Slides 路线：** 先读取 `slides` 技能，再按 [Slides / PPT 生产交接](references/slides-ppt-route.md) 将已校验蓝图映射为 Slides outline 和逐页规格。只使用 Slides 允许的项目、页面写入、预览、`present` 与导出流程；不要手写独立PPTX、绕过项目清单或把静态报告工具链冒充PPT生产。
-
-**静态报告路线：** 阅读 [静态 HTML/PDF 路线](references/static-html-pdf.md)。使用 `task.json` 与 `pages.json v2`，并将每页的 `data-density-profile` 与页面合同一致。首次使用或浏览器环境变化时先探测能力；每完成一页即装配、预览和返工，而不是整册完成后才发现版式问题。
+阅读 [静态 HTML/PDF 路线](references/static-html-pdf.md)。使用 `task.json` 与 `pages.json v2`，并将每页的 `data-density-profile` 与页面合同一致。首次使用或浏览器环境变化时先探测能力；每完成一页即装配、预览和返工，而不是整册完成后才发现版式问题。
 
 ### 7. 用轻量但严格的门禁收口
 
@@ -86,7 +83,7 @@ node scripts/deck_blueprint.cjs /任务/deck-blueprint.json
 1. **蓝图门**：`deck_blueprint.cjs` 通过；标题链、页面角色、故事节拍、密度、来源计划和图形形式完整。
 2. **逐页门**：实际预览中检查主证据、支持证据、标题—图形匹配、留白、来源安全区、对齐、文字对比和图表编码。
 3. **最坏页门**：重看每种风险最高的一页：最密、最大留白、图表最复杂、来源最多、行动最强。复杂/重大材料由未参与制作者复核这些页和标题链。
-4. **交付门**：Slides 路线以 `present` 为门禁；静态路线以 acceptance audit、真实审查记录和打包校验为门禁。未看预览、未核实关键数字或未导出最终媒介，一律不称完成。
+4. **交付门**：acceptance audit、真实审查记录和打包校验。未看预览、未核实关键数字或未导出最终媒介，一律不称完成。
 
 ## 单页硬规则
 
@@ -106,7 +103,6 @@ node scripts/deck_blueprint.cjs /任务/deck-blueprint.json
 | 形成总判断、标题链、页面角色、反证和行动门槛 | [咨询叙事与决策架构](references/consulting-storyline.md) |
 | 选择图表、表格、机制图、流程或复合表达 | [表达选型](references/expression-guide.md) |
 | 设计高密度页面、信息图、排印、留白与色彩 | [咨询级单页系统](references/consulting-page-system.md) |
-| 将蓝图生产为 PPT / PPTX / Slides | [Slides / PPT 生产交接](references/slides-ppt-route.md) 与 `slides` 技能 |
 | 生成离线 HTML/PDF、理解 task/pages/review 合同 | [静态 HTML/PDF 路线](references/static-html-pdf.md) |
 | 执行逐页视觉、证据和交付验收 | [视觉与证据验收](references/visual-qa.md) |
 

@@ -12,7 +12,7 @@ const TIERS=['iteration','smoke','acceptance'];
 // 每一档明确列出它没有覆盖的东西；缺项写在 audit 里，不靠调用者记忆。
 // iteration 必须点名页码，所以它列的缺项就是它实际没跑的东西，不存在"列了却跑了"的偏差。
 const TIER_SKIPS={
- iteration:['打印媒体复检','PDF产物校验','断网一致性','导航与深链','总览图','首尾与逐页合同对账','planner执行核对'],
+ iteration:['打印媒体复检','PDF产物校验','断网一致性','导航与深链','总览图','首尾与逐页合同对账'],
  smoke:['PDF产物校验','断网一致性','导航与深链'],
  acceptance:[]
 };
@@ -93,17 +93,6 @@ function parseArgs(argv){
   const bookendResult=bookends.checkDocument(rows,documentContract);bookendsCheck=bookendResult;errors.push(...bookendResult.errors);warnings.push(...bookendResult.warnings);
   await p.keyboard.press('g');await p.screenshot({path:path.join(out,'overview.png'),fullPage:true});await p.keyboard.press('Escape');
  }
- // 对照屏幕上已存在的展品，检查打印布局中是否仍可见；实际PDF另核关键标签并目视。
- const specFile=input+'.page-spec.json';
- let plannerExecution={status:'NOT_PROVIDED'};
- if(partial)plannerExecution={status:'NOT_CHECKED',reason:'只检查了部分页面'};
- else if(modern){
-  plannerExecution={status:'NOT_CHECKED',reason:'任务合同不可用'};
-  if(taskContract?.planner){const declaration=taskContract.planner;
-   if(declaration.mode==='used'){try{const record=path.resolve(path.dirname(input),declaration.record);if(taskContracts.fileHash(record)!==declaration.sha256)throw Error('planner记录sha256与任务合同不符');plannerExecution=await require('./check_planner_execution.cjs').check(JSON.parse(fs.readFileSync(record,'utf8')),p,{baseDir:path.dirname(record)});plannerExecution.record={path:record,sha256:declaration.sha256};errors.push(...plannerExecution.errors);}catch(e){plannerExecution={status:'FAIL',errors:[e.message]};errors.push('planner合同：'+e.message);}}
-   else plannerExecution={status:declaration.mode==='direct'?'DIRECT':'UNAVAILABLE',mode:declaration.mode,reason:declaration.reason||'作者直接制作，未采用planner；不声称planner验证通过'};
-  }
- }else if(!partial&&fs.existsSync(specFile)){plannerExecution=await require('./check_planner_execution.cjs').check(JSON.parse(fs.readFileSync(specFile,'utf8')),p,{baseDir:path.dirname(specFile)});errors.push(...plannerExecution.errors);}
  // 逐页形式声明：独立于装配器重新对账一次，并给出全篇形式清单供审查者判断节奏。
  const pagesApi=require('./check_pages.cjs');
  let pagesCheck={status:'NOT_PROVIDED',reason:partial?'只检查了部分页面，不能对账逐页形式':'任务合同未绑定 pages.json；S3 未产出逐页形式声明，不能正式交付'};
@@ -126,6 +115,7 @@ function parseArgs(argv){
  }
  let printCheck={status:'NOT_CHECKED',reason:'iteration 档不做打印媒体复检'},pdfRows=[],evidenceManifest=null;
  let pdfPages=null,pdfFonts=null,pdfArtifact={skipped:true,reason:'tier='+tier},navigation={skipped:true,reason:'tier='+tier},offlineState={skipped:true,reason:'tier='+tier};
+ // 对照屏幕上已存在的展品，检查打印布局中是否仍可见；实际PDF另核关键标签并目视。
  if(tier!=='iteration'){
   const expected=rows.flatMap(r=>r.exhibits.map(e=>({...e,page:r.page})));
   await p.emulateMedia({media:'print'});await p.evaluate(()=>window.dispatchEvent(new Event('beforeprint')));
@@ -182,7 +172,7 @@ function parseArgs(argv){
  if(acceptance&&htmlArtifact.sha256!==initialSha256)errors.push('QA期间HTML文件发生变化，截图/PDF证据不能绑定当前文件');
  if(acceptance&&pdfArtifact.sha256&&taskContract&&htmlArtifact.sha256===initialSha256){try{evidenceManifest=auditEvidence.manifest(evidenceSnapshot,rows,pdfRows,{html:htmlArtifact,pdf:pdfArtifact},taskContract,out,{browser:browser.version(),viewport:{width:1400,height:820},pdfRasterScale:4/3});}catch(e){errors.push('审查证据关联失败：'+e.message);}}
  const missingStages=[...TIER_SKIPS[tier]];
- const report={tier,acceptance:{complete:acceptance&&!missingStages.length,tier,missingStages},scope:{pages:rows.map(r=>r.page),partial,of:total},taskContract,pagesCheck,pagesInventory:pagesCheck.inventory||null,evidenceManifest,criticalCoverage:modern?'DECLARED_ONLY：只检查声明的关键内容，不证明全部业务语义覆盖':'LEGACY_NOT_CHECKED',plannerExecution,documentContract,warnings,bookendsCheck,printCheck,input,pages:total,pdfPages,htmlArtifact,pdfArtifact,pdfFonts,navigation,errors,offline:offlineState,rows,visualStatus:'NOT_REVIEWED：必须实际查看每页图片与PDF',geometryStatus:rows.some(r=>r.overflow.length||r.unreadableText.length||r.charts.some(c=>!c.rendered||c.error))||errors.length?'FAIL':'PASS'};
+ const report={tier,acceptance:{complete:acceptance&&!missingStages.length,tier,missingStages},scope:{pages:rows.map(r=>r.page),partial,of:total},taskContract,pagesCheck,pagesInventory:pagesCheck.inventory||null,evidenceManifest,criticalCoverage:modern?'DECLARED_ONLY：只检查声明的关键内容，不证明全部业务语义覆盖':'LEGACY_NOT_CHECKED',documentContract,warnings,bookendsCheck,printCheck,input,pages:total,pdfPages,htmlArtifact,pdfArtifact,pdfFonts,navigation,errors,offline:offlineState,rows,visualStatus:'NOT_REVIEWED：必须实际查看每页图片与PDF',geometryStatus:rows.some(r=>r.overflow.length||r.unreadableText.length||r.charts.some(c=>!c.rendered||c.error))||errors.length?'FAIL':'PASS'};
  fs.writeFileSync(path.join(out,'audit.json'),JSON.stringify(report,null,2));
  console.log(JSON.stringify({tier,acceptance:report.acceptance.complete,pages:total,scope:report.scope,geometry:report.geometryStatus,warnings:report.warnings.length,errors,overflow:rows.filter(r=>r.overflow.length).map(r=>({page:r.page,items:r.overflow})),tiny:rows.filter(r=>r.tinyText.length).map(r=>r.page),offline:offlineState}));
  if(report.geometryStatus==='FAIL')process.exitCode=1;

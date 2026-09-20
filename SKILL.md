@@ -98,6 +98,7 @@ node scripts/deck_blueprint.cjs /任务/deck-blueprint.json
 - 大于约五分之一正文高度的空白必须能解释为分组、聚焦、比较间隙或来源安全区；否则补强真实证据或重排版式。
 - 用位置、长度、共同基线、直接标签和冗余编码表达比较；颜色只辅助语义，不能成为唯一含义。
 - 实际、预测、目标、缺失、零值、百分比和百分点必须分开；构成图仅用于互斥可加的部分。
+- **瀑布、桥接与贡献排序必须能对账**：起点、增量、终点要对得上；缺失不等于 0，说不清的差额不许自动抹平。数据侧（原始记录怎么进、费率怎么加权、残差什么时候才承认）以 [瀑布数据合同](references/waterfall-bridge.md) 为唯一权威，渲染器不自己再算一遍；这一页在 `pages.json` 里声明 `waterfall` 后，成稿上的对账标记会被逐字核对。
 - 机制图中箭头必须说明流向、条件、责任或证据状态；箭头和等宽节点本身不证明因果、规模或时长。
 - 文字、表格、脚注和来源必须有足够对比度与安全区；不以浅字配浅底、深字配深底，也不把决定判断的信息压成微字。
 - 禁止伪3D定量图、装饰性色条、顶部色条数字卡、无意义图标阵列、未说明量尺、依赖悬停的关键信息和“内容不足时的极简伪装”。
@@ -122,6 +123,7 @@ node scripts/deck_blueprint.cjs /任务/deck-blueprint.json
 | 形成总判断、标题链、页面角色、反证和行动门槛 | [咨询叙事与决策架构](references/consulting-storyline.md) |
 | **选这一页的骨架**：按母版找布局，看用途、代价与逐格容量 | [布局图谱](assets/layout-atlas.html)（数据源 `assets/layout-atlas/catalog.json`） |
 | 选择图表、表格、机制图、流程或复合表达 | [表达选型](references/expression-guide.md) |
+| 做瀑布图/桥接图：原始记录怎么进、费率怎么加权、残差什么时候才承认、怎么出图 | [瀑布数据合同](references/waterfall-bridge.md) |
 | 理解 12×6 网格算术、容量表、槽位语义与留白纪律 | [咨询级单页系统](references/consulting-page-system.md) |
 | 生成离线 HTML/PDF、理解 task/pages/review 合同 | [静态 HTML/PDF 路线](references/static-html-pdf.md) |
 | 执行逐页视觉、证据和交付验收 | [视觉与证据验收](references/visual-qa.md) |
@@ -129,3 +131,5 @@ node scripts/deck_blueprint.cjs /任务/deck-blueprint.json
 ## 归因
 
 随包运行时基于 **Zerox Zhang 的 `consulting_deck_skill_concise`** 重组，遵循 Apache-2.0。保留随包 [LICENSE](LICENSE)；对外再分发时保留原许可证及适用归因。
+
+瀑布图的数据侧判据（三模式、加权费率与百分点贡献、容差用原始单位、“缺失≠0／不自动平账／残差不自动配平”、缺口清单按责任方分组）端口自 **`aeolus-period-waterfall`** 的 `diagnose()` 决策逻辑。**是端口而非依赖**：本技能不引入 Python、不读取该目录、不在任何路径上耦合它，只保留结论与规则，并把它们写进 [瀑布数据合同](references/waterfall-bridge.md)。

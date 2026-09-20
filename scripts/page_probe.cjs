@@ -7,9 +7,19 @@ const geometry = require('./browser_geometry_audit.cjs');
 const criticalContent = require('./critical_content.cjs');
 const visualPolicy = require('./browser_visual_policy.cjs');
 const fontAudit = require('./browser_font_audit.cjs');
+const deckForms = require('../assets/deck-forms.js');
 
-/* 在真实页面上执行的 DOM 测量。自包含（不闭包外部变量），供 Playwright 序列化。 */
-function inspectDom(s) {
+/* 哪些形式"必须能对账"，由形式目录说了算。曾经在这里硬编码过一份 ['kit.waterfall','precision.waterfall']，
+   与目录里那份是两处知识：加第三个瀑布形式时探针不会知道，而且它没法被测到——
+   测试只能构造 isWaterfallForm 字段，永远碰不到这个常量本身。现在从目录派生，再由 collect 传进浏览器。 */
+const WF_FORMS = deckForms.list().filter(id => (deckForms.get(id).limits || {}).reconciles === true);
+
+/* 在真实页面上执行的 DOM 测量。自包含（不闭包外部变量），供 Playwright 序列化；
+   确实需要的外部输入一律走 evaluate 的第二个参数传进来。 */
+function inspectDom(s, wfForms) {
+  /* 清单必须显式传进来。缺了它 isWaterfallForm 会恒为 false，瀑布判据安安静静地全部失效——
+     一个"少传一个参数"不该表现为"这页没问题"。 */
+  if (!Array.isArray(wfForms)) throw new Error('inspectDom 需要第二个参数：瀑布形式清单（page_probe.WF_FORMS）');
   const box = s.getBoundingClientRect(), bad = [], tiny = [], smallData = [], unreadable = [], scaledSvg = [], logicalScale = box.width / s.offsetWidth;
   for (const e of s.querySelectorAll('*')) {
     const r = e.getBoundingClientRect(), cs = getComputedStyle(e); if (!r.width || !r.height || cs.visibility === 'hidden') continue;
@@ -65,6 +75,20 @@ function inspectDom(s) {
       }
     }
   }
+  /* 瀑布的账要现场核对，不能只看声明。分派依据是零轴线上的 data-role="reconciliation"——
+     它是两个瀑布渲染器在内核报告存在时才写下的标记，别处不会出现。
+     不能改用 data-from/data-to 分派：precision 的柱图与堆积图同样会发这两个属性，那样等于
+     把不是瀑布的图也当成瀑布来判。（同类教训：本仓库曾因按属性名猜测形式而误判。） */
+  const form = s.dataset.form || '';
+  const auditAxes = [...s.querySelectorAll('[data-role="reconciliation"]')];
+  const waterfall = {
+    form, isWaterfallForm: wfForms.indexOf(form) >= 0,
+    axes: auditAxes.length,
+    /* 多于一条对账零轴意味着这一页有两次体检结论，声明只能写一个，必然对不上。 */
+    residual: auditAxes.length === 1 ? (auditAxes[0].getAttribute('data-residual') || '') : null,
+    tolerance: auditAxes.length === 1 ? (auditAxes[0].getAttribute('data-tolerance') || '') : null,
+    nodes: auditAxes.length === 1 ? Number(auditAxes[0].getAttribute('data-nodes')) : null
+  };
   const notePad = [], noteSeen = new Set();
   for (const e of s.querySelectorAll('*')) {
     if (noteSeen.has(e)) continue;
@@ -78,6 +102,7 @@ function inspectDom(s) {
     exhibits, textEvidence, unreadableText: unreadable, form: s.dataset.form || null, visual: s.dataset.visual || '', proves: s.dataset.proves || '', densityProfile: s.dataset.densityProfile || '',
     // v3 布局绑定：QA 拿它和 pages.json、布局目录三方对账。
     layout: s.dataset.layout || '', modules: [...s.querySelectorAll('[data-module]')].map(e => e.dataset.module || ''),
+    waterfall,
     title: s.querySelector('.slide__title,.cover-title,.divider-name')?.textContent || '',
     overflow: bad, tinyText: tiny, smallDataText: smallData, scaledSvg,
     charts: [...s.querySelectorAll('.chart')].map(e => ({width: e.clientWidth, height: e.clientHeight, rendered: !!e.querySelector('svg,canvas'), error: e.dataset.chartError || null, risks: e.dataset.chartRisks || null})),
@@ -99,7 +124,7 @@ async function activate(page, index) {
 async function collect(page, index, {modern = false} = {}) {
   await activate(page, index);
   const slide = page.locator('.slide.active');
-  const result = await slide.evaluate(inspectDom);
+  const result = await slide.evaluate(inspectDom, WF_FORMS);
   result.page = index + 1;
   result.bookends = await slide.evaluate(bookends.inspectPage);
   if (modern) {
@@ -114,6 +139,22 @@ async function collect(page, index, {modern = false} = {}) {
 
 function screenshotName(pageNumber) {
   return 'p' + String(pageNumber).padStart(2, '0') + '.png';
+}
+
+/* 瀑布现场的自查判据。声明侧的校验在 check_pages，这里只判"图本身说不说得通"：
+   一页只能有一个对账结论；声明是瀑布形式的页，图上必须真的有一条对账零轴。 */
+function waterfallErrors(row) {
+  const facts = row.waterfall, found = [];
+  if (!facts) return found;
+  if (facts.axes > 1) found.push({code: 'WF-MULTIPLE-AUDIT', fatal: true, message: '这一页有 ' + facts.axes + ' 条对账零轴：一次体检只能有一个结论，声明也只能写一个'});
+  /* 提醒，不是阻塞：这一页可能走的是老 items 路径，本来就没有内核报告，作者没做错什么。
+     真正该拦的那一条——"pages.json 声明 verified、图上却没有零轴"——由 verifyDeck 判，那里看得见声明。
+     判据落在探针里是为了让单页自查与正式审计同一套结论，不是为了让探针替 declarations 做决定。 */
+  if (facts.isWaterfallForm && !facts.axes) found.push({code: 'WF-NOT-RECONCILED', fatal: false, message: '第' + row.page + '页声明为 ' + facts.form + '，但图上没有内核出的对账零轴（data-role="reconciliation"）：这一页的桥没走体检，图上的数字无人核对。若这一页在 pages.json 里声明了 waterfall，装配期会直接拦下；没声明则是老 items 路径，改用内核出图后可消除本条'});
+  /* 有差额不是错，藏着不说才是错。声明了对账结论的页由 verifyDeck 与声明逐字对账；
+     这里只提醒审稿人这一页必须亲眼核对差额的来路。 */
+  if (facts.axes === 1 && facts.residual) found.push({code: 'WF-RESIDUAL', fatal: false, message: '第' + row.page + '页图上有未解释差额 ' + facts.residual + '（容差 ' + facts.tolerance + '）：这一页必须声明 residualReason，并目视确认它是以独立节点出现，不是被并进最后一根柱子'});
+  return found;
 }
 
 /* 单页自查的紧凑摘要：只列可执行结论，不冒充验收状态。 */
@@ -137,6 +178,11 @@ function summarize(row) {
     if (item.source === 'data-actual-size') errors.push(item2); else warnings.push(item2);
   }
   for (const item of row.smallDataText || []) warnings.push({code: 'SMALL-DATA-TEXT', ...item});
+  /* 瀑布对账门：判据落在探针里，单页自查与正式审计就不可能有两套结论。
+     只看"有没有对账属性"是不够的——那读到的只是渲染器写下的值，把差额塞进最后一根柱子照样"闭合"。
+     真正要拦的是：图上有一笔说不清的差额，而这一页没承认它。承认与否由 pages.json 的声明决定，
+     探针这里只负责把现场量出来（见 check_pages 的 verifyDeck 做两处对账），以及拦住"有两份结论"。 */
+  for (const item of waterfallErrors(row)) { const {fatal, ...detail} = item; (fatal ? errors : warnings).push(detail); }
   if (row.fonts?.identity === 'FAIL') errors.push({code: 'FONT-IDENTITY', message: fontAudit.describe(row.fonts)});
   if (!row.frame?.boundary) errors.push({code: 'FRAME-BOUNDARY-MISSING', message: '未显式声明 data-frame-boundary'});
   if (row.frame?.ruleVisible && row.frame.doubleBorder.length) warnings.push({code: 'DOUBLE-BORDER', cls: row.frame.doubleBorder[0], message: '标题区隔线与正文首排顶线可能并存'});
@@ -145,4 +191,4 @@ function summarize(row) {
   return {errors, warnings, manual};
 }
 
-module.exports = {inspectDom, activate, collect, screenshotName, summarize};
+module.exports = {inspectDom, activate, collect, screenshotName, summarize, waterfallErrors, WF_FORMS};

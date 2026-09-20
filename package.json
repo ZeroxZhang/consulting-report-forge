@@ -6,7 +6,7 @@
   "description": "Shared blueprint, evidence-density, and static-report runtime for consulting-grade decision materials.",
   "scripts": {
     "setup-fonts": "sh scripts/setup_font_venv.sh",
-    "test": "node scripts/test_deck_grid.cjs && node scripts/test_layout_contract.cjs && node scripts/test_density_contract.cjs && node scripts/test_deck_blueprint.cjs && node scripts/test_blueprint_pages.cjs && node scripts/build_layout_css.cjs --check && node scripts/build_layout_atlas.cjs --check",
+    "test": "node scripts/test_deck_grid.cjs && node scripts/test_layout_contract.cjs && node scripts/test_density_contract.cjs && node scripts/test_deck_blueprint.cjs && node scripts/test_blueprint_pages.cjs && node scripts/build_layout_css.cjs --check && node scripts/build_layout_atlas.cjs --check && node scripts/test_waterfall_bridge.cjs && node scripts/test_waterfall_contract.cjs && node scripts/test_propose_annotations.cjs",
     "atlas": "node scripts/build_layout_atlas.cjs && node scripts/build_layout_css.cjs",
     "check:grid": "node scripts/check_layout_grid.cjs both"
   },

@@ -10,8 +10,33 @@ function wrap(text,maxWidth,measure,font){
   const lines=[];let line='';for(const char of String(text)){if(char==='\n'){lines.push(line);line='';continue;}if(measure(line+char,font).width>maxWidth&&line){lines.push(line);line=char;}else line+=char;}
   if(line||!lines.length)lines.push(line);if(lines.some(v=>measure(v,font).width>maxWidth))throw Error('单字宽度超出分配空间');return lines;
 }
+/* 总数型节点用小计宽度与粗体，增量型节点用方向色；残差自成一色。 */
+const isTotal=type=>['total','subtotal','start','end'].includes(type);
+const isDelta=type=>['delta','residual'].includes(type);
+const WF_MAX_NODES=18,WF_TYPES=['start','delta','subtotal','end','residual'];
 function normalize(spec){
   if(!['columns','stacked','waterfall'].includes(spec.type))throw Error('type 须为 columns/stacked/waterfall');
+  /* 零轴线上的对账标记只允许由真正的瀑布写出来。留着别的图型带一份瀑布报告（改 type 时漏删是常见路径），
+     会让这张柱图凭空长出一条"对账零轴"，而 page_probe 正是拿这个标记当"这页走过体检"的证据。 */
+  if(spec.waterfall&&spec.type!=='waterfall')throw Error('只有 waterfall 接受 waterfall 报告：这一页是 '+spec.type+'，带着瀑布报告会让零轴线被标成对账结论，声明与图就对不上了');
+  if(spec.type==='waterfall'){
+    /* 破轴的桥接图读不出"起点+增量=终点"，直接拒绝，不给"看起来更整齐"的出口。 */
+    if((spec.axisBreaks||[]).length)throw Error('瀑布图不接受 axisBreaks：起点加增量必须等于终点，破轴后无法核对');
+    if(spec.waterfall){
+      if(spec.items)throw Error('不要同时声明 items 与 waterfall：几何与文本都来自内核，重复声明必然漂移');
+      const report=spec.waterfall;
+      if(!report||typeof report!=='object'||report.status!=='ready'||!report.chart)throw Error('瀑布数据未通过体检，不能出图：'+(((report&&report.issues)||[]).map(v=>v.code).join('、')||'缺少 chart'));
+      const bars=report.chart.bars;
+      if(!Array.isArray(bars)||!bars.length)throw Error('内核报告缺 bars');
+      if(bars.length>WF_MAX_NODES)throw Error('瀑布节点 '+bars.length+' 个，超过 '+WF_MAX_NODES+'：请归并驱动项，不静默截断');
+      const used=new Map();
+      /* 渲染器不重算累计、不重排数字：from/to/value 与预格式化文本都来自内核。 */
+      return {items:bars.map(b=>{
+        if(!WF_TYPES.includes(b.type))throw Error('未知瀑布节点类型: '+b.type);
+        const label=nonempty(b.label,'类别标签'),n=(used.get(label)||0)+1;used.set(label,n);
+        return {id:n>1?label+'#'+n:label,label,type:b.type,value:G.finite(b.value),from:G.finite(b.from),to:G.finite(b.to),text:b.valueText};}),series:[]};
+    }
+  }
   if(!Array.isArray(spec.items)||!spec.items.length)throw Error('items 不可为空');
   if(spec.type==='waterfall')return {items:G.waterfall(spec.items).map(v=>({...v,label:nonempty(v.label,'类别标签')})),series:[]};
   const ids=new Set(),series=[];const items=spec.items.map((raw,i)=>{
@@ -82,7 +107,10 @@ function build(spec){
   // Noto Sans SC 真实字体 ascent/descent 是当前正文中最高的度量；保守占位不强拉字形顶底。
   const ascent=fontSize*1.16,descent=fontSize*.288,lineHeight=fontSize*1.55;
   const sizeOf=(text,weight=400,size=fontSize)=>({width:measure(text,font(weight,size)).width,height:size*1.448,ascent:size*1.16,descent:size*.288});
-  const {items,series}=normalize(spec),comparisons=spec.comparisons||[];
+  const {items,series}=normalize(spec),comparisons=spec.comparisons||[],chart=spec.waterfall?spec.waterfall.chart:null;
+  /* 残差是内核的结论，它必须有自己的颜色；落回 undefined 等于让读者把"说不清的差额"读成一根没画出来的柱子。
+     只在内核报告这一支判：老 items 路径从不产出 residual，为它加判据就是凭空多出一条抛错路径。 */
+  if(spec.waterfall&&items.some(v=>v.type==='residual')&&!palette.residual)throw Error('调色板缺少 residual 令牌：残差柱要有自己的颜色，不能与主数据或下降共用');
   if(!Array.isArray(comparisons))throw Error('comparisons 须为数组');
   if(spec.connections){if(!['continuous','cumulative'].includes(spec.connections.mode))throw Error('连接线须显式声明 continuous 或 cumulative 关系');if(spec.connections.mode==='cumulative'&&spec.type!=='waterfall')throw Error('cumulative 连接只适用于 waterfall');if(spec.type==='stacked'&&spec.connections.mode==='continuous'&&!spec.connections.series&&spec.connections.target!=='total')throw Error('堆积连续线须声明 target: total 或 series');}
   const rawValues=items.flatMap(v=>spec.type==='stacked'?v.segments.flatMap(k=>[k.from,k.to]):[v.from,v.to]),domain=G.extent(rawValues,spec.domain);
@@ -93,11 +121,11 @@ function build(spec){
   ticks=[...new Set(ticks)].filter(v=>!(spec.axisBreaks||[]).some(k=>v>k.from&&v<k.to)).sort((a,b)=>a-b);
   const tickText=v=>G.formatNumber(v,{decimals:formatOptions.axisDecimals===undefined?Math.min(formatOptions.decimals===undefined?1:formatOptions.decimals,2):formatOptions.axisDecimals});
   const maxTick=Math.max(...ticks.map(v=>measure(tickText(v),font()).width));
-  const plotLeft=Math.max(58,maxTick+20),plotRight=width-28,baseSlot=(plotRight-plotLeft)/items.reduce((s,v)=>s+((v.type==='total'||v.type==='subtotal')&&spec.type!=='stacked'?1.15:1),0);
+  const plotLeft=Math.max(58,maxTick+20),plotRight=width-28,baseSlot=(plotRight-plotLeft)/items.reduce((s,v)=>s+(isTotal(v.type)&&spec.type!=='stacked'?1.15:1),0);
   if(baseSlot<fontSize*2.7)throw Error('类别过密：增加宽度或分面');
   let cursor=plotLeft;const barWidth=Math.min(spec.barWidth===undefined?76:G.finite(spec.barWidth),baseSlot*.52);if(barWidth<12)throw Error('柱宽不足');
-  const slots=items.map(v=>{const width=baseSlot*((v.type==='total'||v.type==='subtotal')&&spec.type!=='stacked'?1.15:1),slot={x:cursor,width,center:cursor+width/2};cursor+=width;return slot;});
-  const categoryLines=items.map((v,i)=>wrap(v.label,slots[i].width-14,measure,font(['total','subtotal'].includes(v.type)?600:400)));
+  const slots=items.map(v=>{const width=baseSlot*(isTotal(v.type)&&spec.type!=='stacked'?1.15:1),slot={x:cursor,width,center:cursor+width/2};cursor+=width;return slot;});
+  const categoryLines=items.map((v,i)=>wrap(v.label,slots[i].width-14,measure,font(isTotal(v.type)?600:400)));
   const maxCategory=Math.max(...categoryLines.map(v=>v.length));if(maxCategory>4)throw Error('类别标签超过 4 行：增加宽度或分面');
   const legendRows=[];let legend=[];let used=0;
   for(const s of series){const needed=sizeOf(s.label).width+32;if(needed>width-32)throw Error('单个图例标签过宽');if(used+needed>width-32&&legend.length){legendRows.push(legend);legend=[];used=0;}legend.push({...s,x:16+used});used+=needed;}if(legend.length)legendRows.push(legend);
@@ -126,13 +154,13 @@ function build(spec){
   titleLines.forEach((line,i)=>fixedText('title-'+i,line,16,12+(fontSize+2)*1.16+i*(fontSize+2)*1.55,{weight:600,fontSize:fontSize+2,role:'title'}));
   if(unitText)fixedText('unit',unitText,plotLeft,headHeight-4,{color:palette.muted,role:axisNote?'axis-break-label':'unit'});
   ticks.forEach((v,i)=>fixedText('tick-'+i,tickText(v),plotLeft-10,scale.map(v)+(ascent-descent)/2,{anchor:'end',color:palette.muted,role:'axis'}));
-  categoryLines.forEach((lines,i)=>lines.forEach((line,j)=>fixedText('category-'+i+'-'+j,line,slots[i].center,plotBottom+16+ascent+j*lineHeight,{anchor:'middle',weight:['total','subtotal'].includes(items[i].type)?600:400,role:'category',item:items[i].id})));
+  categoryLines.forEach((lines,i)=>lines.forEach((line,j)=>fixedText('category-'+i+'-'+j,line,slots[i].center,plotBottom+16+ascent+j*lineHeight,{anchor:'middle',weight:isTotal(items[i].type)?600:400,role:'category',item:items[i].id})));
   legendRows.forEach((row,r)=>row.forEach(s=>{const baseline=plotBottom+16+maxCategory*lineHeight+ascent+r*(lineHeight+4);decorations.push({type:'legend',x:s.x,y:baseline-fontSize*.65,width:10,height:10,fill:palette.series[series.findIndex(v=>v.id===s.id)%palette.series.length]});fixedText('legend-'+s.id,s.label,s.x+16,baseline,{role:'legend',series:s.id});}));
   function addMark(item,i,segment,seriesIndex){
     const value=segment?segment.value:item.value,from=segment?segment.from:item.from,to=segment?segment.to:item.to;
-    const id=item.id+(segment?'::'+segment.id:''),fill=segment?palette.series[seriesIndex%palette.series.length]:item.type==='delta'?(value<0?palette.negative:palette.positive):palette.accent;
+    const id=item.id+(segment?'::'+segment.id:''),fill=segment?palette.series[seriesIndex%palette.series.length]:item.type==='residual'?palette.residual:isDelta(item.type)?(value<0?palette.negative:palette.positive):palette.accent;
     const pieces=scale.segments(from,to).map((p,j)=>({x:slots[i].center-barWidth/2,y:Math.min(p.p1,p.p2),width:barWidth,height:Math.abs(p.p2-p.p1),from:p.from,to:p.to,index:j}));
-    const mark={id,item:item.id,series:segment?segment.id:null,type:segment?'segment':item.type,value,from,to,x:slots[i].center,endpointY:scale.map(to),pieces,fill,weight:!segment&&['total','subtotal'].includes(item.type)?600:400};marks.push(mark);
+    const mark={id,item:item.id,series:segment?segment.id:null,type:segment?'segment':item.type,value,from,to,x:slots[i].center,endpointY:scale.map(to),pieces,fill,weight:!segment&&isTotal(item.type)?600:400,text:segment?undefined:item.text};marks.push(mark);
     anchors[id]={x:mark.x,y:mark.endpointY,value,axisValue:to,item:item.id,series:mark.series,markId:id};return mark;
   }
   items.forEach((item,i)=>{if(spec.type==='stacked'){item.segments.forEach((seg,j)=>addMark(item,i,seg,j));anchors[item.id]={x:slots[i].center,y:scale.map(item.total),value:item.total,axisValue:item.total,item:item.id,series:null,markId:null};}else addMark(item,i,null,0);});
@@ -141,10 +169,10 @@ function build(spec){
   const connectionRefs=spec.connections?items.map(v=>resolve({item:v.id,...(spec.connections.series?{series:spec.connections.series}:{})})):[];
   if(spec.connections)connectionRefs.slice(0,-1).forEach((a,i)=>{
     const b=connectionRefs[i+1],x1=a.x+barWidth/2,x2=b.x-barWidth/2,mid=(x1+x2)/2;
-    const expected=spec.connections.mode==='cumulative'&&items[i+1].type==='delta'?scale.map(items[i+1].from):b.y;
+    const expected=spec.connections.mode==='cumulative'&&isDelta(items[i+1].type)?scale.map(items[i+1].from):b.y;
     const points=[point(x1,a.y),point(mid,a.y),point(mid,expected),point(x2,expected)];
     // 瀑布的累计连接是上一步终点到下一增量起点；total/subtotal 接到累计值。
-    addRoute({id:'step-'+i,role:'step',points,fromKey:a.key,toKey:b.key,axisFrom:a.axisValue,axisTo:spec.connections.mode==='cumulative'&&items[i+1].type==='delta'?items[i+1].from:b.axisValue,dashed:spec.connections.style!=='solid',color:palette.muted});
+    addRoute({id:'step-'+i,role:'step',points,fromKey:a.key,toKey:b.key,axisFrom:a.axisValue,axisTo:spec.connections.mode==='cumulative'&&isDelta(items[i+1].type)?items[i+1].from:b.axisValue,dashed:spec.connections.style!=='solid',color:palette.muted});
   });
   comparisons.forEach((comparison,i)=>{
     const a=resolve(comparison.from),b=resolve(comparison.to);if(a.key===b.key)throw Error('比较须引用不同端点');
@@ -223,7 +251,8 @@ function build(spec){
     const mark={id:item.id+'::total-label',item:item.id,series:null,type:'total',value:item.total,from:0,to:item.total,x:slots[i].center,endpointY:scale.map(item.total),pieces:[{x:slots[i].center-barWidth/2,y:scale.map(item.total),width:barWidth,height:0}],weight:600};
     requests.push({mark,text:valueLabel(item.total),priority:-100,total:true});
   });
-  marks.forEach(mark=>requests.push({mark,text:(references.has(mark.id)?references.get(mark.id)+' ':'')+valueLabel(mark.value,mark.type==='delta'?'delta':'value'),priority:mark.pieces.reduce((s,p)=>s+p.height,0)}));
+  /* 内核已把标签文本定稿；渲染器只贴，不另算一遍以免两处漂移。 */
+  marks.forEach(mark=>requests.push({mark,text:mark.text===undefined?(references.has(mark.id)?references.get(mark.id)+' ':'')+valueLabel(mark.value,isDelta(mark.type)?'delta':'value'):mark.text,priority:mark.pieces.reduce((s,p)=>s+p.height,0)}));
   // 小片先取得外置候选，避免大块的宽松候选挤占其唯一出路。
   requests.sort((a,b)=>a.priority-b.priority);
   requests.forEach((request,index)=>{
@@ -263,7 +292,13 @@ function build(spec){
     'data-anchor-side':mark.to>=mark.from?'top':'bottom',
     'data-anchor-box':[piece.x,piece.y,piece.width,piece.height].join(','),
     'data-anchor-label':mark.item+(mark.series?'|'+mark.series:'')});
-  for(const tick of ticks)out.push(line(point(plotLeft,scale.map(tick)),point(plotRight,scale.map(tick)),tick===0?palette.ink:palette.grid,{'stroke-width':tick===0?1.2:.6,'data-role':tick===0?'zero-axis':'axis-grid','data-axis-value':tick}));
+  /* 对账结论挂在已有的零轴线上做属性，不做成可见文字：−0.0000004 这种串既超宽又没人要读。 */
+  for(const tick of ticks)out.push(line(point(plotLeft,scale.map(tick)),point(plotRight,scale.map(tick)),tick===0?palette.ink:palette.grid,{'stroke-width':tick===0?1.2:.6,
+    'data-role':tick===0?(chart?'reconciliation':'zero-axis'):'axis-grid','data-axis-value':tick,
+    'data-residual':tick===0&&chart?(chart.residual===null||chart.residual===undefined?'':chart.residual):undefined,
+    'data-tolerance':tick===0&&chart?chart.tolerance:undefined,
+    /* 节点数也回显：pages.json 声明的 nodes 要有个能对账的现场，否则那个数字没人核得了。 */
+    'data-nodes':tick===0&&chart?chart.bars.length:undefined}));
   marks.forEach(mark=>{
     mark.pieces.forEach((piece,i)=>out.push(piece.height===0?line(point(piece.x,piece.y),point(piece.x+piece.width,piece.y),mark.fill,{'stroke-width':2,'data-role':'bar',...commonData(mark),...anchorData(mark,piece,i)}):`<rect ${attrs({x:piece.x,y:piece.y,width:piece.width,height:piece.height,fill:mark.fill,stroke:mark.weight===600?palette.ink:'white','stroke-width':mark.weight===600?1.6:.8,'data-role':'bar','data-semantic':mark.type,'data-piece':i,...commonData(mark),...anchorData(mark,piece,i)})}/>`));
     for(const band of scale.breaks)if(Math.min(mark.from,mark.to)<band.from&&Math.max(mark.from,mark.to)>band.to){const y=band.center;out.push(`<path d="M ${mark.x-barWidth/2} ${y+3} l ${barWidth*.33} -6 l ${barWidth*.34} 6 l ${barWidth*.33} -6" fill="none" stroke="${esc(palette.ink)}" stroke-width="1.3" data-role="mark-break" ${attrs(commonData(mark))}/>`);}

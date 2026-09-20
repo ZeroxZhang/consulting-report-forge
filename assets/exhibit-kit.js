@@ -1,16 +1,20 @@
 /* 原创零依赖、可打印 SVG 分析图组件。所有数值编码由数据计算。 */
 (function (root, factory) {
   const isNode = typeof module === 'object' && module.exports;
-  const api = factory(isNode ? require('./deck-typography.js') : root.DeckTypography, isNode ? require('./annotation-layer.js') : root.AnnotationLayer);
+  // 内核是第三个依赖，但只有声明了 waterfall 报告的图才用得上；浏览器少加载它不影响其余形式。
+  const api = factory(isNode ? require('./deck-typography.js') : root.DeckTypography, isNode ? require('./annotation-layer.js') : root.AnnotationLayer, isNode ? require('./waterfall-bridge.js') : root.WaterfallBridge);
   if (isNode) module.exports = api;
   if (root) root.ExhibitKit = api;
-})(typeof window !== 'undefined' ? window : null, function (typography, AnnotationLayer) {
+})(typeof window !== 'undefined' ? window : null, function (typography, AnnotationLayer, WaterfallBridge) {
   'use strict';
   if (!AnnotationLayer) throw new Error('ExhibitKit 需要 annotation-layer.js（浏览器加载时须先于本文件）');
   const esc = v => String(v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const num = (v, name) => { if (typeof v !== 'number' || !Number.isFinite(v)) throw new Error(name + ' 必须为有限数值'); return v; };
   const list = (v, name) => { if (!Array.isArray(v) || !v.length) throw new Error(name + ' 不可为空'); return v; };
-  const p0 = {"ink":"#172C3B","muted":"#50606E","grid":"#BFCBD2","accent":"#000080","positive":"#000080","negative":"#9C5C14","surface":"#F2F5F7","selected":"#D9D9EC","series":["#000080","#007A78","#8652A0","#9C5C14","#667586","#9B4566"],"sequential":["#D9D9EC","#A3A3D1","#6D6DB6","#36369B","#000080"],"ranges":["#F2F5F7","#E8EDF0","#BFCBD2"]};
+  /* residual 取主题的 risk 令牌：它必须在灰度里也能与 positive/negative 分开。
+     三个预设的 caution/warn 都太靠近 delta-negative（麦肯锡 #805B18 对 #9C5C14），
+     用它们等于让"说不清的差额"和"下降"长成同一个颜色。 */
+  const p0 = {"ink":"#172C3B","muted":"#50606E","grid":"#BFCBD2","accent":"#000080","positive":"#000080","negative":"#9C5C14","residual":"#A3313C","surface":"#F2F5F7","selected":"#D9D9EC","series":["#000080","#007A78","#8652A0","#9C5C14","#667586","#9B4566"],"sequential":["#D9D9EC","#A3A3D1","#6D6DB6","#36369B","#000080"],"ranges":["#F2F5F7","#E8EDF0","#BFCBD2"]};
   /* 透明填充叠加白底后计算实际亮度，不能用透明度阈值推断文字颜色。 */
   function rgb(color) {
     if (typeof color !== 'string') throw new Error('颜色需要字符串');
@@ -135,21 +139,65 @@
     c.line(a.x,40,b.x,40,c.p.ink);
     c.line(a.x,40,a.x,49,c.p.ink);c.line(b.x,40,b.x,49,c.p.ink);
   }
+  const WF_MAX_NODES=18;
+  /* 内核报告的节点已带 from/to/value 与预格式化文本：渲染器只画，不重算累计、不重排数字。
+     体检未通过的报没有图可画——画一张对不上账的图比拒绝出图更糟。 */
+  function kernelBars(report){
+    if(!report||typeof report!=='object')throw new Error('waterfall 应为内核报告对象');
+    if(report.status!=='ready'||!report.chart)throw new Error('瀑布数据未通过体检，不能出图：'+((report.issues||[]).map(v=>v.code).join('、')||'缺少 chart'));
+    const bars=report.chart.bars;
+    if(!Array.isArray(bars)||!bars.length)throw new Error('内核报告缺 bars');
+    if(bars.length>WF_MAX_NODES)throw new Error('瀑布节点 '+bars.length+' 个，超过 '+WF_MAX_NODES+'：请归并驱动项，不静默截断');
+    return bars.map(b=>{
+      if(!['start','delta','subtotal','end','residual'].includes(b.type))throw new Error('未知瀑布节点类型: '+b.type);
+      return {label:b.label,from:num(b.from,'from'),to:num(b.to,'to'),type:b.type,value:num(b.value,'value'),text:b.valueText};});
+  }
+  /* 折行只在放不下时发生；放得下时逐字符与不折行相同，既有 spec 的输出因此不变。 */
+  function wrapLabel(c,text,width){
+    const lines=WaterfallBridge?WaterfallBridge.labelLines(text,width/c.fs):[String(text)];
+    if(lines.length>2)throw new Error('类别标签折成 '+lines.length+' 行，超出瀑布标签区：请缩短措辞或加宽画布：'+text);
+    return lines;
+  }
   function waterfall(s){
-    const c=canvas(s),items=list(s.items,'items');let acc=0;
-    const steps=items.map((d,i)=>{if(!['total','delta','subtotal'].includes(d.type))throw new Error('waterfall type 应为 total/delta/subtotal');let from,to;
+    const c=canvas(s),report=s.waterfall;
+    if(report&&s.items)throw new Error('不要同时声明 items 与 waterfall：几何与文本都来自内核，重复声明必然漂移');
+    const items=report?kernelBars(report):list(s.items,'items');let acc=0;
+    const steps=report?items:items.map((d,i)=>{if(!['total','delta','subtotal'].includes(d.type))throw new Error('waterfall type 应为 total/delta/subtotal');let from,to;
       if(d.type==='delta'){from=acc;to=acc+num(d.value,'value');acc=to;}
       else if(d.type==='total'){from=0;to=num(d.value,'value');if(i>0&&Math.abs(to-acc)>1e-8*Math.max(1,Math.abs(acc)))throw new Error('总计不等于累计值');acc=to;}
       else {from=0;to=acc;if(d.value!==undefined&&Math.abs(num(d.value,'value')-acc)>1e-8)throw new Error('小计不等于累计值');}
       return {label:d.label,from,to,type:d.type,value:d.type==='delta'?to-from:to};});
-    const d=domain(steps.flatMap(x=>[x.from,x.to]),s.domain),y=scale(d,c.h-65,s.comparison?90:45),dx=(c.w-110)/items.length,bw=Math.min(76,dx*.65);if(dx<45)throw new Error('柱过多');
-    if(c.h-65-(s.comparison?90:45)<70)throw new Error('瀑布绘图区不足');
-    c.line(60,y(0),c.w-30,y(0));
-    steps.forEach((v,i)=>{const x=65+i*dx;const barTop=y(Math.max(v.from,v.to)),barH=Math.abs(y(v.from)-y(v.to));const aw=c.anchor({id:'bar:'+v.label,x:x+bw/2,y:barTop+barH/2,side:'top',value:v.value,label:v.label,box:{x,y:barTop,width:bw,height:barH},group:v.type});c.rect(x,barTop,bw,barH,v.type==='delta'?(v.value>=0?c.p.positive:c.p.negative):c.p.accent,`${aw} data-from="${v.from}" data-to="${v.to}"`);
+    /* 净变化括号占预留带，与 comparison 括线是同一条带；两者都要时须显式选择，不能叠着画。 */
+    const netBracket=Boolean(report)&&s.bracket!=='comparison';
+    if(netBracket&&s.comparison)throw new Error('净变化括号与 comparison 括线占用同一条预留带：请显式选择 s.bracket="comparison" 或移除 comparison');
+    /* 内核报告的预格式化文本由 present() 产生；渲染器不自己拼这些串，缺了就报错而不是印出 undefined。 */
+    if(report&&typeof report.chart.netText!=='string')throw new Error('内核报告缺少 present() 产生的预格式化文本（netText）：请先把报告过一遍 WaterfallBridge.present() 再交给渲染器');
+    /* 残差是内核的结论，它必须有自己的颜色；落回默认色等于让读者把"说不清的差额"读成主数据。 */
+    if(report&&steps.some(v=>v.type==='residual')&&!c.p.residual)throw new Error('调色板缺少 residual 令牌：残差柱要有自己的颜色，不能与主数据或下降共用');
+    const labelSeen=new Map();
+    const head=s.comparison||netBracket?90:45;
+    const d=domain(steps.flatMap(x=>[x.from,x.to]),s.domain),y=scale(d,c.h-65,head),dx=(c.w-110)/items.length,bw=Math.min(76,dx*.65);if(dx<45)throw new Error('柱过多');
+    if(c.h-65-head<70)throw new Error('瀑布绘图区不足');
+    const chart=report?report.chart:null;
+    /* 对账结论挂在已有的零轴线上做属性，不做成可见文字：−0.0000004 这种串既超宽又没人要读。 */
+    /* data-nodes 让 pages.json 声明的节点数有个能对账的现场：声明里的数字要么能核对，要么不该写。
+       整串只在声明了内核报告时生成，未声明时仍是空串，老 spec 的输出逐字节不变。 */
+    const audit=chart?` data-role="reconciliation" data-residual="${esc(chart.residual===null||chart.residual===undefined?'':chart.residual)}" data-tolerance="${esc(chart.tolerance)}" data-nodes="${chart.bars.length}"`:'';
+    c.line(60,y(0),c.w-30,y(0),c.p.grid,audit);
+    steps.forEach((v,i)=>{const x=65+i*dx;const barTop=y(Math.max(v.from,v.to)),barH=Math.abs(y(v.from)-y(v.to));const seen=(labelSeen.get(v.label)||0)+1;labelSeen.set(v.label,seen);const aw=c.anchor({id:'bar:'+(seen>1?v.label+'#'+seen:v.label),x:x+bw/2,y:barTop+barH/2,side:'top',value:v.value,label:v.label,box:{x,y:barTop,width:bw,height:barH},group:v.type});c.rect(x,barTop,bw,barH,v.type==='residual'?c.p.residual:v.type==='delta'?(v.value>=0?c.p.positive:c.p.negative):c.p.accent,`${aw} data-from="${v.from}" data-to="${v.to}"`);
       if(v.from===v.to)c.line(x,y(v.to),x+bw,y(v.to),c.p.ink);
-      fittedText(c,x+bw/2,y(Math.max(v.from,v.to))-8,formatNumber(v.value,{...s.format,signed:v.type==='delta'}),dx-6,'middle');
-      fittedText(c,x+bw/2,c.h-30,v.label,dx-6,'middle');
+      /* 负值标签落到柱子下沿之下，不压住浮条；只有声明了内核报告的图才改这一处。 */
+      const labelY=report&&v.value<0?y(Math.min(v.from,v.to))+c.fs+8:y(Math.max(v.from,v.to))-8;
+      fittedText(c,x+bw/2,labelY,v.text===undefined?formatNumber(v.value,{...s.format,signed:v.type==='delta'}):v.text,dx-6,'middle');
+      /* 折行只给内核报告那一支：老 items 路径把标签原样交给 fittedText，多切一个 \n 都是改老稿的输出。 */
+      const lines=report?wrapLabel(c,v.label,dx-6):[v.label];
+      lines.forEach((line,j)=>fittedText(c,x+bw/2,c.h-30-(lines.length-1-j)*(c.fs+2),line,dx-6,'middle'));
       if(i<steps.length-1)c.line(x+bw,y(v.to),65+(i+1)*dx,y(v.to),c.p.grid,'stroke-dasharray="4 3"');});
+    if(netBracket){
+      const first=65+bw/2,last=65+(steps.length-1)*dx+bw/2,growth=chart.growthText&&chart.growthText!=='—'?'  /  '+chart.growthText:'';
+      fittedText(c,(first+last)/2,24,'净变化 '+chart.netText+growth,2*Math.min((first+last)/2-12,c.w-12-(first+last)/2),'middle',c.p.ink,'font-weight="700" data-role="net-change"');
+      c.line(first,40,last,40,c.p.ink);c.line(first,40,first,49,c.p.ink);c.line(last,40,last,49,c.p.ink);
+    }
     if(s.comparison)comparisonBracket(c,steps.map((v,i)=>({x:65+i*dx+bw/2,value:v.to})),s.comparison);
     return c.end();
   }

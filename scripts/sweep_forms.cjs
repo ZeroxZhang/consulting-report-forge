@@ -8,7 +8,7 @@ function sweep() {
     families: Object.entries(forms.familyLabels).map(([family, label]) => ({ family, label,
       forms: forms.list().filter(form => forms.familyOf(form) === family).map(form => {
         const entry = forms.get(form);
-        return { form, label: entry.label, annotation: entry.annotation, capacity: entry.capacity };
+        return { form, label: entry.label, annotation: entry.annotation, capacity: entry.capacity, limits: entry.limits };
       })
     }))
   };

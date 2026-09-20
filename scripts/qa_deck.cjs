@@ -75,6 +75,8 @@ function parseArgs(argv){
   errors.push(...result.relations.errors.map(e=>'第'+pageNumber+'页几何关系：'+JSON.stringify(e)));
   // 图被 CSS 缩放在预览里看不见，但它改的是图内每一个字号与偏移，必须当错误报。
   for(const item of result.scaledSvg||[]){const line='第'+pageNumber+'页图形被缩放：按 '+item.source+' '+item.intrinsic.join('×')+' 渲染，实际占位 '+item.rendered.join('×')+'（缩放 '+item.scale+'）';if(item.source==='data-actual-size')errors.push(line+'——配方图不能靠 CSS 缩放；改 exhibits 的 width/height 或版位比例');else warnings.push(line+'——请确认是有意的');}
+  // 瀑布对账门直接调探针的判据函数：单页自查（preview_page 走 summarize）与正式审计共用一个实现，不会有两套结论。
+  for(const item of pageProbe.waterfallErrors(result)){const line='第'+pageNumber+'页瀑布对账：'+item.message;(item.fatal?errors:warnings).push(line);}
   if(result.fonts.identity==='FAIL')errors.push('第'+pageNumber+'页'+fontAudit.describe(result.fonts));
   const titleFit=await p.locator('.slide.active .slide__title').evaluateAll(es=>es.map(e=>{const cs=getComputedStyle(e);return {text:e.textContent,lines:e.offsetHeight/parseFloat(cs.lineHeight)};}));if(titleFit.some(t=>t.lines>2.1))warnings.push('第'+pageNumber+'页标题超过两行建议，请目视判断');
   if(result.tinyText.length||result.smallDataText.length)warnings.push('第'+pageNumber+'页部分文字低于建议字号，请按实际可读性复核');
@@ -101,7 +103,7 @@ function parseArgs(argv){
    const record=path.resolve(path.dirname(input),taskContract.pages.record);
    if(!fs.existsSync(record)||taskContracts.fileHash(record)!==taskContract.pages.sha256)throw Error('pages记录缺失或sha256与任务合同不符');
    const doc=JSON.parse(fs.readFileSync(record,'utf8')),checked=pagesApi.check(doc);
-   const mismatches=pagesApi.verifyDeck(doc,rows.map(r=>({page:r.page,form:r.form,visual:r.visual,proves:r.proves,densityProfile:r.densityProfile,layout:r.layout,modules:r.modules,role:r.bookends?.role})));
+   const mismatches=pagesApi.verifyDeck(doc,rows.map(r=>({page:r.page,form:r.form,visual:r.visual,proves:r.proves,densityProfile:r.densityProfile,layout:r.layout,modules:r.modules,waterfall:r.waterfall,role:r.bookends?.role})));
    const all=[...checked.errors,...mismatches];
    // 布局对账：声明了布局的页，每一格必须真的落在网格上。量出来的矩形才是事实。
    const layoutApi=require('./layout_contract.cjs');

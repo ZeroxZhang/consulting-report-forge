@@ -7,6 +7,7 @@ const layer = require('../assets/annotation-layer.js');
 const densityContract = require('./density_contract.cjs');
 const richness = require('./richness_contract.cjs');
 const layouts = require('./layout_contract.cjs');
+const waterfall = require('./waterfall_contract.cjs');
 
 const SLOTS = ['main', 'left', 'right', 'top', 'bottom', 'aside', 'full'];
 const ROLES = ['primary', 'support', 'context', 'evidence'];
@@ -65,6 +66,9 @@ function check(doc) {
     // 已移除字段的残留必须显式报错：静默忽略会让作者以为声明仍然生效。
     if (page.planner !== undefined) bad(at + ' 已取消 planner 字段：图表选型由本技能直接完成，请删除该字段及 capability_id');
     if (page.repetitionReason !== undefined && !norm(page.repetitionReason)) bad(at + ' repetitionReason 不能为空');
+    // 瀑布对账声明：只做"声明了就必须自洽"，与 annotations/visual/repetitionReason 同一先例。
+    // 不要求"是瀑布形式就必须声明"——那条会让已存在的稿子突然失败，而布局与丰富度已经有版本门控。
+    errors.push(...waterfall.blockErrors(page, at + '（page ' + page.page + '）'));
     // 图型不因容量不足改表：合同里不再有降级出口，放不下时在同一表达内重排、分面或换实现。
     if (page.fallback !== undefined) bad(at + ' 已取消 fallback：容量不足时调整布局、分面、换实现或如实报未完成，不能改表');
   });
@@ -167,6 +171,7 @@ function inventory(doc) {
     layoutExempt: layoutFacts.layoutExempt,
     layoutDiversityReason: layoutFacts.layoutDiversityReason,
     annotations: annotated,
+    ...waterfall.inventory(doc),
     regions,
     modules: pages.reduce((sum, page) => sum + layouts.resolveModules(page).length, 0),
     longestRun: runs.reduce((max, run) => Math.max(max, run.length), 0),
@@ -198,6 +203,7 @@ function verifyDeck(doc, slides) {
     // 同一句话存在成稿与 pages.json 两处，逐字相同才认。报错要把两句都摊开——
     // 只说"不一致"等于让作者回去逐字比对，页数一多就是纯耗时。
     if (norm(slide.proves) && norm(slide.proves) !== norm(declared.proves)) errors.push('第 ' + slide.page + ' 页 data-proves 与 pages.json 的 proves 不一致：成稿写「' + norm(slide.proves) + '」，pages.json 写「' + norm(declared.proves) + '」；两处必须逐字相同，改完一处要同步另一处');
+    errors.push(...waterfallMismatches(slide, declared, slide.page));
     if (doc.version >= 2 && norm(slide.densityProfile) !== norm(declared.density?.profile)) errors.push('第 ' + slide.page + ' 页 data-density-profile 与 pages.json 不一致：成稿写「' + norm(slide.densityProfile) + '」，pages.json 写「' + norm(declared.density?.profile) + '」；v2 起页面必须把 dense/balanced/sparse 显式写到 section 上');
     if (doc.version === 3 && norm(slide.layout) !== norm(declared.layout)) errors.push('第 ' + slide.page + ' 页 data-layout 与 pages.json 不一致：成稿写「' + norm(slide.layout) + '」，pages.json 写「' + norm(declared.layout) + '」；v3 起每页必须把布局引用写到 section 上，CSS 才按网格排版');
     // 每一格都要在成稿里落地：布局声明了几格、每格是什么槽位、顺序如何，DOM 里必须一致。
@@ -211,4 +217,27 @@ function verifyDeck(doc, slides) {
   return errors;
 }
 
-module.exports = {SLOTS, ROLES, BOOKEND_ROLES, DENSITY_PROFILES, DENSITY_ROLES, densityErrors, legacyRegions, check, repetitionErrors, inventory, load, verifyDeck, fileHash, norm};
+/* 瀑布的两处对账：pages.json 的声明与成稿零轴线上的属性。
+   与 proves 同一条纪律——同一件事存在两处，逐字相同才认；只说"不一致"等于让作者回去自己找。
+   声明了就必须对得上；没声明就整页不查（老稿不受影响）。 */
+function waterfallMismatches(slide, declared, pageNumber) {
+  const errors = [], block = declared.waterfall, dom = slide.waterfall;
+  if (!block) return errors;
+  const at = '第 ' + pageNumber + ' 页 waterfall 声明';
+  if (block.status === 'not_applicable') {
+    if (dom && dom.axes) errors.push(at + ' 写的是 not_applicable（这一页没有可对账的桥），但成稿里有 ' + dom.axes + ' 条内核对账零轴：两边只能有一个是对的，先决定这页到底有没有桥');
+    return errors;
+  }
+  if (!dom || !dom.axes) {
+    errors.push(at + ' 写的是 verified，但成稿里找不到内核出的对账零轴（data-role="reconciliation"）：这一页的桥没走体检，声明里的对账结论无从核对');
+    return errors;
+  }
+  /* 空串与 null 是同一件事的两种写法：内核没有残差时属性值为空。 */
+  const residual = value => (value === null || value === undefined) ? '' : norm(value);
+  if (residual(dom.residual) !== residual(block.residual)) errors.push(at + ' 的 residual 与成稿不一致：成稿写「' + residual(dom.residual) + '」，pages.json 写「' + residual(block.residual) + '」；这个数只应原样抄自内核报告，不能自己重算');
+  if (norm(dom.tolerance) !== norm(block.tolerance)) errors.push(at + ' 的 tolerance 与成稿不一致：成稿写「' + norm(dom.tolerance) + '」，pages.json 写「' + norm(block.tolerance) + '」；容差要用内核实际生效的那一个（含 rate+percent 的百分之一缩量）');
+  if (Number.isInteger(block.nodes) && dom.nodes !== block.nodes) errors.push(at + ' 的 nodes 与成稿不一致：成稿画了 ' + dom.nodes + ' 个节点，pages.json 写 ' + block.nodes + '；改图或改声明，两处必须一致');
+  return errors;
+}
+
+module.exports = {SLOTS, ROLES, BOOKEND_ROLES, DENSITY_PROFILES, DENSITY_ROLES, densityErrors, legacyRegions, check, repetitionErrors, inventory, load, verifyDeck, waterfallMismatches, fileHash, norm};

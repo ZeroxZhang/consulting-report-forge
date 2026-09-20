@@ -142,7 +142,9 @@ const presets={
 };
 function get(id){id=id===undefined||id===null||id===''?'mckinsey':id;if(!Object.prototype.hasOwnProperty.call(presets,id))throw new Error('未知主题: '+id);return JSON.parse(JSON.stringify(presets[id]));}
 function css(id){const t=get(id);return ':root{'+Object.entries(t.tokens).map(([k,v])=>'--'+k+':'+v+';').join('')+'}';}
-function palette(id){const t=get(id).tokens;return {ink:t.ink,muted:t['gray-2'],grid:t['gray-3'],accent:t.accent,positive:t['delta-positive'],negative:t['delta-negative'],surface:t.surface,selected:t.selected,series:Array.from({length:6},(_,i)=>t['cat-'+(i+1)]),sequential:Array.from({length:5},(_,i)=>t['seq-'+(i+1)]),ranges:[t.surface,t['delta-neutral'],t['gray-3']]};}
+/* residual 取 risk 而非 caution/warn：三个预设的 caution 都太靠近 delta-negative
+   （麦肯锡 #805B18 对 #9C5C14），用它们等于让"说不清的差额"和"下降"长成同一个颜色。 */
+function palette(id){const t=get(id).tokens;return {ink:t.ink,muted:t['gray-2'],grid:t['gray-3'],accent:t.accent,positive:t['delta-positive'],negative:t['delta-negative'],residual:t.risk,surface:t.surface,selected:t.selected,series:Array.from({length:6},(_,i)=>t['cat-'+(i+1)]),sequential:Array.from({length:5},(_,i)=>t['seq-'+(i+1)]),ranges:[t.surface,t['delta-neutral'],t['gray-3']]};}
 function apply(html,id){const t=get(id),tag='<style id="deck-theme">'+css(id)+'</style>';if(/<style id="deck-theme">[\s\S]*?<\/style>/.test(html))html=html.replace(/<style id="deck-theme">[\s\S]*?<\/style>/,tag);else html=html.replace('</head>',tag+'\n</head>');return html.replace(/<html\b[^>]*>/,m=>m.replace(/ data-theme="[^"]*"/g,'').replace('>',' data-theme="'+t.id+'">'));}
 return {ids:Object.keys(presets),get,css,palette,apply};
 });

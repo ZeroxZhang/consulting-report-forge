@@ -4,7 +4,12 @@
 
 const FORMS = {
   // —— 构建期静态咨询展品（assets/exhibit-kit.js）——
-  'kit.waterfall': { family: 'comparison', label: '瀑布图', kind: 'svg', module: 'exhibit-kit', export: 'waterfall', annotation: 'layer', capacity: '贡献项 ≤ 8；不闭合不做' },
+  /* capacity 与 references/expression-guide.md 的瀑布行手工同形，改一处须改两处。
+     limits 是机器可校验的那部分：maxNodes 比的是 bars.length，含起点与终点，渲染器超限直接拒绝、不静默截断；
+     所以 capacity 说"贡献项 ≤ 16"而 maxNodes 写 18，两者是同一条线的两种数法，不是笔误；
+     reconciles 标出"这一形式必须能对账"，QA 探针按它分派瀑布判据——两边共用这一份，
+     不在这里和探针里各写一个形式清单，否则加第三个瀑布形式时探针不会知道。 */
+  'kit.waterfall': { family: 'comparison', label: '瀑布图', kind: 'svg', module: 'exhibit-kit', export: 'waterfall', annotation: 'layer', capacity: '贡献项 ≤ 16（另占起点与终点，有残差柱再减 1）；不闭合不做', limits: { maxNodes: 18, reconciles: true } },
   'kit.dumbbell': { family: 'comparison', label: '哑铃图', kind: 'svg', module: 'exhibit-kit', export: 'dumbbell', annotation: 'layer', capacity: '行 ≤ 14；两期同口径同量尺' },
   'kit.slope': { family: 'comparison', label: '坡度图', kind: 'svg', module: 'exhibit-kit', export: 'slope', annotation: 'layer', capacity: '行 ≤ 10；只比较排序迁移，不比横距' },
   'kit.bullet': { family: 'kpi', label: '子弹图', kind: 'svg', module: 'exhibit-kit', export: 'bullet', annotation: 'layer', capacity: '指标 ≤ 6；分档须另有业务定义' },
@@ -30,7 +35,7 @@ const FORMS = {
   // —— 专业标注入口（scripts/render_precision_exhibit.cjs）——
   'precision.columns': { family: 'comparison', label: '数值柱（含小计／断轴／Δ）', kind: 'svg', module: 'precision', type: 'columns', annotation: 'layer', capacity: '≥ 400×260；类别 ≤ 4 行' },
   'precision.stacked': { family: 'composition', label: '数值堆积（含层比较）', kind: 'svg', module: 'precision', type: 'stacked', annotation: 'layer', capacity: '仅非负组成；列内须列全系列' },
-  'precision.waterfall': { family: 'comparison', label: '数值瀑布（含累计连接）', kind: 'svg', module: 'precision', type: 'waterfall', annotation: 'layer', capacity: '须闭合；累计连接只用于瀑布' },
+  'precision.waterfall': { family: 'comparison', label: '数值瀑布（含累计连接）', kind: 'svg', module: 'precision', type: 'waterfall', annotation: 'layer', capacity: '须闭合；累计连接只用于瀑布；贡献项 ≤ 16（另占起点与终点）；不接受破轴', limits: { maxNodes: 18, reconciles: true } },
 
   // —— 语义图示（scripts/render_diagram.cjs）——
   'diagram.mechanism': { family: 'diagram', label: '机制／反馈图', kind: 'svg', module: 'diagram', annotation: null, capacity: '边须写含义与证据状态；循环标反馈' },
@@ -74,4 +79,4 @@ const byFamily = () => list().reduce((groups, form) => {
   return groups;
 }, {});
 
-module.exports = { version: '1.1.0', forms: FORMS, familyLabels: FAMILY_LABELS, NON_EXPRESSIVE_FAMILIES, list, get, familyOf, expressive, annotationEntry, byFamily };
+module.exports = { version: '1.2.0', forms: FORMS, familyLabels: FAMILY_LABELS, NON_EXPRESSIVE_FAMILIES, list, get, familyOf, expressive, annotationEntry, byFamily };

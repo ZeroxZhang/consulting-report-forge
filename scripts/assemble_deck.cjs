@@ -113,6 +113,23 @@ async function assemble(options={}){
   if(contractFile&&!pagesRecord)throw Error('任务合同缺少 pages：页面蓝图阶段须产出 pages.json，并在 task.json 用 {"pages":{"record":"pages.json","sha256":"..."}} 绑定（字段见 references/static-html-pdf.md）');
   if(pagesRecord){
    const pagesApi=require('./check_pages.cjs'),pagesContract=pagesApi.load(pagesRecord);
+   // verifyDeck 要把 pages.json 的 waterfall 声明与成稿零轴线上的属性逐字对账。上面那个 evaluate 只搬结构，
+   // 不产生 DOM 事实；缺了事实，对账会把"没法核对"误报成"成稿里没有对账零轴"——一句假话，且必然阻断。
+   // 所以这里补一次现场测量。复用 page_probe 的 inspectDom 而不是再抄一遍属性名：
+   // 两处各写一份的话，改一处漏一处就会重新长出这种假事实。只对真的声明了 waterfall 的册子跑，老稿不受影响。
+   if(pagesContract.doc.pages.some(page=>page&&page.waterfall)){
+    const probe=require('./page_probe.cjs');
+    // 上面那个 evaluate 产出的是一个 DOMParser 文档再序列化出来的字符串，页面里那个 #stage 并不是它；
+    // 而且此时成稿还没上主题、引擎脚本也还没跑。所以另开一个关掉脚本的页面来量：
+    // 引擎的内联脚本会去取没装配进来的 deck-typography.js，跑起来只会制造与本次测量无关的报错。
+    const probePage=await browser.newPage({javaScriptEnabled:false});
+    try{
+     await probePage.setContent(assembled.html,{waitUntil:'domcontentloaded'});
+     const slidesLoc=probePage.locator('#stage .slide'),count=await slidesLoc.count();
+     if(count!==assembled.slideForms.length)throw Error('装配后 #stage 下有 '+count+' 页，与逐页形式表 '+assembled.slideForms.length+' 条对不上');
+     for(let i=0;i<count;i++)assembled.slideForms[i].waterfall=(await slidesLoc.nth(i).evaluate(probe.inspectDom,probe.WF_FORMS)).waterfall;
+    }finally{await probePage.close();}
+   }
    // pages.json 记录的 sha256 仍在 load 里照常核对——切片只收窄成稿要对账的条目，不改动那份记录。
    const declared=upto?{...pagesContract.doc,pages:pagesContract.doc.pages.filter(page=>page.page<=upto)}:pagesContract.doc;
    const pagesErrors=pagesApi.verifyDeck(declared,assembled.slideForms);

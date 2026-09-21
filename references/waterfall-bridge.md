@@ -12,7 +12,7 @@
 | 分类贡献拆解 | 各分类的增量之和等于整体净变化 |
 | 费率结构化变动 | 两期各分类都有分母/权重（见 §三 rate） |
 
-不用：分类不互斥或范围不完整的"构成"（那是堆积图的地盘）；只有起止总量、没有驱动项（**只有起点和终点做不出贡献拆解**，内核直接阻断并要你补数）；增减之间是相关而非可加。
+不用：分类不互斥或范围不完整却声称完整加总的“构成”（堆积图也不能解决互斥性问题，应重定范围、说明剩余项或改为非加总比较）；只有起止总量、没有驱动项（**只有起点和终点做不出贡献拆解**，内核直接阻断并要你补数）；增减之间是相关而非可加。
 
 ## 二、三个入口与三种模式
 
@@ -26,7 +26,7 @@ W.present(report);                                          // 追加预格式�
 
 **预格式化文本只在这里算一次。** 渲染器另算一遍必然与内核漂移，读者就会看到"正文写 +300、图上画 +299.99"。
 
-输入有两代，走同一套体检：
+两种输入形态走同一套体检：
 
 | 入口 | 形状 | 用途 |
 |---|---|---|
@@ -219,7 +219,7 @@ console.log(JSON.stringify(r,null,2));
 
 自检：`node scripts/test_waterfall_bridge.cjs`（含三个标准 fixture 的黄金几何，已与 aeolus 原实现逐字段比对一致）。它已挂在 `npm test` 链上。
 
-### 命令行（`kit.*` 唯一的出图入口）
+### 命令行（瀑布专用体检与出图入口）
 
 `kit.waterfall` 没有别的 CLI——瀑布是最需要"先体检、后出图"的形式，所以它的入口直接叫合同：
 
@@ -251,7 +251,7 @@ node scripts/waterfall_contract.cjs render   spec.json out.svg  # 体检通过�
 
 `metric`、`unit`、`source` 是溯源三件套，**bridge 也必须写**，缺一即 `blocked`——示例里省掉它们只会得到一个 2 号退出码。
 
-`renderer` 取 `kit`（默认）或 `precision`；取 `precision` 时 `spec` 还接受 `theme` / `typography_id` 等 `render_precision_exhibit.cjs` 的既有参数。带残差通过体检时，stderr 会多一句提醒：**这一页在 `pages.json` 里必须写 `residualReason`**——否则作者要到校验那一步才发现。
+`renderer` 取 `kit`（默认）或 `precision`；取 `precision` 时 `spec` 还接受 `theme` / `typography_id` 等 `render_precision_exhibit.cjs` 的既有参数。带残差通过体检时，stderr 会多一句提醒：在蓝图的 `slide.waterfall.residualReason` 写明残差依据并重新编译——否则作者要到校验那一步才发现。
 
 自检：`node scripts/test_waterfall_contract.cjs`（已挂在 `npm test` 链上）。
 
@@ -283,7 +283,9 @@ const svg=require('./assets/exhibit-kit.js').waterfall({palette,typography_id:'s
 
 ## 十一、逐页声明与门禁
 
-### 声明块（写在 `pages.json` 的页对象里）
+### 编译后的对账声明
+
+在蓝图的 `slide.waterfall.input` 提供输入，编译器生成下列页面声明，不手填对账数或直接改 pages。字段表用于理解编译结果。
 
 ```json
 { "page": 7, "form": "kit.waterfall", "...": "…",
@@ -299,18 +301,11 @@ const svg=require('./assets/exhibit-kit.js').waterfall({palette,typography_id:'s
 | `residualReason` | **残差非 0 时必填**，≥ 12 字。`residual` 写 `null` 或整个键省略表示"这一页没有差额"；写 `"0"` 等同于没有差额，**不会**因此豁免 `reconciliation` 与 `tolerance` 的量级比较 |
 | `residual` 的实际取值 | 只能是内核 `chart.residual` 的**原样字符串**（未取整，可能是负号开头）或 `null`。空串 `""` 会被拒绝：`Number("")` 不是数，门禁无法判断你到底想说什么 |
 
-走内核出图但确实没有可对账的桥（例如手绘资金流向示意），写豁免：
-
-```json
-{"waterfall": {"status": "not_applicable", "reason": "这一页是手绘的资金流向示意，不含可加总的起点与增量"}}
-```
-
-豁免理由同样 ≥ 12 字，且**不能同时写对账结论**——两边都写等于两个结论并存，门禁直接拦。
+资金流向示意应声明实际 `flow` 语义；真正的瀑布语义不能以 `not_applicable` 豁免。
 
 ### 判据
 
-- **不声明就不查。** 没有 `waterfall` 键的页，整页不碰。老稿不会因为这条规则突然失败，所以**不需要版本门控**（同 `annotations`／`visual`／`repetitionReason` 的先例）。
-  **这条承诺要成立，`WF-NOT-RECONCILED` 就必须是提醒。** 声明侧看得见 `pages.json`，现场侧看不见；把"形式是瀑布却没有零轴"做成探针里的阻塞项，等于凭空对所有历史瀑布页加了一条它们无法满足的规则——正是本节承诺不会发生的事。
+- **瀑布必须对账。** 瀑布形式或 `semanticType:waterfall` 必须从权威输入派生 verified 对账，不能通过省略声明跳过检查。
 - **声明了就必须自洽。** `check_pages.cjs` 只做结构校验：三个数是不是数、`nodes` 在不在范围内、超容差时有没有承认残差并写够理由。
 - **成稿与声明两处逐字对账。** `qa_deck.cjs` 拿 `page_probe.cjs` 在现场量到的 `data-residual`／`data-tolerance`／`data-nodes`，与声明逐字比。同一件事存在两处，逐字相同才认（同 `proves`／`form`／`layout`／`density` 那一组）。
 - **分派依据是零轴线上的 `data-role="reconciliation"`**，加上页面自己的 `data-form` 是不是"必须能对账的形式"。这份清单不在探针里硬编码，而是从 `assets/deck-forms.js` 的 `limits.reconciles` 派生——加第三个瀑布形式时，探针和形式目录不会各说各话。**不能按 `data-from`／`data-to` 分派**——precision 的柱图与堆积图同样会发这两个属性，那样等于把不是瀑布的图也当瀑布判。
@@ -319,7 +314,7 @@ const svg=require('./assets/exhibit-kit.js').waterfall({palette,typography_id:'s
 
 | 代码 | 档位 | 什么时候出现 |
 |---|---|---|
-| `WF-NOT-RECONCILED` | 提醒 | 页面 `data-form` 是瀑布形式，图上却没有内核出的对账零轴。**是提醒不是阻塞**：这一页可能走的是老 `items` 路径，本来就没有内核报告，作者没做错什么。真正该拦的那条——"`pages.json` 声明 `verified`、成稿却没有零轴"——由 `verifyDeck` 判，那里看得见声明 |
+| `WF-NOT-RECONCILED` | 探针提示，须结合合同检查 | 图上缺少内核对账零轴。核查声明与实际SVG；完整验收还会检查权威输入、verified状态及现场对账标记，不能把单条提示当作通过 |
 | `WF-MULTIPLE-AUDIT` | 阻塞 | 一页上有两条以上对账零轴：一次体检只能有一个结论，声明也只能写一个 |
 | `WF-RESIDUAL` | 提醒 | 图上有非 0 差额：不是错，但这一页必须写 `residualReason`，且要目视确认差额是独立节点、不是被并进最后一根柱子 |
 

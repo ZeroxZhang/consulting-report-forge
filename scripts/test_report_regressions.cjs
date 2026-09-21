@@ -3,7 +3,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const lc=require('./layout_contract.cjs'),bp=require('./deck_blueprint.cjs'),pages=require('./check_pages.cjs'),probe=require('./probe_capabilities.cjs'),kit=require('../assets/exhibit-kit.js');
 const root=path.resolve(__dirname,'..'),clone=x=>JSON.parse(JSON.stringify(x));
-const template=JSON.parse(fs.readFileSync(path.join(root,'templates/deck-blueprint.json')));
+const template=JSON.parse(fs.readFileSync(path.join(root,'tests/fixtures/legacy-deck-blueprint.json')));
 assert.throws(()=>probe.parseArgs(['out','--verify']),/答案文件/);
 assert.throws(()=>probe.parseArgs(['out','--verify','--help']),/答案文件/);
 assert.throws(()=>probe.parseArgs(['out','--verify','a.json','--verify','b.json']),/只能/);

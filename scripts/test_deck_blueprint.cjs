@@ -2,7 +2,7 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const blueprint = require('./deck_blueprint.cjs');
-const template = JSON.parse(fs.readFileSync(require('node:path').resolve(__dirname, '../templates/deck-blueprint.json'), 'utf8'));
+const template = JSON.parse(fs.readFileSync(require('node:path').resolve(__dirname, '../tests/fixtures/legacy-deck-blueprint.json'), 'utf8'));
 
 const valid = blueprint.validate(template);
 assert.equal(valid.status, 'PASS', JSON.stringify(valid.errors));

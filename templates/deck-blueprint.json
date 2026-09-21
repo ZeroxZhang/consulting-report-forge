@@ -1,12 +1,22 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "deck": {
-    "title": "填写项目标题",
-    "audience": "填写读者与其决策角色",
-    "decision": "填写本次材料要支持的具体决策",
-    "governingThought": "填写贯穿全篇、可被每页证据支持的总判断",
-    "mode": "presentation",
+    "title": "合成示例：同口径收入比较",
+    "audience": "经营研究读者",
+    "decision": "理解收入变化及预测边界",
+    "governingThought": "合成收入增加，单凭收入变化不能判断利润。",
+    "mode": "reading",
     "ratio": "16x9"
+  },
+  "sources": {
+    "S1": {
+      "label": "合成销售输入",
+      "locator": "inputs/synthetic.csv:L2-L3"
+    },
+    "S2": {
+      "label": "合成情景假设",
+      "locator": "inputs/scenario.md:L1-L2"
+    }
   },
   "slides": [
     {
@@ -14,104 +24,128 @@
       "sequence": 1,
       "pageRole": "cover",
       "storyBeat": "context",
-      "title": "项目标题：用一句可读的判断或问题建立阅读预期",
-      "subtitle": "范围、期间、面向对象",
-      "cornerLabel": "CONFIDENTIAL · YYYY-MM",
-      "speakerIntent": "用20秒说明本材料解决什么决策，不预先重复整套结论。"
+      "title": "合成业务收入分析",
+      "subtitle": "仅用于工具验证",
+      "cornerLabel": "",
+      "speakerIntent": ""
     },
     {
-      "id": "diagnosis",
+      "id": "revenue",
       "sequence": 2,
       "pageRole": "analysis",
-      "storyBeat": "diagnosis",
-      "title": "用结论型标题陈述第一条可验证发现",
-      "subtitle": "可选：限定统计口径、时间或样本",
-      "cornerLabel": "DIAGNOSIS · 01",
-      "speakerIntent": "先读主图，再指出差额或阈值，最后说明其为何改变决策。",
-      "proves": "读者必须在画面上直接看出的一条差异、趋势、机制或约束。",
+      "storyBeat": "insight",
+      "title": "收入增长{{metric:growth-rate}}，利润变化仍待核对",
+      "subtitle": "合成数据，2024–2025年",
+      "cornerLabel": "01",
+      "speakerIntent": "区分收入变化与利润判断。",
+      "proves": "本期收入较基期增长{{metric:growth-rate}}，预测另列且不冒充实际。",
       "visual": {
         "form": "kit.dumbbell",
-        "primary": "同口径的前后或对象比较主图，占左侧主体阅读区。",
+        "primary": "基期与本期收入的同量尺比较",
         "layout": "L01",
-        "readingPath": "标题结论 → 主图差额 → 右侧条件 → 底部来源。"
+        "readingPath": "主图 → 预测 → 口径与来源"
       },
       "density": {
         "profile": "balanced",
         "evidenceUnits": [
           {
             "role": "primary",
-            "purpose": "主图呈现标题中的核心比较或变化。"
+            "purpose": "同量尺显示基期与本期收入变化"
           },
           {
             "role": "support",
-            "purpose": "补充基准、分母、条件或反例，限制主图解释范围。"
+            "purpose": "区分预测身份与利润边界"
           }
         ],
-        "spaceIntent": "主图和支持证据之间保留可扫读的分组间隙；其余空间由主图、解释与来源共同占据。"
+        "spaceIntent": "主图与条件分组，来源独立。"
       },
       "sourcePlan": {
-        "status": "to_verify",
-        "scope": "核实本页核心数值的来源、期间、分母及比较口径。",
+        "status": "verified",
         "keys": [
-          "替换为文件:行号或原始URL"
+          "S1",
+          "S2"
         ],
+        "scope": "只核对合成输入和算术。",
         "claims": [
           {
-            "id": "key-comparison",
-            "statement": "填写改变判断的关键主张",
-            "kind": "estimate",
-            "verification": "pending",
+            "id": "revenue-change",
+            "kind": "fact",
+            "statement": "合成收入从{{metric:base}}增至{{metric:current}}，增长{{metric:growth-rate}}。",
+            "verification": "provided",
             "sourceKeys": [
-              "替换为文件:行号或原始URL"
+              "S1"
             ],
-            "period": "填写起止期间",
-            "population": "填写市场、渠道与样本",
-            "unit": "填写单位或说明不适用",
-            "denominator": "填写分母或说明不适用",
-            "calculation": "填写计算或说明不适用",
-            "inference": "填写证据允许推出的结论",
-            "limitation": "填写未核查事项、反例或外推边界"
+            "period": "2024–2025全年",
+            "population": "同一合成业务",
+            "unit": "万元",
+            "denominator": "基期收入{{metric:base}}",
+            "calculation": "本期{{metric:current}}除以基期{{metric:base}}再减一，按百分数显示。",
+            "inference": "收入增加{{metric:growth-rate}}，不证明利润增加。",
+            "limitation": "合成测试数据；没有成本与现金数据。",
+            "metrics": [
+              {
+                "id": "base",
+                "unit": "万元",
+                "decimals": 0,
+                "value": 100
+              },
+              {
+                "id": "current",
+                "unit": "万元",
+                "decimals": 0,
+                "value": 120
+              },
+              {
+                "id": "growth-rate",
+                "unit": "%",
+                "decimals": 1,
+                "formula": {
+                  "op": "percent_change",
+                  "args": [
+                    "current",
+                    "base"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "next-year",
+            "kind": "forecast",
+            "statement": "下一期收入可能达到{{metric:forecast-revenue}}。",
+            "verification": "provided",
+            "sourceKeys": [
+              "S2"
+            ],
+            "period": "2026全年",
+            "population": "同一合成业务情景",
+            "unit": "万元",
+            "denominator": "本期收入{{metric:current}}",
+            "calculation": "本期收入{{metric:current}}乘以{{metric:factor}}。",
+            "inference": "条件情景，不是实际经营结果。",
+            "limitation": "合成假设，增长率尚未验证。",
+            "metrics": [
+              {
+                "id": "factor",
+                "unit": "倍",
+                "decimals": 1,
+                "value": 1.1
+              },
+              {
+                "id": "forecast-revenue",
+                "unit": "万元",
+                "decimals": 0,
+                "formula": {
+                  "op": "multiply",
+                  "args": [
+                    "current",
+                    "factor"
+                  ]
+                }
+              }
+            ]
           }
         ]
-      }
-    },
-    {
-      "id": "action",
-      "sequence": 3,
-      "pageRole": "action",
-      "storyBeat": "action",
-      "title": "把分析收束为一个有优先级、责任和验证方式的行动判断",
-      "subtitle": "可选：行动窗口或试点边界",
-      "cornerLabel": "ACTION · 02",
-      "speakerIntent": "明确先做什么、谁负责、以什么证据判断有效；不把愿望清单包装为路线图。",
-      "proves": "不同举措的优先级、前置条件与验证方式必须在一页中被看清。",
-      "visual": {
-        "form": "html.matrix",
-        "primary": "以影响、可行性和证据成熟度组织的优先级台账，占中栏。",
-        "layout": "L27",
-        "readingPath": "标题判断 → 高优先级区域 → 所有者与验证门槛 → 风险边界。"
-      },
-      "density": {
-        "profile": "dense",
-        "evidenceUnits": [
-          {
-            "role": "primary",
-            "purpose": "清楚显示举措之间的优先级和取舍。"
-          },
-          {
-            "role": "context",
-            "purpose": "说明优先级判断使用的影响、成本或可行性标准。"
-          },
-          {
-            "role": "implication",
-            "purpose": "给出首轮责任人、验证指标和停止条件。"
-          }
-        ],
-        "spaceIntent": "矩阵占主体阅读区；底部只保留行动门槛与来源，不留下与判断无关的大块空白。"
-      },
-      "sourcePlan": {
-        "status": "not_applicable",
-        "reason": "本页仅将此前已验证结论转化为行动排序，不引入新的外部事实。"
       }
     }
   ]

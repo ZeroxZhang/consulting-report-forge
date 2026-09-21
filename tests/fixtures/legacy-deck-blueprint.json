@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "deck": {
+    "title": "填写项目标题",
+    "audience": "填写读者与其决策角色",
+    "decision": "填写本次材料要支持的具体决策",
+    "governingThought": "填写贯穿全篇、可被每页证据支持的总判断",
+    "mode": "presentation",
+    "ratio": "16x9"
+  },
+  "slides": [
+    {
+      "id": "cover",
+      "sequence": 1,
+      "pageRole": "cover",
+      "storyBeat": "context",
+      "title": "项目标题：用一句可读的判断或问题建立阅读预期",
+      "subtitle": "范围、期间、面向对象",
+      "cornerLabel": "CONFIDENTIAL · YYYY-MM",
+      "speakerIntent": "用20秒说明本材料解决什么决策，不预先重复整套结论。"
+    },
+    {
+      "id": "diagnosis",
+      "sequence": 2,
+      "pageRole": "analysis",
+      "storyBeat": "diagnosis",
+      "title": "用结论型标题陈述第一条可验证发现",
+      "subtitle": "可选：限定统计口径、时间或样本",
+      "cornerLabel": "DIAGNOSIS · 01",
+      "speakerIntent": "先读主图，再指出差额或阈值，最后说明其为何改变决策。",
+      "proves": "读者必须在画面上直接看出的一条差异、趋势、机制或约束。",
+      "visual": {
+        "form": "kit.dumbbell",
+        "primary": "同口径的前后或对象比较主图，占左侧主体阅读区。",
+        "layout": "L01",
+        "readingPath": "标题结论 → 主图差额 → 右侧条件 → 底部来源。"
+      },
+      "density": {
+        "profile": "balanced",
+        "evidenceUnits": [
+          {
+            "role": "primary",
+            "purpose": "主图呈现标题中的核心比较或变化。"
+          },
+          {
+            "role": "support",
+            "purpose": "补充基准、分母、条件或反例，限制主图解释范围。"
+          }
+        ],
+        "spaceIntent": "主图和支持证据之间保留可扫读的分组间隙；其余空间由主图、解释与来源共同占据。"
+      },
+      "sourcePlan": {
+        "status": "to_verify",
+        "scope": "核实本页核心数值的来源、期间、分母及比较口径。",
+        "keys": [
+          "替换为文件:行号或原始URL"
+        ],
+        "claims": [
+          {
+            "id": "key-comparison",
+            "statement": "填写改变判断的关键主张",
+            "kind": "estimate",
+            "verification": "pending",
+            "sourceKeys": [
+              "替换为文件:行号或原始URL"
+            ],
+            "period": "填写起止期间",
+            "population": "填写市场、渠道与样本",
+            "unit": "填写单位或说明不适用",
+            "denominator": "填写分母或说明不适用",
+            "calculation": "填写计算或说明不适用",
+            "inference": "填写证据允许推出的结论",
+            "limitation": "填写未核查事项、反例或外推边界"
+          }
+        ]
+      }
+    },
+    {
+      "id": "action",
+      "sequence": 3,
+      "pageRole": "action",
+      "storyBeat": "action",
+      "title": "把分析收束为一个有优先级、责任和验证方式的行动判断",
+      "subtitle": "可选：行动窗口或试点边界",
+      "cornerLabel": "ACTION · 02",
+      "speakerIntent": "明确先做什么、谁负责、以什么证据判断有效；不把愿望清单包装为路线图。",
+      "proves": "不同举措的优先级、前置条件与验证方式必须在一页中被看清。",
+      "visual": {
+        "form": "html.matrix",
+        "primary": "以影响、可行性和证据成熟度组织的优先级台账，占中栏。",
+        "layout": "L27",
+        "readingPath": "标题判断 → 高优先级区域 → 所有者与验证门槛 → 风险边界。"
+      },
+      "density": {
+        "profile": "dense",
+        "evidenceUnits": [
+          {
+            "role": "primary",
+            "purpose": "清楚显示举措之间的优先级和取舍。"
+          },
+          {
+            "role": "context",
+            "purpose": "说明优先级判断使用的影响、成本或可行性标准。"
+          },
+          {
+            "role": "implication",
+            "purpose": "给出首轮责任人、验证指标和停止条件。"
+          }
+        ],
+        "spaceIntent": "矩阵占主体阅读区；底部只保留行动门槛与来源，不留下与判断无关的大块空白。"
+      },
+      "sourcePlan": {
+        "status": "not_applicable",
+        "reason": "本页仅将此前已验证结论转化为行动排序，不引入新的外部事实。"
+      }
+    }
+  ]
+}

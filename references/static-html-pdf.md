@@ -1,6 +1,6 @@
 # 静态 HTML/PDF 路线
 
-在实际技能根目录执行以下命令。新稿采用 blueprint schemaVersion 2 → 编译 pages version 4 → 静态 HTML → acceptance PDF → 实际审查 → 打包；字段与绑定详见 [内容制作合同](content-authoring.md)。
+在实际技能根目录执行以下命令。制作路线为蓝图 → 编译页面记录 → 静态 HTML → acceptance PDF → 实际审查 → 打包；字段与绑定详见 [内容制作合同](content-authoring.md)。
 
 ## 安装与环境
 
@@ -24,7 +24,7 @@ node scripts/probe_capabilities.cjs /任务/probe --verify /任务/probe/respons
 
 ## 任务和内容
 
-从 [新蓝图模板](../templates/deck-blueprint-v2.json) 与 [任务模板](../templates/task.json) 开始。改写全部合成示例，不把示例当研究证据。
+从 [蓝图模板](../templates/deck-blueprint.json) 与 [任务模板](../templates/task.json) 开始。改写全部合成示例，不把示例当研究证据。
 
 ```json
 {
@@ -44,7 +44,7 @@ node scripts/probe_capabilities.cjs /任务/probe --verify /任务/probe/respons
 ```
 
 - `workMode`：editorial / analytical / exploratory；已定稿重排保持原意，有新计算或推论使用 analytical。
-- `complexity`：不确定时 complex；新模型、多源口径或新结论需要独立复核。`majorConclusion:true` 也强制独立。
+- `complexity`：按实际分析风险填写；不确定时 complex。涉及新模型、多源口径冲突或重大新结论时需要独立复核，简单的单表比较不因使用 analytical 就自动升级。`majorConclusion:true` 也强制独立。
 - `mode`：reading / presentation；`kind`：report（封面、正文、参考、封底）、fragment 或 collection。选择 fragment 不降低复核要求。
 - `theme`：mckinsey / bcg / accenture；ratio：16x9 / 4x3。
 - `blueprint` 与 `pages`：相对 task 路径，装配后自动换算为相对 HTML 路径并绑定文件摘要。改变蓝图后重新编译；不要手改 pages 或摘要蒙混通过。
@@ -56,7 +56,7 @@ node scripts/compile_blueprint.cjs /任务/deck-blueprint.json /任务/pages.jso
 node scripts/verify_blueprint_pages.cjs /任务/deck-blueprint.json /任务/pages.json
 ```
 
-正文角色 analysis / decision / action / risk / appendix 按顺序映射 pages。封面、章节、参考、封底不计入正文编号。schema 2 的关键内容绑定与计算是正式新稿入口；历史 `templates/deck-blueprint.json` 和 `templates/pages.json` 仅供旧版本兼容。
+正文角色 analysis / decision / action / risk / appendix 按顺序映射 pages。封面、章节、参考、封底不计入正文编号。关键内容通过蓝图编译和可见绑定进入页面，不手工制作第二份页面数据模板。
 
 ## 制作与装配
 
@@ -74,7 +74,7 @@ node scripts/preview_page.cjs /任务/deck.html 3
 
 先做最能暴露问题的代表页；蓝图和片段应对应完整的当前制作范围。已有整册片段时可以 `assemble_deck.cjs ... --upto 3` 仅装前 3 页正文，产物自动标为制作期切片，不能用于最终验收。它仍需完整 blueprint/pages 记录，不修改权威源来冒充完整报告。
 
-密度按证据职责选择：balanced 有主证据与支持/边界；dense 增加不同职责的证据及判断含义；sparse 说明减少信息的必要性。不能为凑数补空话。v4 的形式数量、重复与空白检测是待复核诊断，不能仅靠换图型、放大主图或拉伸框关闭；可读性与语义错误仍是阻断项。
+密度按证据职责选择：balanced 有主证据与支持/边界；dense 增加不同职责的证据及判断含义；sparse 说明减少信息的必要性。不能为凑数补空话。形式数量、重复与空白检测是待复核诊断，不能仅为消除提示而换图型或拉伸空框；主图确实太小时，可以扩大真实绘图区并复看；可读性与语义错误仍是阻断项。
 
 ## 最终验收与交付
 
@@ -92,10 +92,10 @@ node scripts/aggregate_reviews.cjs /任务/renders/audit.json /任务/renders/re
 node scripts/package_delivery.cjs /任务/deck.html /任务/renders/deck.pdf /任务/delivery 报告名
 ```
 
-审查用 schemaVersion 3，绑定实际 audit、HTML/PDF 证据 id 与产物摘要。作者及独立审查者都须实际看每页；analysis/evidence/visual 有具体依据，所有 warnings 经 accepted/fixed 处置，无未解决 major/blocking。独立审查来自实际不同实例，不能脚本生成通过结论。
+审查用 schemaVersion 3，绑定实际 audit、HTML/PDF 证据 id 与产物摘要。作者须覆盖每页；任务要求独立审查时，独立角色也须覆盖每页。多人分工按同一角色的覆盖并集核对，不要求每位成员重复看全册；analysis/evidence/visual 有具体依据，所有 warnings 经 accepted/fixed 处置，无未解决 major/blocking。独立审查来自实际不同实例，不能脚本生成通过结论。
 
 完成审查后按 [审查快照与复用](review-reuse.md) 冻结证据。修订先保存快照，再覆盖工作稿；工具只准备继承草稿，变化页和全局判断仍须审查。未完成审查仅可用 `package_delivery.cjs --preview`，并明确称预览。
 
 ## 缓存与验证
 
-字体缓存按源摘要、实际工具版本和字符集验证，损坏项重建；`FONT_CACHE_DIR` 可指定目录，缓存不免除缺字检查。字体改动用 `.font-venv/bin/python scripts/test_font_cache.py`。`npm test` 是合同与计算回归；`npm run test:render` 做历史浏览器回归；`npm run test:upgrade-render` 验证新蓝图、自由/目录布局、实际 HTML/PDF 与内容篡改防护。
+字体缓存按源摘要、实际工具版本和字符集验证，损坏项重建；`FONT_CACHE_DIR` 可指定目录，缓存不免除缺字检查。字体改动用 `.font-venv/bin/python scripts/test_font_cache.py`。`npm test` 是合同与计算回归；`npm run test:render` 做浏览器回归；`npm run test:upgrade-render` 验证内容蓝图、自由/目录布局、实际 HTML/PDF 与内容篡改防护。

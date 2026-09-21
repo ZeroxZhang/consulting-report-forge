@@ -11,7 +11,7 @@ const FORMS = {
      不在这里和探针里各写一个形式清单，否则加第三个瀑布形式时探针不会知道。 */
   'kit.waterfall': { family: 'comparison', label: '瀑布图', kind: 'svg', module: 'exhibit-kit', export: 'waterfall', annotation: 'layer', capacity: '贡献项 ≤ 16（另占起点与终点，有残差柱再减 1）；不闭合不做', limits: { maxNodes: 18, reconciles: true } },
   'kit.dumbbell': { family: 'comparison', label: '哑铃图', kind: 'svg', module: 'exhibit-kit', export: 'dumbbell', annotation: 'layer', capacity: '行 ≤ 14；两期同口径同量尺' },
-  'kit.slope': { family: 'comparison', label: '坡度图', kind: 'svg', module: 'exhibit-kit', export: 'slope', annotation: 'layer', capacity: '行 ≤ 10；只比较排序迁移，不比横距' },
+  'kit.slope': { family: 'comparison', label: '坡度图', kind: 'svg', module: 'exhibit-kit', export: 'slope', annotation: 'layer', capacity: '行 ≤ 10；同量尺两期数值或名次；横距不编码连续时间' },
   'kit.bullet': { family: 'kpi', label: '子弹图', kind: 'svg', module: 'exhibit-kit', export: 'bullet', annotation: 'layer', capacity: '指标 ≤ 6；分档须另有业务定义' },
   'kit.heatmap': { family: 'correlation', label: '矩阵热力图', kind: 'svg', module: 'exhibit-kit', export: 'heatmap', annotation: 'layer', capacity: '≤ 160 格；固定 domain；只接受有限数值，未观察／缺失用自定义 SVG 或 HTML 单独编码' },
   'kit.mekko': { family: 'composition', label: '百分轴 Mekko', kind: 'svg', module: 'exhibit-kit', export: 'mekko', annotation: 'layer', capacity: '列 ≤ 6；窄列与小片自动改走同侧引线通道，通道放不下时报错' },
@@ -50,12 +50,12 @@ const FORMS = {
   // —— 作者手写结构 ——
   'html.table': { family: 'table', label: '精确数据表', kind: 'html', annotation: null, capacity: '一列一种单位；总计由作者提供' },
   'html.matrix': { family: 'table', label: '评估矩阵／RACI', kind: 'html', annotation: null, capacity: '权重与评分锚点须透明' },
-  'html.kpi': { family: 'kpi', label: 'KPI 卡组', kind: 'html', annotation: null, capacity: '≤ 5 张卡；每张须有目标线' },
+  'html.kpi': { family: 'kpi', label: 'KPI 卡组', kind: 'html', annotation: null, capacity: '建议 ≤ 5 张卡；实际值需单位与期间，目标仅在有依据时添加' },
   'html.text': { family: 'text', label: '结构化文字／证据组', kind: 'html', annotation: null, capacity: '无共同维度时保留结构化文字' },
-  /* finding 与 text 的差别是「依据能不能数」：text 是一段散文，finding 把同一段话拆成
-     判断一句 + 依据 N 条 + 限定一句；三级缺一就退化成散文，而散文不构成证据。
+  /* finding 是判断 + 多项依据 + 限定的专用结构；text 可用于其他有证据的文字组织。
+     组件结构约定不等于文字或证据的普遍条数要求。
      依据有序时用档位条标次序，但档位条只数「第几档」、不量值——长度会把它谎报成测得的量级。 */
-  'html.finding': { family: 'text', label: '判断／依据／限定', kind: 'html', annotation: null, capacity: '依据 3–5 条；三级缺一即退化为散文；有序依据用档位条标次序' },
+  'html.finding': { family: 'text', label: '判断／依据／限定', kind: 'html', annotation: null, capacity: '本组件依据至少 3 条，建议 3–5 条；保留判断与限定；更少依据可选 html.text' },
   'svg.custom': { family: 'custom', label: '自定义矢量构图', kind: 'svg', annotation: null, capacity: '几何与语义由作者负责，须实际看图' },
 };
 

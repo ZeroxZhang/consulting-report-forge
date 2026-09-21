@@ -7,7 +7,7 @@ const forms = require('../assets/deck-forms.js');
 const waterfall = require('./waterfall_contract.cjs');
 
 const CONTENT_ROLES = new Set(['analysis', 'decision', 'action', 'risk', 'appendix']);
-const SEMANTIC_TYPES = ['comparison', 'trend', 'composition', 'flow', 'waterfall', 'scenario', 'table', 'qualitative'];
+const SEMANTIC_TYPES = ['comparison', 'trend', 'composition', 'flow', 'waterfall', 'scenario', 'table', 'qualitative', 'distribution', 'correlation', 'hierarchy', 'geographic', 'network'];
 const CLAIM_LABELS = {fact: '', estimate: '估计', forecast: '预测', assumption: '假设', recommendation: '建议'};
 const CLAIM_TEXT_FIELDS = ['statement', 'verification', 'period', 'population', 'unit', 'denominator', 'calculation', 'inference', 'limitation'];
 const OPS = ['sum', 'subtract', 'multiply', 'divide', 'percent_change', 'share'];

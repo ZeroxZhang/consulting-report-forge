@@ -1,6 +1,6 @@
 # 从同一内容真源制作页面
 
-新稿使用 `schemaVersion: 2` 蓝图：正文主张、来源、派生数值和页面关系只在蓝图维护，`pages.json` 由编译器生成。图形仍由作者构思，内容绑定不会自动产生一份完整报告，也不证明来源真实或推理成立。
+从蓝图模板开始（保留 `schemaVersion: 2` 字段）：正文主张、来源、派生数值和页面关系只在蓝图维护，`pages.json` 由编译器生成。图形仍由作者构思，内容绑定不会自动产生一份完整报告，也不证明来源真实或推理成立。
 
 ## 来源与指标
 
@@ -23,7 +23,7 @@
 ]}
 ```
 
-`value` 与 `formula` 必须二选一；`value` 只能是有限数字，`decimals` 为0–6。计算保留未舍入值，显示时才按位数格式化，使用十进制半入（halfExpand，中点远离零）并消除显示负零；例如 0.725 显示为 0.73、2.175 显示为 2.18。指标继承所属主张的身份：预测、估计、假设或建议会出现在 `text` 的数值后（例如 `132 万元（预测）`），图中标签不能省去。运算仅支持：
+`value` 与 `formula` 必须二选一；`value` 只能是有限数字，`decimals` 为0–6。计算保留未舍入值，显示时才按位数格式化，使用十进制半入（halfExpand，中点远离零）并消除显示负零；例如 0.725 显示为 0.73、2.175 显示为 2.18。指标继承所属主张的身份：预测、估计、假设或建议会出现在 `text` 的数值后（例如 `132 万元（预测）`），图中标签不能省去。内置公式运算支持：
 
 | op | 参数与结果 |
 |---|---|
@@ -32,7 +32,7 @@
 | `percent_change` | `[本期, 基期]`，结果为 `(本期/基期−1)×100`；基期须为正 |
 | `share` | `[部分, 总量]`，结果为 `部分/总量×100` |
 
-循环、缺引用、零除、非有限结果或任意代码都被拒绝。不自动换算单位，也不证明不同分母可以比较。图形需用数值时读取编译后 `page.content.metrics` 中的 `value`；可见标签使用对应 `text`，不要另算一份。
+循环、缺引用、零除、非有限结果或任意代码都被拒绝。不自动换算单位，也不证明不同分母可以比较。这些是内置算术操作，不是分析模型白名单；回归、分位数、估值等可在可复算脚本或工作表中完成，再将结果作为有正确身份的 `value` 登记，并在主张的计算字段标明输入、方法与脚本定位。图形需用数值时读取编译后 `page.content.metrics` 中的 `value`；可见标签使用对应 `text`，不要另算一份。
 
 身份沿公式依赖传递：`fact` 不能引用任何非事实指标；`estimate` 不能引用预测、假设或建议。其他输出身份仍由作者明确选择，编译器保留不同的上游身份，例如 `132 万元（预测；含假设输入）`，不自动把主张升级为事实。`provided`、`source_checked` 等核验状态也不会改变证据身份。
 
@@ -46,9 +46,9 @@
 node scripts/compile_blueprint.cjs /任务/deck-blueprint.json /任务/pages.json --snippets /任务/content-snippets.html
 ```
 
-先通过蓝图 `ready` 校验，再生成 `pages.version: 4`。编译器拒绝覆盖输入蓝图；再次运行可替换此前生成的 pages。snippets只写新文件或带编译器生成标头的旧文件，不覆盖作者片段；它只是可放入页面的绑定示例，不能当成已完成页面。
+先通过蓝图 `ready` 校验，再生成 `pages.json`（`version: 4`）。编译器拒绝覆盖输入蓝图；再次运行可替换此前生成的 pages。snippets只写新文件或带编译器生成标头的旧文件，不覆盖作者片段；它只是可放入页面的绑定示例，不能当成已完成页面。
 
-目录布局的槽位和角色由目录派生：主区用 `visual.form`；支持区只有在允许文字时才默认 `html.text`。其他模块在 `visual.regions` 按目录顺序明确形式，不手填网格坐标。自定义布局写 `visual.layout: "custom"` 及自己的 `visual.regions`。自定义SVG另写 `visual.semanticType`：`comparison/trend/composition/flow/waterfall/scenario/table/qualitative`，使数据语义不因换实现而丢失。
+目录布局的槽位和角色由目录派生：主区用 `visual.form`；支持区只有在允许文字时才默认 `html.text`。其他模块在 `visual.regions` 按目录顺序明确形式，不手填网格坐标。自定义布局写 `visual.layout: "custom"` 及自己的 `visual.regions`。自定义SVG另写 `visual.semanticType`：`comparison/trend/composition/flow/waterfall/scenario/table/qualitative/distribution/correlation/hierarchy/geographic/network`，使数据语义不因换实现而丢失。
 
 正文容器声明 `data-page-id`，值与蓝图 slide.id一致。标题使用 `.slide__title` 和 `data-content-key="title"`。把绑定放在**不含子元素的叶节点**；不要在包裹图表或整页的容器上绑定，以免填充文字时清掉展品。关键文字不得处于 clip/clip-path/mask 裁切层或使用透明文字；图形需要裁切时，把关键标签放在未裁切的文字层。
 

@@ -185,6 +185,34 @@ function runTests() {
     const custom = contract.compile(changed).pages[0]; assert.equal(custom.semanticType, 'comparison'); assert.equal(custom.form, 'svg.custom');
     delete v.semanticType; assert.ok(contract.validate(changed).some(e => /semanticType/));
   });
+  test('未封装图型可声明真实语义，未知语义及伪瀑布仍被拒绝', () => {
+    for (const semanticType of ['distribution', 'correlation', 'hierarchy', 'geographic', 'network']) {
+      const changed = fixture(), v = changed.slides[1].visual;
+      Object.assign(v, {form: 'svg.custom', semanticType, layout: 'custom',
+        regions: [{slot: 'main', span: 1, role: 'primary', form: 'svg.custom', visual: '合成数据的自定义关系展示'}]});
+      assert.equal(require('./deck_blueprint.cjs').validate(changed, {ready: true}).status, 'PASS');
+      const output = contract.compile(changed);
+      assert.equal(output.pages[0].semanticType, semanticType);
+      assert.equal(require('./check_pages.cjs').check(output).status, 'PASS');
+      v.semanticType = 'invented'; assert.ok(contract.validate(changed).some(e => /semanticType/.test(e)));
+      v.semanticType = 'waterfall'; assert.ok(contract.validate(changed).some(e => /waterfall.input/.test(e)));
+    }
+  });
+  test('新版编辑任务不按页数强造洞察，布局错误给出可执行的新版路径', () => {
+    const changed = fixture();
+    changed.slides[1].storyBeat = 'context';
+    for (let i=2;i<=3;i++) changed.slides.push({...clone(changed.slides[1]), id: 'context-'+i, sequence: i+1});
+    const blueprint = require('./deck_blueprint.cjs');
+    assert.equal(blueprint.validate(changed, {ready: true}).status, 'PASS');
+    assert.equal(contract.compile(changed).pages.length, 3);
+    const legacy = clone(changed); legacy.schemaVersion=1;
+    assert.ok(blueprint.validate(legacy).errors.some(e => /diagnosis.*insight/.test(e)));
+    changed.slides[1].visual.layout='not-a-layout';
+    const errors=blueprint.validate(changed).errors;
+    assert.ok(errors.some(e => /visual.layout=.*custom.*visual.regions/.test(e)), JSON.stringify(errors));
+    changed.slides[1].visual.layout='custom';
+    assert.ok(contract.validate(changed).length || (()=>{try {contract.compile(changed);return false;}catch {return true;}})(), '没有区域的custom不能蒙混通过');
+  });
   test('瀑布只从内核输入派生且输入纳入内容摘要', () => {
     const changed = fixture(); changed.slides[1].visual.form = 'kit.waterfall';
     assert.ok(contract.validate(changed).some(e => /waterfall.input/));

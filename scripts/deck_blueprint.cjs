@@ -55,7 +55,7 @@ function validate(doc, options = {}) {
     else if (ids.has(slide.id)) bad(where + '.id 重复：' + slide.id); else ids.add(slide.id);
     if (slide.sequence !== index + 1) bad(where + '.sequence 须等于 ' + (index + 1));
     if (!PAGE_ROLES.includes(slide.pageRole)) bad(where + '.pageRole 须为 ' + PAGE_ROLES.join('/'));
-    if (!norm(slide.title)) bad(where + '.title 须为非空结论性标题或明确章节标题');
+    if (!norm(slide.title)) bad(where + '.title 须为非空发现、研究问题或明确章节标题');
     for (const key of ['subtitle', 'cornerLabel', 'speakerIntent']) if (typeof slide[key] !== 'string') bad(where + '.' + key + ' 须显式为字符串（可为空，但不能省略）');
     if (!STORY_BEATS.includes(slide.storyBeat)) bad(where + '.storyBeat 须为 ' + STORY_BEATS.join('/'));
     else beats.add(slide.storyBeat);
@@ -64,24 +64,23 @@ function validate(doc, options = {}) {
       if (!slide.visual || typeof slide.visual !== 'object') bad(where + '.visual 缺失');
       else {
         if (!norm(slide.visual.form)) bad(where + '.visual.form 须声明表达形式');
-        else if (slide.visual.form !== 'custom') { try { forms.get(slide.visual.form); } catch (error) { bad(where + '.visual.form ' + error.message + '；词汇表之外的表达可写 custom 并用 rationale 说明'); } }
+        else if (slide.visual.form !== 'custom') { try { forms.get(slide.visual.form); } catch (error) { bad(where + '.visual.form ' + error.message + '；自定义表达可写 svg.custom 并声明 semanticType 与实际表达'); } }
         if (!norm(slide.visual.primary)) bad(where + '.visual.primary 须说明第一眼的主展品');
-        // 版式不是自由文案：从布局目录里选一条，页面才有可核对的骨架，作者也才知道每格能放什么。
-        // 确实没有合适布局时写 layoutExemptReason 说清楚——出口要有，但不能是静默的。
-        if (!norm(slide.visual.layout)) bad(where + '.visual.layout 须填布局编号（见 assets/layout-atlas.html 或 assets/layout-atlas/catalog.json，形如 L09）');
+        // v2 的目录与自定义区域是平等路径；只有历史 v1 使用布局豁免字段。
+        if (!norm(slide.visual.layout)) bad(where + '.visual.layout 须填目录编号（如 L09）' + (doc.schemaVersion === 2 ? '或 custom 并声明 visual.regions' : '，见 assets/layout-atlas/catalog.json'));
         else if (doc.schemaVersion === 2 && slide.visual.layout === 'custom') { /* 自由区域由编译后的 v4 合同检查 */ }
         else if (!layouts.has(norm(slide.visual.layout))) {
           if (doc.schemaVersion === 1 && norm(slide.visual.layoutExemptReason).length >= layouts.MIN_REASON) { /* 历史豁免 */ }
           else bad(where + '.visual.layout="' + norm(slide.visual.layout) + '" 不是目录里的布局编号：'
             + '布局目录共 ' + layouts.list().length + ' 条（' + layouts.list().slice(0, 3).map(item => item.id).join('/') + '…）；'
-            + '选一条承载得住这一页的布局，或写 visual.layoutExemptReason（≥' + layouts.MIN_REASON + '字）说明为什么目录里没有可用结构');
+            + (doc.schemaVersion === 2 ? '选择目录编号，或用 visual.layout="custom" 并声明 visual.regions。' : '选择目录编号，或写 visual.layoutExemptReason（≥' + layouts.MIN_REASON + '字）说明具体理由'));
         }
         if (!norm(slide.visual.readingPath)) bad(where + '.visual.readingPath 须写出读者的阅读顺序');
         if (layouts.has(slide.visual.layout) && forms.list().includes(slide.visual.form) && ['16x9', '4x3'].includes(deck?.ratio || '16x9')) {
           const layout = layouts.get(slide.visual.layout), module = layout.modules[layouts.primaryIndex(layout)];
           errors.push(...layouts.sizeErrors(slide.visual.form, module, deck?.ratio || '16x9', slide.visual.sizing, where + '.visual'));
         }
-        if (slide.visual.form === 'custom' && !norm(slide.visual.rationale)) bad(where + '.visual.form="custom" 必须写 rationale，说明为何现有形式不适用');
+        if (slide.visual.form === 'custom' && !norm(slide.visual.rationale)) bad(where + '.visual.form="custom" 必须写 rationale，说明实际表达、选择理由与几何编码');
       }
       errors.push(...density.validate(slide.density, where + '.density'));
       const source = slide.sourcePlan;
@@ -90,13 +89,13 @@ function validate(doc, options = {}) {
       else if (!['verified', 'to_verify', 'not_applicable'].includes(source.status)) bad(where + '.sourcePlan.status 须为 verified/to_verify/not_applicable');
       else if (source.status === 'verified' && (!Array.isArray(source.keys) || !source.keys.length)) bad(where + '.sourcePlan verified 须列出实际来源键或链接');
       else if (source.status === 'to_verify' && !norm(source.scope)) bad(where + '.sourcePlan to_verify 须说明待核实的数字、判断或边界');
-      else if (ready && source.status === 'to_verify') bad(where + '.sourcePlan 仍为 to_verify：研究完成并进入生产/交付前，必须核实来源或改写为不含该主张的页面');
+      else if (ready && source.status === 'to_verify') bad(where + '.sourcePlan 仍为 to_verify：进入生产前须完成证据裁决：核实来源，或按 provided 记录材料身份与限制，或移除无依据主张');
       else if (source.status === 'not_applicable' && !norm(source.reason)) bad(where + '.sourcePlan not_applicable 须说明为何页面不含外部可核查主张');
     }
   });
   const first = doc.slides[0], body = doc.slides.filter(s => CONTENT_ROLES.has(s?.pageRole));
   if (first?.pageRole !== 'cover') bad('第1页须为 cover；从读者要解决的决策问题建立叙事，而非直接堆数据');
-  if (body.length >= 3 && ![...beats].some(beat => ['diagnosis', 'insight'].includes(beat))) bad('至少三页正文时须有 diagnosis 或 insight，不能只有背景与行动口号');
+  if (doc.schemaVersion === 1 && body.length >= 3 && ![...beats].some(beat => ['diagnosis', 'insight'].includes(beat))) bad('至少三页正文时须有 diagnosis 或 insight，不能只有背景与行动口号');
   if (doc.schemaVersion === 1 && body.length >= 3 && ![...beats].some(beat => ['choice', 'action'].includes(beat))) bad('至少三页正文时须有 choice 或 action，把分析收束为判断、取舍或下一步');
   if (doc.schemaVersion === 2) errors.push(...require('./content_contract.cjs').validate(doc));
   return {status: errors.length ? 'FAIL' : 'PASS', errors, inventory: inventory(doc)};

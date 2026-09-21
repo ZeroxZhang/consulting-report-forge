@@ -19,7 +19,7 @@ const norm = value => String(value === undefined || value === null ? '' : value)
 
 /* v2 将“内容够不够、留白为什么存在”变成页级计划，而不以字数或组件数冒充质量。
    v3 再把“这页长什么样”钉到布局目录上：每页声明 layout，regions 按序对应布局的每一格。
-   v1/v2 仍可读取，历史报告重新打包不会因新规则突然失败；所有新报告应使用 v3。 */
+   v1/v2 仍可读取，历史报告重新打包不会因新规则突然失败；新报告使用 blueprint v2 编译的 pages v4。 */
 function densityErrors(page, at) {
   return densityContract.validate(page && page.density, at + ' density');
 }
@@ -92,7 +92,7 @@ function check(doc, options = {}) {
     // 不要求"是瀑布形式就必须声明"——那条会让已存在的稿子突然失败，而布局与丰富度已经有版本门控。
     errors.push(...waterfall.blockErrors(page, at + '（page ' + page.page + '）'));
     // 图型不因容量不足改表：合同里不再有降级出口，放不下时在同一表达内重排、分面或换实现。
-    if (page.fallback !== undefined) bad(at + ' 已取消 fallback：容量不足时调整布局、分面、换实现或如实报未完成，不能改表');
+    if (page.fallback !== undefined) bad(at + ' 已取消 fallback：容量不足时调整布局、分面、换实现或如实报未完成，不能静默改表并保留原图型声明');
   });
   if (doc.pages.length && !errors.some(e => /缺少合法 page 序号/.test(e))) {
     const numbers = doc.pages.map(p => p.page);

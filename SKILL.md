@@ -34,7 +34,7 @@ description: >-
 
 先写有条件的 `governingThought`，再按 [叙事方法](references/consulting-storyline.md) 形成“问题—证据—判断—边界”的推进。标题连读应有完整论证；每页 `proves` 对应画面能证明的关系。证据不够就缩小结论，不用强词弥补。
 
-新稿使用 [schemaVersion 2 蓝图](templates/deck-blueprint-v2.json) 与 [内容制作合同](references/content-authoring.md)。蓝图是标题、关键主张、来源、计算、密度和页面意图的权威源；`pages.json` version 4 是编译结果，不手工维护第二套内容。旧 schemaVersion 1 与 pages version 1–3 保留兼容，历史模板不作为新任务默认入口。
+使用[蓝图模板](templates/deck-blueprint.json)与[内容制作合同](references/content-authoring.md)。蓝图是标题、关键主张、来源、计算、密度和页面意图的权威源；`pages.json` 由编译器生成，不手工维护第二套内容。
 
 ```sh
 node scripts/deck_blueprint.cjs /任务/deck-blueprint.json --ready
@@ -50,9 +50,9 @@ node scripts/compile_blueprint.cjs /任务/deck-blueprint.json /任务/pages.jso
 - 目录布局是经过测量的原型：按需读 `assets/layout-atlas/catalog.json`，用 `layout_contract.measure()` 检查尺寸；选择后保留其模块和几何合同。
 - `visual.layout: "custom"` 是正常路线：声明阅读区域，自己写 CSS，接受相同的可读性、溢出、证据和打印检查。
 - 自绘 SVG 必须说明实际语义。瀑布统一从权威原始输入经内核诊断，起点、增量、终点必须闭合；示意图也不能出现错误加减关系。
-- 同类分面、连续同型图和表格可帮助比较。新稿不因图型/布局种数、重复次数或空白像素直接失败；相关诊断仍须结合画面解释或修复。
+- 同类分面、连续同型图和表格可帮助比较。报告不因图型/布局种数、重复次数或空白像素直接失败；相关诊断仍须结合画面解释或修复。
 
-具体表达见 [表达指南](references/expression-guide.md)，区域、密度与组件类名见 [单页系统](references/consulting-page-system.md)。需要组件时运行 `node scripts/sweep_forms.cjs` 查询，原生 SVG 与 HTML 表格同样是有效表达。禁止伪 3D、无意义色条、未说明截轴、只靠颜色、悬停才可读的关键内容与以微字塞满页面。
+具体表达见 [表达指南](references/expression-guide.md)，区域、密度与组件类名见 [单页系统](references/consulting-page-system.md)。需要组件时运行 `node scripts/sweep_forms.cjs` 查询，原生 SVG 与 HTML 表格同样是有效表达。未封装图型可自绘或通过原生配置生成静态 SVG；登记表和分析方法表不是能力白名单，组件上限不应外推为全局禁令。禁止伪 3D、无意义色条、未说明截轴、只靠颜色、悬停才可读的关键内容与以微字塞满页面。
 
 ## 5. 代表页收敛后批量生产
 
@@ -67,11 +67,11 @@ node scripts/compile_blueprint.cjs /任务/deck-blueprint.json /任务/pages.jso
 1. **分析**：标题是否被支持，方法前提、分母、身份、边界与反证是否正确。字段齐全不能证明结论成立。
 2. **视觉**：实际查看最终 HTML/PDF 每页；读者能否看清关系、关键限定与来源。重点重看最密、最大空白、最复杂图、来源最多与最强结论页。
 3. **工程**：`qa_deck.cjs --tier acceptance` 核对绑定、布局、溢出、字体、打印、离线和最终证据；自动检查不替代读图。
-4. **交付**：实际作者与独立审查者分别记录所见，处置 warnings；合并 review 后打包。未解决 major/blocking 问题不称完成，未独立验收不冒充正式交付。
+4. **交付**：作者记录实际所见；复杂或重大材料另由独立实例记录审查，简单且无重大结论的任务可仅作者审查。处置 warnings；合并 review 后打包。未解决 major/blocking 问题不称完成，需要独立审查但未完成时不冒充正式交付。
 
 具体命令与记录格式见 [静态路线](references/static-html-pdf.md) 和 [视觉验收](references/visual-qa.md)。首次完成审查后，使用 [审查快照与复用](references/review-reuse.md) 冻结原稿、证据与审查链。局部修订可准备继承草稿；变化页和全局判断仍须真实复核，工具不会预填 PASS。
 
-完成时给出 HTML/PDF、主要结论或变更、验证范围与尚存限制。没有做同题同模型对照实验，不声称某版本更快或总体更优。
+完成时给出 HTML/PDF、主要结论或变更、验证范围与尚存限制。没有做同题同模型对照实验，不声称未经测量的提速比例或总体优势。
 
 ## 按需参考
 

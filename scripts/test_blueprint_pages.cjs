@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const verifier = require('./verify_blueprint_pages.cjs');
 
-const blueprint = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../templates/deck-blueprint.json'), 'utf8'));
+const blueprint = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../tests/fixtures/legacy-deck-blueprint.json'), 'utf8'));
 blueprint.slides[1].sourcePlan = {status: 'verified', keys: ['S1']};
 const content = verifier.contentSlides(blueprint);
 /* 正文页按蓝图选的布局逐格填形式：布局定了有几格，regions 就必须有几项。 */

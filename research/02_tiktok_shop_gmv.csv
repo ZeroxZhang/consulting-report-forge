@@ -1,0 +1,30 @@
+metric,year_or_period,market,value,unit,yoy_growth_pct,source,verification_status,notes
+全球GMV,2021,Global,0.9,billion USD,,ContentGrip/Momentum Works,high,起步期
+全球GMV,2022,Global,4.4,billion USD,389,ContentGrip/Momentum Works,high,
+全球GMV,2023,Global,16.0,billion USD,264,ContentGrip,high,裁决: ContentGrip $16B 优于 Branvas $11B (多来源交叉验证)
+全球GMV,2024,Global,33.2,billion USD,108,Branvas/ContentGrip,high,验证通过
+全球GMV,2025,Global,64.3,billion USD,94,Statista/Momentum Works,high,3-0验证通过
+全球GMV,2026E,Global,112.2,billion USD,75,Branvas,medium,预测值
+全球GMV H1,2025,Global,26.2,billion USD,100,MarketMaze,high,验证通过
+全球GMV H1,2026,Global,50.0,billion USD,,Momentum Works,medium,Momentum Works报告
+美国GMV,2023,US,0.5,billion USD,,eMarketer,medium,Q3+Q4 首年
+美国GMV,2024,US,9.0,billion USD,,Ringly/ContentGrip,high,裁决: Ringly $9B 优于 Momentum Works $7.6B (Ringly使用确认交易数据)
+美国GMV,2025,US,15.82,billion USD,108,eMarketer,high,3-0验证通过 占社交电商18.2%
+美国GMV,2026E,US,23.41,billion USD,48,eMarketer,high,预测值
+美国GMV H1,2025,US,5.8,billion USD,,Momentum Works,high,
+美国GMV H1,2026,US,11.8,billion USD,103,eMarketer,high,3-0验证通过
+美国在线零售份额,2025-07,US,1.2,pct,,eMarketer,high,
+美国在线零售份额,2026-07,US,2.0,pct,,eMarketer/Consumer Edge,high,3-0验证通过 超Target/Costco
+美国社交电商份额,2025,US,18.2,pct,,eMarketer,high,3-0验证通过
+美国买家数,2024,US,46.8,million,,eMarketer,medium,估算
+美国买家数,2025,US,53.2,million,13.6,eMarketer,high,3-0验证通过 占社交电商买家50%
+美国买家数,2026E,US,57.7,million,8.6,eMarketer,high,预测值
+东南亚GMV,2022,SEA,4.4,billion USD,,Digital in Asia,high,
+东南亚GMV,2023,SEA,16.3,billion USD,270,Digital in Asia,high,
+东南亚GMV,2024,SEA,22.6,billion USD,39,Digital in Asia,high,
+东南亚GMV,2025,SEA,45.6,billion USD,102,Digital in Asia/Statista,high,3-0验证通过 占全球71%
+印尼GMV,2025,ID,13.1,billion USD,,Momentum Works/Digital in Asia,high,最大SEA市场 合并Tokopedia
+印尼GMV H1,2025 H1,ID,6.0,billion USD,,Momentum Works,high,超越美国同期
+美国平均客单价,2025,US,59,USD,,Ringly,medium,
+美国复购率,2025,US,81.3,pct,,Ringly,medium,
+全球活跃商家,2025,Global,15,million,,Ringly/redstagfulfillment,medium,vs Amazon 10M

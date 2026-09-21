@@ -1,0 +1,28 @@
+region_or_country,year,ad_revenue_billion_usd,ad_revenue_share_pct,gmv_billion_usd,gmv_share_pct,source,verification_status,notes
+Asia-Pacific(含抖音),2025,16.88,51.0,,,Forbes/coolnerdsmarketing,medium,包含中国抖音 口径不同于GMV
+Middle East & Africa,2025,7.45,22.5,,,,medium,
+Latin America,2025,6.05,18.3,,,,medium,
+North America,2025,3.91,11.8,15.82,,eMarketer,high,美国为主
+Western Europe,2025,3.28,9.9,,,,medium,
+中国(抖音),2022,5.5,45.8,,,tiktok_regional_revenue,medium,抖音独立估算
+中国(抖音),2023,6.8,34,,,tiktok_regional_revenue,medium,份额下降 其他市场增长更快
+中国(抖音),2024,8.5,28.6,,,tiktok_regional_revenue,medium,
+中国(抖音),2025E,10.0,23.8,,,tiktok_regional_revenue,medium,预测
+东南亚,2025,,,45.6,71.0,Statista/Digital in Asia,high,3-0验证通过
+东南亚,2024,,,22.6,,Digital in Asia,high,
+东南亚,2023,,,16.3,,Digital in Asia,high,
+东南亚,2022,,,4.4,,Digital in Asia,high,
+美国,2025,11.01,,15.82,,eMarketer/DemandSage,high,
+美国,2024,,,9.0,,Ringly,high,
+印尼,2025,,,13.1,,Momentum Works,high,最大SEA单一国家
+英国,2025,,,2.5,,多方估算,medium,
+巴西,2025,,,2.0,,多方估算,medium,
+泰国,2025,,,8.0,,Digital in Asia,medium,
+越南,2025,,,6.5,,Digital in Asia,medium,
+马来西亚,2025,,,3.0,,Digital in Asia,medium,
+菲律宾,2025,,,2.5,,Digital in Asia,medium,
+印尼广告可触达,2025,180.11,108.8,,,DemandSage,high, reach rate>100% 多账号效应
+美国广告可触达,2025,153.12,58.8,,,DemandSage,high,
+巴西广告可触达,2025,130.84,87.8,,,DemandSage,high,
+沙特广告可触达,2025,24.5,164,,,DemandSage,medium, reach rate最高
+东南亚广告可触达,2025,541.45,24.5,,,DemandSage,high,占全球24.5%

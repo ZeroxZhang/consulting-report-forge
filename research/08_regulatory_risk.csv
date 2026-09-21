@@ -1,0 +1,13 @@
+event_type,date,duration_hours,impact_metric,impact_value,impact_unit,source,verification_status,notes
+TikTok美国宕机,2025-01-18,14,Meta广告支出增幅,22.4,pct,PMC/PNAS,high,3-0验证通过 自然实验
+TikTok美国宕机,2025-01-18,14,Meta广告量增幅,6.3,pct,PMC/PNAS,high,2-1验证通过
+TikTok美国宕机,2025-01-18,14,CPM增幅,12.1,pct,PMC/PNAS,high,2-1验证通过
+美国禁令deadline,2025-01-19,,出售资产否则禁止运营,,,eMarketer,high,3-0验证通过
+禁令情景Instagram份额,2025,,Instagram广告预算重分配,22.4,pct,eMarketer,high,3-0验证通过 最大单一受益者
+禁令情景Meta+YouTube合计,2025,,合计吸收转移资金,50,pct,eMarketer,high,3-0验证通过
+小企业月损失估计,2025,,小企业月收入损失,>1,billion USD,PMC/PNAS,medium,0-3被推翻 但原始论文确有其估算
+欧盟DMA gatekeeper认定,2023-11-16,,TikTok上诉,,,TikTok Newsroom,failed,0-3验证失败 不可靠
+TikTok美国资产出售完成,2026-01,,Oracle/Silver Lake/MGX持股80.1%,,commercialization_data,medium,交易价值$14B
+美国立法审查,2020-2024,,国家安全争议持续,,,多方报道,medium,
+美国《保护美国人法》通过,2024-04,,要求270天内出售否则禁止,,,美国国会/白宫,high,
+多轮法律挑战和延期,2024-2025,,继续运营但面临不确定性,,,法院/多方,high,

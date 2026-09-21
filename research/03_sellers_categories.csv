@@ -1,0 +1,28 @@
+metric,market_or_country,value,unit,year,source,verification_status,notes
+全球活跃卖家,Global,15,million,2025,Ringly/多方估算,medium,2026预计18M
+美国活跃店铺,US,475000,shops,2026,Ringly,medium,从2023中4450增长
+美国小企业卖家,US,171000,businesses,2025,Ringly,medium,
+印尼活跃卖家,ID,515000,merchants,2025,Resourcera,medium,
+美国活跃卖家,US,475000,merchants,2025,多方估算,medium,
+泰国活跃卖家,TH,470000,merchants,2025,Resourcera,medium,
+越南活跃卖家,VN,440000,merchants,2025,Resourcera,medium,
+英国活跃卖家,UK,200000,merchants,2025,多方估算,medium,
+菲律宾活跃卖家,PH,160000,merchants,2025,多方估算,medium,
+马来西亚活跃卖家,MY,120000,merchants,2025,多方估算,medium,
+活跃联盟营销人员,Global,100000+,affiliates,2025,Ringly,medium,
+年收入超$10K创作者,Global,54000,creators,2025,Ringly,medium,
+美国卖家地理分布,US,29.85,pct,2025,DemandSage,medium,按网站流量
+巴西卖家地理分布,BR,4.98,pct,2025,DemandSage,medium,
+德国卖家地理分布,DE,3.9,pct,2025,DemandSage,medium,
+加拿大卖家地理分布,CA,3.38,pct,2025,DemandSage,medium,
+印尼店铺占比,ID,20.52,pct,2025,DemandSage,medium,按店铺数
+泰国店铺占比,TH,18.29,pct,2025,DemandSage,medium,
+越南店铺占比,VN,17.54,pct,2025,DemandSage,medium,
+美妆个护GMV(美国),US,2.49,billion USD,2025,Ringly,high,占美国22% 最大品类
+美妆个护GMV(全球占比),Global,25,pct,2025,Ringly,medium,国际可达42%
+服饰GMV(美国),US,1.01,billion USD,2025,Ringly,high,占美国约9%
+服饰GMV(全球占比),Global,31,pct,2025,Ringly,medium,女装+男装
+食品饮料GMV(美国),US,0.76,billion USD,2025,Ringly,medium,
+功能营养YoY增长,US,265,pct,2025,Ringly,medium,增长最快子类目
+家居厨房全球占比,Global,10,pct,2025,Statista,medium,
+电子产品全球占比,Global,5,pct,2025,Statista,medium,

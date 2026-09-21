@@ -1,0 +1,26 @@
+metric,year,value,unit,yoy_growth_pct,source,verification_status,notes
+ByteDance总收入,2020,25.0,billion USD,,多方估算,medium,抖音主导
+ByteDance总收入,2021,43.0,billion USD,72.0,Bloomberg/多方估算,medium,
+ByteDance总收入,2022,85.2,billion USD,98.1,Bloomberg,high,
+ByteDance总收入,2023,120.0,billion USD,40.8,Sacara/多方估算,medium,
+ByteDance总收入,2024,155.0,billion USD,29.2,IG.com/Reuters,high,含抖音+TikTok
+ByteDance总收入目标,2025,186.0,billion USD,20.0,IG.com/Reuters,medium,目标值非实际
+ByteDance海外收入,2024,39.0,billion USD,,多方估算,medium,占总收入25%
+ByteDance中国收入,2024,116.0,billion USD,,多方估算,medium,占总收入75% 含抖音
+ByteDance净利润,2024,30.0,billion USD,,Bloomberg,medium,
+ByteDance估值,2025,330.0,billion USD,,多方估算,medium,全球最高估值私有公司
+TikTok全球广告收入,2019,0.34,billion USD,,DemandSage,medium,起步期
+TikTok全球广告收入,2020,2.0,billion USD,488.0,DemandSage,medium,疫情加速
+TikTok全球广告收入,2021,4.0,billion USD,100.0,DemandSage,medium,
+TikTok全球广告收入,2022,11.0,billion USD,175.0,shno.co/BusinessOfApps,high,
+TikTok全球广告收入,2023,17.2,billion USD,56.4,shno.co,high,
+TikTok全球广告收入,2024,23.58,billion USD,37.1,Business of Apps/DemandSage,high,验证通过
+TikTok全球广告收入预测,2025,33.1,billion USD,40.4,Statista/DemandSage,medium,预测值
+TikTok全球广告收入预测,2026,43.96,billion USD,32.9,Shopify,medium,预测值
+TikTok全球广告收入预测,2027,53.95,billion USD,22.7,Shopify,medium,预测值
+TikTok美国广告收入,2024,11.01,billion USD,,DemandSage/PMC,high,验证通过
+TikTok美国广告收入预测,2025,11.8,billion USD,7.2,DemandSage,medium,预测值
+TikTok广告收入占总收入比,2024,77.0,pct,,多方估算,medium,其余为电商/应用内购
+TikTok季度广告收入,2024Q4,6.8,billion USD,,DemandSage,medium,单季最高
+TikTok季度广告收入,2025Q1,7.2,billion USD,,DemandSage,medium,
+TikTok应用内购收入,2024,5.4,billion USD,,BusinessOfApps,medium,非广告收入部分

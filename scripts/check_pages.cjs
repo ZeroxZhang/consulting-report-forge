@@ -24,11 +24,14 @@ function densityErrors(page, at) {
   return densityContract.validate(page && page.density, at + ' density');
 }
 
-function check(doc) {
+function check(doc, options = {}) {
   const errors = [];
   const bad = message => errors.push(message);
   if (!doc || typeof doc !== 'object' || Array.isArray(doc)) { bad('pages.json 须为对象'); return { status: 'FAIL', errors }; }
   if (![1, 2, 3].includes(doc.version)) bad('pages.version 只接受 1（历史）、2（含密度合同）或 3（含布局绑定）');
+  const ratio = options.ratio || doc.ratio || '16x9';
+  if (!['16x9', '4x3'].includes(ratio)) return {status:'FAIL', errors:['pages.ratio 须为16x9/4x3']};
+  if (doc.ratio !== undefined && doc.ratio !== ratio) bad('pages.ratio 与任务画幅不一致');
   if (!Array.isArray(doc.pages) || !doc.pages.length) { bad('pages.pages 须为非空数组'); return { status: 'FAIL', errors }; }
   const seen = new Set();
   doc.pages.forEach((page, index) => {
@@ -44,7 +47,7 @@ function check(doc) {
     try { entry = forms.get(page.form); }
     catch (error) { bad(at + '（page ' + page.page + '）' + error.message); }
     // v3：几何、槽位、角色、容量全部来自布局目录，作者只逐格声明这一格放什么。
-    if (doc.version === 3) errors.push(...layouts.pageErrors(page, at + '（page ' + page.page + '）'));
+    if (doc.version === 3) errors.push(...layouts.pageErrors(page, at + '（page ' + page.page + '）', ratio));
     else if (Array.isArray(page.regions) && page.regions.length) legacyRegions(page, at, bad);
     if (page.annotations !== undefined) {
       if (!Array.isArray(page.annotations)) bad(at + ' annotations 须为数组');
@@ -179,9 +182,9 @@ function inventory(doc) {
   };
 }
 
-function load(file) {
+function load(file, options = {}) {
   const doc = JSON.parse(fs.readFileSync(file, 'utf8'));
-  const result = check(doc);
+  const result = check(doc, options);
   if (result.status !== 'PASS') throw new Error('pages 合同无效：' + result.errors.join('；'));
   return { doc, record: path.resolve(file), sha256: fileHash(file), inventory: result.inventory };
 }

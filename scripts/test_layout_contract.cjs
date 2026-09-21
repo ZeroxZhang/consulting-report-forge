@@ -130,7 +130,7 @@ const deckOf = (count, refs, over = {}) => {
     let cursor = i * 7;
     const regions = layout.modules.map(module => {
       // 排除 svg.custom：它必须由作者声明 visual，测试夹具不该替作者编一个图型名。
-      const legal = forms.list().filter(form => form !== 'svg.custom' && grid.slotAccepts(module.slot, form) && (!module.accepts || lc.formInAccepts(form, module.accepts)));
+      const legal = forms.list().filter(form => form !== 'svg.custom' && grid.slotAccepts(module.slot, form) && (!module.accepts || lc.formInAccepts(form, module.accepts)) && lc.formFit(form, module).fits !== false);
       return {form: legal[cursor++ % legal.length]};
     });
     const primary = lc.primaryIndex(layout);

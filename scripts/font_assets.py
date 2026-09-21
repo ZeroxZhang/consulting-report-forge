@@ -3,10 +3,13 @@ import base64
 import hashlib
 import io
 import json
+import os
 import pathlib
 import sys
 import tempfile
+import time
 import urllib.request
+import fontTools
 from html.parser import HTMLParser
 from fontTools.ttLib import TTFont
 from fontTools.varLib.instancer import instantiateVariableFont
@@ -25,6 +28,42 @@ SOURCES = [
 
 def sha(data):
     return hashlib.sha256(data).hexdigest()
+
+def read_cache(file):
+    """摘要与内容同文件，避免并发写入的半成品；损坏缓存仅触发重建。"""
+    try:
+        raw = file.read_bytes()
+        return raw[65:] if raw[64:65] == b'\n' and raw[:64] == sha(raw[65:]).encode() else None
+    except FileNotFoundError:
+        return None
+
+def write_cache(file, data):
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(dir=file.parent, delete=False) as stream:
+            temporary = pathlib.Path(stream.name)
+            stream.write(sha(data).encode() + b'\n' + data)
+        os.replace(temporary, file)
+    finally:
+        if temporary and temporary.exists():
+            temporary.unlink()
+
+def decoded_font(data, cache_dir):
+    # WOFF2 glyf 重建是逐页新增字符时的主要成本。按源摘要与真实工具版本复用 SFNT，
+    # 不缓存覆盖检查结论；每次仍校验源字体、cmap 和两条角色字体链。
+    key = sha(data + ('sfnt-v1-' + fontTools.__version__).encode())
+    file = cache_dir / (key + '.sfnt')
+    binary = read_cache(file)
+    hit = binary is not None
+    if not hit:
+        font = TTFont(io.BytesIO(data), recalcTimestamp=False)
+        font.flavor = None
+        out = io.BytesIO()
+        font.save(out)
+        font.close()
+        binary = out.getvalue()
+        write_cache(file, binary)
+    return TTFont(io.BytesIO(binary), recalcTimestamp=False), hit
 
 class RoleText(HTMLParser):
     """按真正的标题容器分流；不执行 JavaScript，不把字体自身的许可当正文。"""
@@ -100,6 +139,10 @@ def prepare(requested=None):
     (dest / 'manifest.json').write_text(json.dumps({'version': '1.1.0', 'faces': entries}, ensure_ascii=False, indent=2) + '\n')
 
 def package(payload):
+    started = time.perf_counter()
+    timing = {'faces': []}
+    cache_dir = pathlib.Path(os.environ.get('FONT_CACHE_DIR') or pathlib.Path(tempfile.gettempdir()) / 'consulting-font-cache-v2')
+    cache_dir.mkdir(parents=True, exist_ok=True)
     dest = pathlib.Path(payload.get('assetDir') or ROOT / 'assets/fonts')
     manifest = json.loads((dest / 'manifest.json').read_text())
     ids = set(payload['faces'])
@@ -122,7 +165,9 @@ def package(payload):
         data = (dest / entry['file']).read_bytes()
         if sha(data) != entry['sha256']:
             raise ValueError('字体资源校验失败: ' + entry['id'])
-        font = TTFont(io.BytesIO(data), recalcTimestamp=False)
+        decoded_at = time.perf_counter()
+        font, decoded_hit = decoded_font(data, cache_dir)
+        decoded_seconds = time.perf_counter() - decoded_at
         cmap = font.getBestCmap()
         present = {c for c in chars if ord(c) in cmap}
         for role in role_chars:
@@ -131,14 +176,14 @@ def package(payload):
         # 中文标题字体也保留西文供极少数缺字回退；常规西文由角色字体优先接管。
         covered.update(present)
         if not present:
+            font.close()
             continue
         sample = ''.join(sorted(present))
-        cache_dir = pathlib.Path(tempfile.gettempdir()) / 'consulting-font-subsets-v1'
-        cache_dir.mkdir(exist_ok=True)
-        cache_file = cache_dir / (sha(data + sample.encode() + b'fonttools-4.59.0-all-features-v1') + '.woff2')
-        if cache_file.exists():
-            binary = cache_file.read_bytes()
-        else:
+        cache_file = cache_dir / (sha(data + sample.encode() + ('subset-v2-all-features-' + fontTools.__version__).encode()) + '.woff2')
+        subset_at = time.perf_counter()
+        binary = read_cache(cache_file)
+        subset_hit = binary is not None
+        if not subset_hit:
             options = subset.Options()
             options.layout_features = ['*']
             options.name_IDs = ['*']
@@ -150,10 +195,13 @@ def package(payload):
             out = io.BytesIO()
             font.save(out)
             binary = out.getvalue()
-            cache_file.write_bytes(binary)
+            write_cache(cache_file, binary)
         fonts.append({**entry, 'platform_families': list(dict.fromkeys(filter(None, [font['name'].getDebugName(1), font['name'].getDebugName(16)]))),
                       'postscript_name': font['name'].getDebugName(6), 'data': base64.b64encode(binary).decode(), 'subset_sha256': sha(binary),
                       'subset_bytes': len(binary), 'sample': sample})
+        timing['faces'].append({'id': entry['id'], 'decodedCacheHit': decoded_hit, 'subsetCacheHit': subset_hit,
+                                'decodeSeconds': round(decoded_seconds, 4), 'subsetSeconds': round(time.perf_counter() - subset_at, 4)})
+        font.close()
     if chars - covered:
         raise ValueError('缺失字形 glyph: ' + ', '.join(f'U+{ord(c):04X}' for c in sorted(chars - covered)))
     for role in role_chars:
@@ -162,7 +210,8 @@ def package(payload):
     if ids - {f['id'] for f in manifest['faces']}:
         raise ValueError('字体资源不完整')
     licenses = {f['license']: (dest / f['license']).read_text() for f in fonts}
-    return {'faces': fonts, 'licenses': licenses}
+    timing['totalSeconds'] = round(time.perf_counter() - started, 4)
+    return {'faces': fonts, 'licenses': licenses, 'timing': timing}
 
 if __name__ == '__main__':
     if len(sys.argv) > 1 and sys.argv[1] == 'prepare':

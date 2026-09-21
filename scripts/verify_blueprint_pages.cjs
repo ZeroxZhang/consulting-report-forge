@@ -15,7 +15,7 @@ function verify(blueprint, pagesDoc) {
   const errors = [];
   const blueprintCheck = blueprintApi.validate(blueprint, {ready: true});
   if (blueprintCheck.status !== 'PASS') return ['blueprint 未准备好：' + blueprintCheck.errors.join('；')];
-  const pagesCheck = pagesApi.check(pagesDoc);
+  const pagesCheck = pagesApi.check(pagesDoc, {ratio:blueprint.deck.ratio || '16x9'});
   if (pagesCheck.status !== 'PASS') return ['pages.json 无效：' + pagesCheck.errors.join('；')];
   const slides = contentSlides(blueprint), pages = pagesDoc.pages;
   if (slides.length !== pages.length) errors.push('正文页数不一致：blueprint 有 ' + slides.length + ' 页，pages.json 有 ' + pages.length + ' 页；封面/章节/参考/封底不计入 pages.json');
@@ -28,6 +28,11 @@ function verify(blueprint, pagesDoc) {
     // 布局是这一页的骨架：蓝图选了哪条，制作阶段就必须用哪条。换布局等于换页面结构，
     // 不是排版调整——真要换，先改蓝图再改 pages.json，两边留痕。
     if (norm(slide.visual.layout) !== norm(page.layout)) errors.push(at + ' layout 与 blueprint 不一致：blueprint 写「' + norm(slide.visual.layout) + '」，pages.json 写「' + norm(page.layout) + '」；骨架不能在制作阶段被替换');
+    if (slide.visual.sizing !== undefined) {
+      const layouts = require('./layout_contract.cjs');
+      const primary = layouts.has(page.layout) ? layouts.primaryIndex(layouts.get(page.layout)) : -1;
+      if (stable(slide.visual.sizing) !== stable(page.regions?.[primary]?.sizing)) errors.push(at + ' 主展品 sizing 与 blueprint 不一致');
+    }
     if (stable(slide.density) !== stable(page.density)) errors.push(at + ' density 与 blueprint 不一致；主展品、支持证据与留白意图必须同步');
   }
   return errors;

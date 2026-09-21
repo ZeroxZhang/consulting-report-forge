@@ -32,9 +32,12 @@ function verifyImageResponse(expected, response) {
 function parseArgs(argv) {
   const options = {out: null, verify: null};
   for (let i = 0; i < argv.length; i++) {
-    if (argv[i] === '--verify') options.verify = argv[++i];
+    if (argv[i] === '--verify') {
+      if (options.verify || !argv[i + 1] || argv[i + 1].startsWith('--')) throw Error('--verify 必须且只能指定一个答案文件：--verify response.json；请先实际查看挑战 PNG');
+      options.verify = argv[++i];
+    }
     else if (argv[i] === '--help') options.help = true;
-    else if (!options.out) options.out = argv[i];
+    else if (!options.out && !argv[i].startsWith('--')) options.out = argv[i];
     else throw Error(`未知参数：${argv[i]}`);
   }
   if (!options.help && !options.out) throw Error('用法：node scripts/probe_capabilities.cjs OUTPUT_DIR [--verify response.json]');

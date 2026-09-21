@@ -64,7 +64,8 @@ const measure = (ref, ratio = grid.DEFAULT_RATIO) => {
         index: i, title: m.title, slot: m.slot, role: m.role, style: m.style || 'plain',
         c: m.c, r: m.r, w: m.w, h: m.h, box,
         lines: grid.capacity(m.h, ratio),
-        accepts: m.accepts || null
+        accepts: m.accepts || null,
+        formFits: forms.list().filter(f => grid.slotAccepts(m.slot, f) && (!m.accepts || formInAccepts(f, m.accepts))).map(f => ({form:f, ...formFit(f, m, ratio)}))
       };
     })
   };
@@ -142,7 +143,24 @@ const formInAccepts = (form, accepts) => (accepts || []).some(token => {
 /* —— 页面 ↔ 目录对账：v3 的核心校验 ——
    regions 按序对应 modules，作者只填 form/visual。几何、槽位、角色、容量都来自目录，
    所以"这页长什么样"在写内容之前就已经定死，作者的自由落在每一格放什么。 */
-function pageErrors(page, at = '本页') {
+function formFit(form, module, ratio = grid.DEFAULT_RATIO, sizing = {}) {
+  if (!sizing || typeof sizing !== 'object' || Array.isArray(sizing)) throw Error('sizing 须为对象');
+  for (const k of Object.keys(sizing)) if (!['titled', 'unit', 'stages'].includes(k)) throw Error('未知 sizing 字段：' + k);
+  for (const k of ['titled', 'unit']) if (sizing[k] !== undefined && typeof sizing[k] !== 'boolean') throw Error('sizing.' + k + ' 须为布尔值');
+  if (sizing.stages !== undefined && form !== 'kit.processFlow') throw Error('sizing.stages 当前只适用于 kit.processFlow');
+  const box = grid.box(module, ratio), required = forms.minimumSize(form, sizing);
+  const available = {width:box.width - 2 * grid.MODULE.pad, height:box.height - 2 * grid.MODULE.pad - (sizing.titled ? grid.MODULE.titleBand : 0) - (sizing.unit ? grid.MODULE.unitBand : 0)};
+  return {available, required, fits:required ? available.width >= required.width && available.height >= required.height : null};
+}
+
+function sizeErrors(form, module, ratio, sizing, at) {
+  try {
+    const fit = formFit(form, module, ratio, sizing);
+    return fit.fits === false ? [at + ' ' + form + ' 最小画布 ' + fit.required.width + '×' + fit.required.height + 'px，槽位可用 ' + fit.available.width + '×' + fit.available.height + 'px（' + ratio + '）；请换更大布局或改用适合该槽位的表达，不能缩放组件绕过'] : [];
+  } catch (error) { return [at + ' ' + error.message]; }
+}
+
+function pageErrors(page, at = '本页', ratio = grid.DEFAULT_RATIO) {
   const errors = [];
   const bad = message => errors.push(message);
   const ref = norm(page && page.layout);
@@ -176,6 +194,7 @@ function pageErrors(page, at = '本页') {
     if (!norm(region.form)) { bad(where + ' 缺少 form：这一格用什么表达'); return; }
     let entry = null;
     try { entry = forms.get(region.form); } catch (error) { bad(where + ' ' + error.message); return; }
+    errors.push(...sizeErrors(region.form, module, ratio, region.sizing, where));
     // 槽位是布局对内容的约束：表格式的格不能填一张图，图表格也不能拿表格顶替。
     if (!grid.slotAccepts(module.slot, region.form)) {
       bad(where + ' slot=' + module.slot + ' 装不下 ' + region.form + '（' + entry.label + '）：'
@@ -286,7 +305,7 @@ function inventory(doc) {
 module.exports = {
   CATALOG_FILE, MODULE_STYLES, norm, MODULE_ROLES, MIN_REASON, LAYOUT_TIERS,
   catalog, reset, list, masters, get, has, master, masterOf, memberLayouts,
-  primaryIndex, moduleLabels, measure, catalogErrors,
+  primaryIndex, moduleLabels, measure, catalogErrors, formFit, sizeErrors,
   validToken, acceptsToken, formInAccepts, slotFormList,
   pageErrors, resolveModules, requiredLayouts, layoutsOf, validate, inventory
 };

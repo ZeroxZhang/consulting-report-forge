@@ -112,7 +112,7 @@ async function assemble(options={}){
   const pagesRecord=contractFile?contractApi.authoredPageRecord(contractFile):null;
   if(contractFile&&!pagesRecord)throw Error('任务合同缺少 pages：页面蓝图阶段须产出 pages.json，并在 task.json 用 {"pages":{"record":"pages.json","sha256":"..."}} 绑定（字段见 references/static-html-pdf.md）');
   if(pagesRecord){
-   const pagesApi=require('./check_pages.cjs'),pagesContract=pagesApi.load(pagesRecord);
+   const pagesApi=require('./check_pages.cjs'),pagesContract=pagesApi.load(pagesRecord,{ratio});
    // verifyDeck 要把 pages.json 的 waterfall 声明与成稿零轴线上的属性逐字对账。上面那个 evaluate 只搬结构，
    // 不产生 DOM 事实；缺了事实，对账会把"没法核对"误报成"成稿里没有对账零轴"——一句假话，且必然阻断。
    // 所以这里补一次现场测量。复用 page_probe 的 inspectDom 而不是再抄一遍属性名：

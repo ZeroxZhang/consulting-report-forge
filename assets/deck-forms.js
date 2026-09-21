@@ -86,4 +86,8 @@ const byFamily = () => list().reduce((groups, form) => {
   return groups;
 }, {});
 
-module.exports = { version: '1.2.0', forms: FORMS, familyLabels: FAMILY_LABELS, NON_EXPRESSIVE_FAMILIES, list, get, familyOf, expressive, annotationEntry, byFamily };
+const minimumSize = (form, sizing = {}) => {
+  const entry = get(form);
+  return entry.module === 'exhibit-kit' ? require('./exhibit-kit.js').minimumSize(entry.export, sizing) : null;
+};
+module.exports = { version: '1.2.0', forms: FORMS, familyLabels: FAMILY_LABELS, NON_EXPRESSIVE_FAMILIES, list, get, familyOf, expressive, annotationEntry, byFamily, minimumSize };

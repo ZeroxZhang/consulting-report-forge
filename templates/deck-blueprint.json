@@ -5,7 +5,8 @@
     "audience": "填写读者与其决策角色",
     "decision": "填写本次材料要支持的具体决策",
     "governingThought": "填写贯穿全篇、可被每页证据支持的总判断",
-    "mode": "presentation"
+    "mode": "presentation",
+    "ratio": "16x9"
   },
   "slides": [
     {
@@ -37,12 +38,42 @@
       "density": {
         "profile": "balanced",
         "evidenceUnits": [
-          {"role": "primary", "purpose": "主图呈现标题中的核心比较或变化。"},
-          {"role": "support", "purpose": "补充基准、分母、条件或反例，限制主图解释范围。"}
+          {
+            "role": "primary",
+            "purpose": "主图呈现标题中的核心比较或变化。"
+          },
+          {
+            "role": "support",
+            "purpose": "补充基准、分母、条件或反例，限制主图解释范围。"
+          }
         ],
         "spaceIntent": "主图和支持证据之间保留可扫读的分组间隙；其余空间由主图、解释与来源共同占据。"
       },
-      "sourcePlan": {"status": "to_verify", "scope": "核实本页核心数值的来源、期间、分母及比较口径。"}
+      "sourcePlan": {
+        "status": "to_verify",
+        "scope": "核实本页核心数值的来源、期间、分母及比较口径。",
+        "keys": [
+          "替换为文件:行号或原始URL"
+        ],
+        "claims": [
+          {
+            "id": "key-comparison",
+            "statement": "填写改变判断的关键主张",
+            "kind": "estimate",
+            "verification": "pending",
+            "sourceKeys": [
+              "替换为文件:行号或原始URL"
+            ],
+            "period": "填写起止期间",
+            "population": "填写市场、渠道与样本",
+            "unit": "填写单位或说明不适用",
+            "denominator": "填写分母或说明不适用",
+            "calculation": "填写计算或说明不适用",
+            "inference": "填写证据允许推出的结论",
+            "limitation": "填写未核查事项、反例或外推边界"
+          }
+        ]
+      }
     },
     {
       "id": "action",
@@ -63,13 +94,25 @@
       "density": {
         "profile": "dense",
         "evidenceUnits": [
-          {"role": "primary", "purpose": "清楚显示举措之间的优先级和取舍。"},
-          {"role": "context", "purpose": "说明优先级判断使用的影响、成本或可行性标准。"},
-          {"role": "implication", "purpose": "给出首轮责任人、验证指标和停止条件。"}
+          {
+            "role": "primary",
+            "purpose": "清楚显示举措之间的优先级和取舍。"
+          },
+          {
+            "role": "context",
+            "purpose": "说明优先级判断使用的影响、成本或可行性标准。"
+          },
+          {
+            "role": "implication",
+            "purpose": "给出首轮责任人、验证指标和停止条件。"
+          }
         ],
         "spaceIntent": "矩阵占主体阅读区；底部只保留行动门槛与来源，不留下与判断无关的大块空白。"
       },
-      "sourcePlan": {"status": "not_applicable", "reason": "本页仅将此前已验证结论转化为行动排序，不引入新的外部事实。"}
+      "sourcePlan": {
+        "status": "not_applicable",
+        "reason": "本页仅将此前已验证结论转化为行动排序，不引入新的外部事实。"
+      }
     }
   ]
 }

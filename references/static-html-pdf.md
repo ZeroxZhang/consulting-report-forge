@@ -11,8 +11,12 @@ npm ci
 npm run setup-fonts
 node scripts/probe_capabilities.cjs /tmp/report-forge-probe
 # 查看探测输出的 PNG 后：
-node scripts/probe_capabilities.cjs /tmp/report-forge-probe --verify
+node scripts/probe_capabilities.cjs /tmp/report-forge-probe --verify /tmp/report-forge-probe/response.json
 ```
+
+`response.json` 由查看 `vision-challenge.png` 的审查者填写，结构为 `{"code":"替换为图中六字符","shape_left_to_right":["实际颜色 形状","实际颜色 形状","实际颜色 形状"]}`。填写实际读图结果，不能照抄示例或读取答案文件。返回 `status: ready` 才表示环境与读图验证完成；缺少答案路径会立即报错，不会重新生成挑战。
+
+测试产物集中在任务目录并按用户要求忽略；优先直接调用主技能脚本。确需隔离副本时，入口文件改名为 `SKILL.snapshot.md`，不要留下嵌套 `SKILL.md`：Git忽略规则不会阻止技能扫描器发现它。
 
 `setup-fonts` 不假定系统 `python3` 够用。它按 `FONT_PYTHON` > `python3.13/3.12/3.11/3.10/python3/python` 的顺序挑第一个满足下限的解释器（当前 ≥3.10，来自 `scripts/requirements-fonts.txt` 里 zopfli 的版本 pin）；已有 venv 的解释器够用就复用，版本不足就重建。`FONT_PYTHON` 与 `pack_fonts.cjs`、`probe_capabilities.cjs` 是同一个覆盖口，指一次即可，后续构建沿用同一个解释器。
 
@@ -123,6 +127,10 @@ node scripts/verify_blueprint_pages.cjs /任务/deck-blueprint.json /任务/page
 
 `regions` 里**不要写 `c/r/w/h`**：几何由 `layout` 决定，写了会与目录漂移，校验直接拒绝。`slot` 与 `role` 可以写，但必须与目录一致。主展品那一格的 `form` 必须等于页面 `form`。
 
+选型时可运行 `node -e 'console.log(JSON.stringify(require("./scripts/layout_contract.cjs").measure("L10", "16x9"), null, 2))'` 查看逐格可用尺寸及形式排除项。
+
+蓝图 `deck.ratio` 与页面合同顶层 `ratio` 可声明 `16x9`/`4x3`，省略默认16x9；装配和QA按实际任务画幅检查。主展品的 `visual.sizing` 与对应 `regions[].sizing` 必须同步，例如 `{"stages":4,"titled":true,"unit":false}`。`stages` 当前用于 `kit.processFlow`；标题与单位行从槽位内区扣除。未声明sizing只按无标题的最低尺寸检查。L10的16x9主槽位内高296px，小于processFlow最低324px，会在蓝图阶段拒绝；4x3与其他布局按各自几何计算。图谱展示尺寸排除项，未登记最小尺寸的形式仍需按实际内容预览，不能把“未被排除”当成一定放得下。
+
 ```json
 {
   "version": 3,
@@ -200,3 +208,9 @@ node scripts/package_delivery.cjs /任务/deck.html /任务/renders/deck.pdf /�
 每份审查都使用 schemaVersion 3，并绑定本次 audit 内的 HTML/PDF 证据 id、产物 SHA-256 与审查范围。最终 `review.status` 为 `complete`，`analysis`、`evidence`、`visual` 均有实际依据；所有 `audit.warnings` 均在 `warningReview` 中以 `accepted` 或 `fixed` 处置；不存在未解决的 `major` 或 `blocking` 问题。只有 `tier: acceptance`、几何 PASS、无 errors、审查完整且打包校验通过，才称正式交付。
 
 未完成审查时仅使用 `package_delivery.cjs --preview`，并明确将结果称为预览。
+
+## 字体制作期缓存与计时
+
+字体缓存按源文件摘要与实际fontTools版本保存完整解码结果和字符子集，写入原子化且读取校验摘要；损坏项自动重建。`FONT_CACHE_DIR`可指定缓存目录，默认使用系统临时目录。每次仍验证原字体摘要、全稿字形及标题/正文字体链覆盖，不会因缓存命中跳过缺字检查。`font_assets.py`返回JSON中的`timing`包含逐字体解码/子集耗时及命中状态，可区分冷启动和新增字符成本。完整解码缓存会占用比压缩字体更多的磁盘；删除缓存只影响下次构建速度，不影响已交付报告。
+
+修改字体处理后，先运行 `npm run setup-fonts`（已有合格环境可跳过），再运行 `.font-venv/bin/python scripts/test_font_cache.py` 验证缓存失效、损坏恢复与缺字门禁。`npm test`覆盖纯合同回归；`npm run test:render`另在真实Chrome检查结构线和装饰反例。

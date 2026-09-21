@@ -8,7 +8,7 @@ function sweep() {
     families: Object.entries(forms.familyLabels).map(([family, label]) => ({ family, label,
       forms: forms.list().filter(form => forms.familyOf(form) === family).map(form => {
         const entry = forms.get(form);
-        return { form, label: entry.label, annotation: entry.annotation, capacity: entry.capacity, limits: entry.limits };
+        return { form, label: entry.label, annotation: entry.annotation, capacity: entry.capacity, limits: entry.limits, minimumSize: forms.minimumSize(form) };
       })
     }))
   };
@@ -20,7 +20,7 @@ function text(report, onlyFamily) {
     lines.push('', '## ' + group.label + '（' + group.family + '）');
     for (const item of group.forms) {
       const annotation = item.annotation === 'layer' ? '通用标注层' : item.annotation === 'comparisons' ? '自带 Δ 入口' : '未接入';
-      lines.push('- ' + item.form + '：' + item.label + ' · ' + item.capacity + ' · 旁解读 ' + annotation);
+      lines.push('- ' + item.form + '：' + item.label + ' · ' + item.capacity + ' · 旁解读 ' + annotation + (item.minimumSize ? ' · 最低画布 ' + item.minimumSize.width + '×' + item.minimumSize.height + 'px（条数增加需重算）' : ''));
     }
   }
   return lines.join('\n');

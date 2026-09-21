@@ -10,6 +10,29 @@ const STORY_BEATS = ['context', 'tension', 'diagnosis', 'insight', 'choice', 'ac
 const CONTENT_ROLES = new Set(['analysis', 'decision', 'action', 'risk', 'appendix']);
 const norm = density.norm;
 
+// 可选的逐主张记录：老蓝图仍可读；一旦登记，就不能把待核实状态静默带入生产。
+function claimErrors(source, where, ready) {
+  if (source?.claims === undefined) return [];
+  if (!Array.isArray(source.claims) || !source.claims.length) return [where + '.claims 须为非空数组'];
+  const errors = [], ids = new Set();
+  source.claims.forEach((c, i) => {
+    const at = where + '.claims[' + i + ']';
+    if (!c || typeof c !== 'object' || Array.isArray(c)) { errors.push(at + ' 须为对象'); return; }
+    if (!/^[a-z][a-z0-9-]*$/.test(c.id || '') || ids.has(c.id)) errors.push(at + ' id须为不重复的小写标识');
+    ids.add(c.id);
+    for (const key of ['statement', 'period', 'population', 'unit', 'denominator', 'calculation', 'inference', 'limitation']) if (typeof c[key] !== 'string' || !norm(c[key])) errors.push(at + '.' + key + ' 须为非空文本，不适用须写明原因');
+    if (!['fact', 'estimate', 'forecast', 'assumption', 'recommendation'].includes(c.kind)) errors.push(at + '.kind 须区分事实、估计、预测、假设或建议');
+    if (!['provided', 'source_checked', 'pending', 'not_applicable'].includes(c.verification)) errors.push(at + '.verification 无效');
+    if (ready && c.verification === 'pending') errors.push(at + ' 仍为pending：核实或在材料限制内改写后再进入生产');
+    const factual = ['fact', 'estimate', 'forecast'].includes(c.kind);
+    if (factual && source.status === 'not_applicable') errors.push(at + ' 含事实类主张，sourcePlan不能标not_applicable');
+    if (factual && c.verification === 'not_applicable') errors.push(at + ' 外部事实/估计/预测不能免核对来源');
+    if (!Array.isArray(c.sourceKeys) || (factual && !c.sourceKeys.length)) errors.push(at + '.sourceKeys须为数组，事实类主张须列来源');
+    else for (const key of c.sourceKeys) if (typeof key !== 'string' || !Array.isArray(source.keys) || !source.keys.includes(key)) errors.push(at + ' 来源键未登记于sourcePlan.keys：' + key);
+  });
+  return errors;
+}
+
 function validate(doc, options = {}) {
   const errors = [], bad = message => errors.push(message);
   const ready = options.ready === true;
@@ -20,6 +43,7 @@ function validate(doc, options = {}) {
   else {
     for (const key of ['title', 'audience', 'decision', 'governingThought']) if (!norm(deck[key])) bad('deck.' + key + ' 须为非空文本');
     if (!['presentation', 'reading'].includes(deck.mode)) bad('deck.mode 须为 presentation/reading');
+    if (deck.ratio !== undefined && !['16x9', '4x3'].includes(deck.ratio)) bad('deck.ratio 须为16x9/4x3');
     if (deck.route !== undefined) bad('deck.route 已移除：本技能只产出静态报告，请删除该字段');
   }
   if (!Array.isArray(doc.slides) || !doc.slides.length) return {status: 'FAIL', errors: [...errors, 'blueprint.slides 须为非空数组']};
@@ -52,10 +76,15 @@ function validate(doc, options = {}) {
             + '选一条承载得住这一页的布局，或写 visual.layoutExemptReason（≥' + layouts.MIN_REASON + '字）说明为什么目录里没有可用结构');
         }
         if (!norm(slide.visual.readingPath)) bad(where + '.visual.readingPath 须写出读者的阅读顺序');
+        if (layouts.has(slide.visual.layout) && forms.list().includes(slide.visual.form) && ['16x9', '4x3'].includes(deck?.ratio || '16x9')) {
+          const layout = layouts.get(slide.visual.layout), module = layout.modules[layouts.primaryIndex(layout)];
+          errors.push(...layouts.sizeErrors(slide.visual.form, module, deck?.ratio || '16x9', slide.visual.sizing, where + '.visual'));
+        }
         if (slide.visual.form === 'custom' && !norm(slide.visual.rationale)) bad(where + '.visual.form="custom" 必须写 rationale，说明为何现有形式不适用');
       }
       errors.push(...density.validate(slide.density, where + '.density'));
       const source = slide.sourcePlan;
+      errors.push(...claimErrors(source, where + '.sourcePlan', ready));
       if (!source || typeof source !== 'object') bad(where + '.sourcePlan 缺失：须声明 verified/to_verify/not_applicable');
       else if (!['verified', 'to_verify', 'not_applicable'].includes(source.status)) bad(where + '.sourcePlan.status 须为 verified/to_verify/not_applicable');
       else if (source.status === 'verified' && (!Array.isArray(source.keys) || !source.keys.length)) bad(where + '.sourcePlan verified 须列出实际来源键或链接');

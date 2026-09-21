@@ -27,7 +27,6 @@
    三级缺一即退化为散文；validation 由 qa_deck 按 html.finding 声明核对，不靠自觉。 */
 .finding{display:flex;flex-direction:column;gap:14px;min-height:0}
 .finding__verdict{margin:0;font-size:17px;line-height:1.5;color:var(--ink);font-weight:600}
-.finding__verdict::before{content:"";display:block;width:34px;height:3px;background:var(--brand);margin-bottom:10px}
 .finding__grounds{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
 .finding__step{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:11px;row-gap:3px;align-items:baseline}
 /* 档位条三格等宽，第 k 项亮 k 格。等宽是关键：长度会承载量级，格数只承载「在第几档」。

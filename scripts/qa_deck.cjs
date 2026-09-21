@@ -102,7 +102,7 @@ function parseArgs(argv){
   try{
    const record=path.resolve(path.dirname(input),taskContract.pages.record);
    if(!fs.existsSync(record)||taskContracts.fileHash(record)!==taskContract.pages.sha256)throw Error('pages记录缺失或sha256与任务合同不符');
-   const doc=JSON.parse(fs.readFileSync(record,'utf8')),checked=pagesApi.check(doc);
+   const doc=JSON.parse(fs.readFileSync(record,'utf8')),checked=pagesApi.check(doc,{ratio:taskContract.ratio});
    const mismatches=pagesApi.verifyDeck(doc,rows.map(r=>({page:r.page,form:r.form,visual:r.visual,proves:r.proves,densityProfile:r.densityProfile,layout:r.layout,modules:r.modules,waterfall:r.waterfall,role:r.bookends?.role})));
    const all=[...checked.errors,...mismatches];
    // 布局对账：声明了布局的页，每一格必须真的落在网格上。量出来的矩形才是事实。

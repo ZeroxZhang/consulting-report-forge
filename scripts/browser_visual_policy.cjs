@@ -15,7 +15,8 @@ function inspectSlide(slide) {
     const header=slide.querySelector(':scope > .slide__header'),body=slide.querySelector(':scope > .slide__body');
     if(el!==header||pseudo!=='::after'||!body||!header.querySelector('.slide__title')||!(header.compareDocumentPosition(body)&Node.DOCUMENT_POSITION_FOLLOWING))return false;
     const frame=slide.getAttribute('data-frame')||document.documentElement.getAttribute('data-frame');
-    if(frame!=='quiet'||slide.dataset.frameBoundary!=='line'||p.position!=='absolute'||Math.abs(parseFloat(p.height)-1)>.1||parseFloat(p.left)!==0||parseFloat(p.right)!==0||parseFloat(p.bottom)>=0||parseFloat(p.bottom)<-16||parseFloat(p.width)<slide.clientWidth*.75)return false;
+    // 网格版心的线在标题带边界（0）；非网格母版放在边界下方（负值）。其余外观约束不变。
+    if(frame!=='quiet'||slide.dataset.frameBoundary!=='line'||p.position!=='absolute'||Math.abs(parseFloat(p.height)-1)>.1||parseFloat(p.left)!==0||parseFloat(p.right)!==0||!Number.isFinite(parseFloat(p.bottom))||parseFloat(p.bottom)>0||parseFloat(p.bottom)<-16||parseFloat(p.width)<slide.clientWidth*.75)return false;
     if(p.backgroundImage!=='none'||p.boxShadow!=='none'||['Top','Right','Bottom','Left'].some(side=>parseFloat(p['border'+side+'Width'])>0))return false;
     // Canvas 在离屏内只解析颜色；不读取页面像素、不改变报告 DOM。
     const ctx=document.createElement('canvas').getContext('2d');ctx.fillStyle=p.backgroundColor;ctx.fillRect(0,0,1,1);const rgb=[...ctx.getImageData(0,0,1,1).data].slice(0,3);

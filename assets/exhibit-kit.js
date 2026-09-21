@@ -475,11 +475,21 @@
     if(line)lines.push(line);if(lines.length>maxLines)throw new Error('流程文字过长，请拆分或扩容：'+value);
     lines.forEach((t,i)=>c.text(x,y+i*(c.fs+7),t,'start',color));
   }
+  // 选型与渲染共用最低尺寸；只证明几何可行，不承诺长标签一定放得下。
+  const FLOW = {left:90,right:20,gap:48,column:140,header:120,row:68,rows:3};
+  function minimumSize(kind, sizing={}) {
+    if(kind!=='processFlow')return null;
+    const stages=sizing.stages===undefined?2:sizing.stages;
+    if(!Number.isInteger(stages)||stages<2)throw new Error('processFlow sizing.stages 须为至少2的整数');
+    return {width:FLOW.left+FLOW.right+FLOW.gap*(stages-1)+FLOW.column*stages,height:FLOW.header+FLOW.rows*FLOW.row};
+  }
   function processFlow(s) {
     const c=canvas(s),stages=list(s.stages,'stages'),transitions=list(s.transitions,'transitions');
     if(stages.length<2||transitions.length!==stages.length-1)throw new Error('线性流程需至少2阶段和逐段转换条件');
-    const left=90,gap=48,cw=(c.w-left-20-gap*(stages.length-1))/stages.length;
-    const rh=(c.h-120)/3;if(cw<140||rh<68)throw new Error('流程画布不足，请增加尺寸或拆页');
+    const min=minimumSize('processFlow',{stages:stages.length});
+    if(c.w<min.width||c.h<min.height)throw new Error('流程画布不足：至少 '+min.width+'×'+min.height+'px，当前 '+c.w+'×'+c.h+'px；请换布局或拆页');
+    const left=FLOW.left,gap=FLOW.gap,cw=(c.w-left-FLOW.right-gap*(stages.length-1))/stages.length;
+    const rh=(c.h-FLOW.header)/FLOW.rows;
     const fields=[['owner','责任'],['output','交付'],['gate','放行条件']];
     fields.forEach(([key,label],r)=>{const yy=110+r*rh;c.text(8,yy,label,'start',c.p.muted);c.line(left,yy-24,c.w-20,yy-24,c.p.grid);});
     stages.forEach((v,i)=>{
@@ -490,5 +500,5 @@
     });
     return c.end();
   }
-  return {shareBar,waterfall,dumbbell,slope,bullet,heatmap,mekko,tree,swimlane,stacked,comparisonTable,processFlow,formatNumber,difference};
+  return {shareBar,waterfall,dumbbell,slope,bullet,heatmap,mekko,tree,swimlane,stacked,comparisonTable,processFlow,minimumSize,formatNumber,difference};
 });

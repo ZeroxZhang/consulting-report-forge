@@ -71,7 +71,7 @@ function data() {
         const m = layouts.measure(layout.id, id);
         measured[id] = {
           fillRatio: m.fillRatio,
-          modules: m.modules.map(mod => ({ box: mod.box, lines: mod.lines, accepts: mod.accepts, style: mod.style }))
+          modules: m.modules.map(mod => ({ box: mod.box, lines: mod.lines, accepts: mod.accepts, style: mod.style, formFits: mod.formFits }))
         };
       }
       return Object.assign({}, layout, { measured });
@@ -272,6 +272,11 @@ const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;
 /* 可填形式：目录写了 accepts 就按 accepts 收窄，没写就是整个槽位能装的形式。
    这正是作者选型时要看的那句话——"这一格我能放什么"。 */
 const acceptsText = (mod, accepts, slot) => {
+  if (mod.formFits) {
+    const allowed = mod.formFits.filter(f => f.fits !== false).map(f => FORM_LABEL[f.form] || f.form);
+    const excluded = mod.formFits.filter(f => f.fits === false).map(f => (FORM_LABEL[f.form] || f.form) + '至少' + f.required.width + '×' + f.required.height + 'px');
+    return allowed.join('、') + (excluded.length ? '；尺寸排除：' + excluded.join('、') : '') + '（按无标题内区；仍需按条数/文字预览）';
+  }
   if (accepts && accepts.length) {
     return accepts.map(t => t.indexOf('family:') === 0 ? (FAMILY_LABEL[t.slice(7)] || t) + '（整族）' : (FORM_LABEL[t] || t)).join('、');
   }
@@ -385,7 +390,7 @@ function detail(layout) {
       + '<td class="num">' + m.c + ',' + m.r + '<br>' + m.w + '×' + m.h + '</td>'
       + '<td class="num">' + box.width + '×' + box.height + '<br><span class="role">内 ' + cap.inner + 'px</span></td>'
       + '<td class="num">' + cap.body.plain + ' / ' + cap.body.titled + ' / ' + cap.body.titledUnit + '<br><span class="role">注释 ' + cap.note.plain + ' / ' + cap.note.titled + ' / ' + cap.note.titledUnit + '</span></td>'
-      + '<td class="acc">' + esc(acceptsText(m, M.modules[i].accepts, m.slot)) + '</td></tr>';
+      + '<td class="acc">' + esc(acceptsText(M.modules[i], M.modules[i].accepts, m.slot)) + '</td></tr>';
   }).join('');
   // 同几何的兄弟布局：几何一样、语义不同，选错就是选错，所以明说。
   const sig = l => l.modules.map(m => [m.c, m.r, m.w, m.h].join(',')).join('|');

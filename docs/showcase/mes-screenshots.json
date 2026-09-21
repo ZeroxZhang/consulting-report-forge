@@ -1,0 +1,40 @@
+{
+  "report": "中国MES市场：增长结构与交付约束",
+  "version": "1.3.0",
+  "date": "2026-09-22",
+  "source": "最终acceptance的HTML截图；原字节复制，未裁切或重绘",
+  "htmlSha256": "ed43b91acd4a5718e3ecac197d6ddf159c8fc4a6b92653f338e0f91814a3ca13",
+  "pdfSha256": "c2cb8df786f3d5978b777300aa72424fa87d0be037bbd5cbd73cacb3733c7db2",
+  "pages": [
+    {
+      "file": "mes-growth.png",
+      "page": 4,
+      "sha256": "1c7b67f97950d512bc86d854a1dee510627fa7ecd6247081c76dea7cf0c6be09"
+    },
+    {
+      "file": "mes-regions.png",
+      "page": 6,
+      "sha256": "a3f90e23d1f6a25651cff9519ff0379ebc3787e6cb6610ecb3e2c00f8e3d1977"
+    },
+    {
+      "file": "mes-competition.png",
+      "page": 9,
+      "sha256": "2f35d96e2479ed50aee4221287881d636b25403a099300c6a0feefb4d098150a"
+    },
+    {
+      "file": "mes-penetration.png",
+      "page": 10,
+      "sha256": "55435024fb73d403b6fb4b133de9599d80cc237da7c4fa3f63f1ebf6d67f8114"
+    },
+    {
+      "file": "mes-scenarios.png",
+      "page": 15,
+      "sha256": "c6928d293c1f48b31e680bee7d1835ddfa971e0cc789b5cb7caa17708a455aff"
+    },
+    {
+      "file": "mes-action.png",
+      "page": 18,
+      "sha256": "853ee9b87063ab71ceaf2b1799b1235e624fa561f8c542765cfad2acf37a3b7b"
+    }
+  ]
+}

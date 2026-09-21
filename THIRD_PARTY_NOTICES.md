@@ -36,7 +36,7 @@ Python 字体依赖由 [requirements-fonts.txt](scripts/requirements-fonts.txt) 
 
 ## 研究材料、报告图与演示数据
 
-- `research/` 保存研究汇编及来源标记。引用的第三方资料、数据和商标不因本项目采用 Apache-2.0 而被重新授权。
+- `research/` 是被 Git 忽略的本地研究目录，不随仓库分发。用户自行放入的第三方资料、数据和商标不因本项目采用 Apache-2.0 而被重新授权。
 - README 的真实报告截图来自本项目本地生成的报告，截图中的第三方事实与来源继续保留其原有身份；这些截图不代表相关公司认可本项目。
 - `docs/showcase/chart-*.png` 是本项目原创的虚构数据演示；其生成入口和数据一并提供，适用项目许可证。
 - 本次 README 没有复制旧仓库的报告图片。逐图来源见 [样例说明](docs/showcase/README.md)。

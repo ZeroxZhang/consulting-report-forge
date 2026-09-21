@@ -39,3 +39,21 @@ node docs/showcase/build.cjs
 需要本地 Chrome；已安装 Playwright Chromium 时可设置 `CHROME_CHANNEL=chromium`。命令会更新本目录六张图表 PNG 和一张总览 PNG，不覆盖四张真实报告原页。中间 HTML 保存在被 Git 忽略的 `renders/readme/`，需要时可打开查看。
 
 所有演示数据和标题都在 [build.cjs](build.cjs) 中，可直接修改并重新生成。截图使用随包字体；真实报告图片与虚构演示的版权范围见根目录 [第三方说明](../../THIRD_PARTY_NOTICES.md)。
+
+## 布局图谱演示
+
+三张 `layout-*.png` 来自本项目已有的 Layout Atlas，不包含业务数据。
+
+| 文件 | 内容与来源 |
+|---|---|
+| [layout-featured.png](layout-featured.png) | L09、L14、L24、L26 四种代表布局；直接复用图谱线框，并在真实矩形内放置目录中的模块名称 |
+| [layout-overview.png](layout-overview.png) | 目录中全部 30 套 `analysis` 正文布局，沿用图谱缩略线框 |
+| [layout-atlas-workbench.png](layout-atlas-workbench.png) | 实际 `assets/layout-atlas.html` 界面截图，选中 L26 与容量视图 |
+
+在仓库根目录运行：
+
+```sh
+node docs/showcase/build-layouts.cjs
+```
+
+环境要求与前面的图表演示相同。脚本首先检查图谱与目录是否一致，再调用实际图谱的线框生成器，避免维护另一套布局几何。中间 HTML 和检查记录保存在被忽略的 `renders/readme/`；只更新上述三张 PNG，不修改技能布局或图谱本身。

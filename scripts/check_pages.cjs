@@ -28,7 +28,8 @@ function check(doc, options = {}) {
   const errors = [];
   const bad = message => errors.push(message);
   if (!doc || typeof doc !== 'object' || Array.isArray(doc)) { bad('pages.json 须为对象'); return { status: 'FAIL', errors }; }
-  if (![1, 2, 3].includes(doc.version)) bad('pages.version 只接受 1（历史）、2（含密度合同）或 3（含布局绑定）');
+  if (![1, 2, 3, 4].includes(doc.version)) bad('pages.version 只接受 1/2/3（历史）或 4（统一内容与自由布局）');
+  if (doc.version === 4 && !/^[a-f0-9]{64}$/.test(doc.blueprintSha256 || '')) bad('v4 缺少 blueprintSha256：须从 schemaVersion 2 蓝图编译');
   const ratio = options.ratio || doc.ratio || '16x9';
   if (!['16x9', '4x3'].includes(ratio)) return {status:'FAIL', errors:['pages.ratio 须为16x9/4x3']};
   if (doc.ratio !== undefined && doc.ratio !== ratio) bad('pages.ratio 与任务画幅不一致');
@@ -47,8 +48,26 @@ function check(doc, options = {}) {
     try { entry = forms.get(page.form); }
     catch (error) { bad(at + '（page ' + page.page + '）' + error.message); }
     // v3：几何、槽位、角色、容量全部来自布局目录，作者只逐格声明这一格放什么。
-    if (doc.version === 3) errors.push(...layouts.pageErrors(page, at + '（page ' + page.page + '）', ratio));
+    if (doc.version === 4 && page.layout === 'custom') errors.push(...layouts.customPageErrors(page, at, ratio));
+    else if (doc.version >= 3) errors.push(...layouts.pageErrors(page, at + '（page ' + page.page + '）', ratio));
     else if (Array.isArray(page.regions) && page.regions.length) legacyRegions(page, at, bad);
+    if (doc.version === 4) {
+      const contentApi = require('./content_contract.cjs');
+      if (!page.content || page.contentHash !== contentApi.contentHash(page.content)) bad(at + ' content 缺失或 contentHash 不匹配');
+      if (!norm(page.title) || page.title !== page.content?.title) bad(at + ' title 与权威 content 不一致');
+      if (page.form === 'svg.custom' && !contentApi.SEMANTIC_TYPES.includes(page.semanticType)) bad(at + ' svg.custom 须声明 semanticType，不能用自绘绕开数据语义');
+      const water = page.semanticType === 'waterfall' || [page.form, ...(page.regions || []).map(r => r.form)].some(f => /waterfall/i.test(f || ''));
+      if (water && page.waterfall?.status !== 'verified') bad(at + ' 瀑布语义须有 verified waterfall 对账；示意图也不能违反加减关系');
+      if (water || page.waterfall?.status === 'verified') {
+        try {
+          if (!page.waterfall?.input) throw Error('缺少权威 waterfall.input');
+          const report = waterfall.diagnoseSpec(page.waterfall.input);
+          if (report.status !== 'ready') throw Error('起点、增量与终点未通过内核诊断：' + report.issues.map(i=>i.code).join('/'));
+          const b=page.waterfall,c=report.chart;
+          for (const [key,value] of Object.entries({reconciliation:c.reconciliation,tolerance:c.tolerance,nodes:c.bars.length,residual:c.residual})) if (norm(b[key]) !== norm(value)) throw Error('waterfall.'+key+' 与权威输入计算结果不同');
+        } catch(error) { bad(at + ' ' + error.message); }
+      }
+    }
     if (page.annotations !== undefined) {
       if (!Array.isArray(page.annotations)) bad(at + ' annotations 须为数组');
       else if (page.annotations.length && entry && entry.annotation !== 'layer') bad(at + ' 形式 ' + page.form + ' 尚未接入通用标注层，不能声明 annotations' + (entry.annotation === 'comparisons' ? '（该形式用自己的 comparisons 入口）' : ''));
@@ -79,11 +98,12 @@ function check(doc, options = {}) {
     const numbers = doc.pages.map(p => p.page);
     for (let i = 1; i <= numbers.length; i++) if (!numbers.includes(i)) bad('page 序号不连续：缺少 ' + i);
   }
-  errors.push(...repetitionErrors(doc));
+  if (doc.version < 4) errors.push(...repetitionErrors(doc));
   // 与 densityErrors 同一先例：声明质量类合同只对新版本生效，历史稿继续可读、重新打包不会因新规则突然失败。
   if (doc.version >= 2) errors.push(...richness.validate(doc));
-  if (doc.version === 3) errors.push(...layouts.validate(doc));
-  return { status: errors.length ? 'FAIL' : 'PASS', errors, inventory: inventory(doc) };
+  if (doc.version >= 3) errors.push(...layouts.validate(doc));
+  const warnings = doc.version === 4 ? [...layouts.diagnostics(doc), ...richness.diagnostics(doc)] : [];
+  return { status: errors.length ? 'FAIL' : 'PASS', errors, warnings, inventory: inventory(doc) };
 }
 
 /* v1/v2 的 regions 是页面自己划分的阅读区：几何由作者在 HTML 里决定，这里只核对声明自洽。 */
@@ -149,7 +169,7 @@ function inventory(doc) {
   });
   const entries = Object.entries(byForm).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
   /* 丰富度的事实与豁免：豁免不是静默放行，要能被审稿人在 audit 里看见。 */
-  const chartTypes = richness.typesOf(doc), diversityRequired = richness.requiredTypes(pages.length);
+  const chartTypes = richness.typesOf(doc), diversityRequired = doc?.version === 4 ? 0 : richness.requiredTypes(pages.length);
   const diversityNote = norm(doc && doc.diversityReason);
   const layoutFacts = layouts.inventory(doc);
   /* 逐页表达清单：把"哪些页只有一种东西"摊开，审稿不必自己数格子。 */
@@ -208,13 +228,21 @@ function verifyDeck(doc, slides) {
     if (norm(slide.proves) && norm(slide.proves) !== norm(declared.proves)) errors.push('第 ' + slide.page + ' 页 data-proves 与 pages.json 的 proves 不一致：成稿写「' + norm(slide.proves) + '」，pages.json 写「' + norm(declared.proves) + '」；两处必须逐字相同，改完一处要同步另一处');
     errors.push(...waterfallMismatches(slide, declared, slide.page));
     if (doc.version >= 2 && norm(slide.densityProfile) !== norm(declared.density?.profile)) errors.push('第 ' + slide.page + ' 页 data-density-profile 与 pages.json 不一致：成稿写「' + norm(slide.densityProfile) + '」，pages.json 写「' + norm(declared.density?.profile) + '」；v2 起页面必须把 dense/balanced/sparse 显式写到 section 上');
-    if (doc.version === 3 && norm(slide.layout) !== norm(declared.layout)) errors.push('第 ' + slide.page + ' 页 data-layout 与 pages.json 不一致：成稿写「' + norm(slide.layout) + '」，pages.json 写「' + norm(declared.layout) + '」；v3 起每页必须把布局引用写到 section 上，CSS 才按网格排版');
+    if (doc.version >= 3 && norm(slide.layout) !== norm(declared.layout)) errors.push('第 ' + slide.page + ' 页 data-layout 与 pages.json 不一致：成稿写「' + norm(slide.layout) + '」，pages.json 写「' + norm(declared.layout) + '」');
     // 每一格都要在成稿里落地：布局声明了几格、每格是什么槽位、顺序如何，DOM 里必须一致。
-    if (doc.version === 3 && norm(declared.layout) && layouts.has(declared.layout)) {
+    if (doc.version >= 3 && norm(declared.layout) && layouts.has(declared.layout)) {
       const slots = layouts.get(declared.layout).modules.map(module => module.slot);
       const got = Array.isArray(slide.modules) ? slide.modules : [];
       if (got.length !== slots.length) errors.push('第 ' + slide.page + ' 页有 ' + got.length + ' 个 data-module，布局 ' + declared.layout + ' 有 ' + slots.length + ' 格；逐格对应，不能多也不能少');
       else if (got.join(',') !== slots.join(',')) errors.push('第 ' + slide.page + ' 页 data-module 顺序为 [' + got.join('/') + ']，布局 ' + declared.layout + ' 要求 [' + slots.join('/') + ']；DOM 顺序即阅读顺序，换顺序要换布局');
+    }
+    if (doc.version === 4) {
+      const contractApi = require('./report_contract.cjs');
+      if(slide.pageId!==declared.id)errors.push('第 '+slide.page+' 页身份与蓝图不一致');
+      if(slide.pagePlanHash!==contractApi.hash(contractApi.stable(declared)))errors.push('第 '+slide.page+' 页计划指纹不一致：口径、布局或声明已变化');
+      if (slide.contentHash !== declared.contentHash) errors.push('第 ' + slide.page + ' 页内容指纹与蓝图不一致');
+      if (norm(slide.semanticType) !== norm(declared.semanticType)) errors.push('第 ' + slide.page + ' 页 semanticType 与蓝图不一致');
+      errors.push(...require('./content_contract.cjs').verify(slide, declared).map(e => '第 ' + slide.page + ' 页：' + e));
     }
   });
   return errors;
@@ -240,6 +268,14 @@ function waterfallMismatches(slide, declared, pageNumber) {
   if (residual(dom.residual) !== residual(block.residual)) errors.push(at + ' 的 residual 与成稿不一致：成稿写「' + residual(dom.residual) + '」，pages.json 写「' + residual(block.residual) + '」；这个数只应原样抄自内核报告，不能自己重算');
   if (norm(dom.tolerance) !== norm(block.tolerance)) errors.push(at + ' 的 tolerance 与成稿不一致：成稿写「' + norm(dom.tolerance) + '」，pages.json 写「' + norm(block.tolerance) + '」；容差要用内核实际生效的那一个（含 rate+percent 的百分之一缩量）');
   if (Number.isInteger(block.nodes) && dom.nodes !== block.nodes) errors.push(at + ' 的 nodes 与成稿不一致：成稿画了 ' + dom.nodes + ' 个节点，pages.json 写 ' + block.nodes + '；改图或改声明，两处必须一致');
+  if(block.input){
+    try{
+      const chart=waterfall.diagnoseSpec(block.input).chart;
+      const expected=require('../assets/waterfall-bridge.js').auditModel(chart);
+      if(dom.model!==expected)errors.push(at+' 内核模型与权威输入不一致；同样闭合不等于同一份数据');
+      if(JSON.stringify(dom.bars)!==JSON.stringify(JSON.parse(expected).bars))errors.push(at+' 实际柱节点的标签、类型、值或起止位置与权威输入不一致');
+    }catch(error){errors.push(at+' 无法核对权威瀑布模型：'+error.message);}
+  }
   return errors;
 }
 

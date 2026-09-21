@@ -33,7 +33,8 @@ function inspectCoverage(review,{htmlSha256,pdfSha256,pages,requireIndependent=f
  return errors;
 }
 function aggregateCurrent(audit,inputs,{baseDir=process.cwd(),auditDir=baseDir,inputDirs=[]}={}){
- const errors=[],coverage=[],issues=[],dispositions=[],values={analysis:[],evidence:[],visual:[]};
+ baseDir=fs.realpathSync(baseDir);auditDir=fs.realpathSync(auditDir);inputDirs=inputDirs.map(dir=>fs.realpathSync(dir));
+ const errors=[],coverage=[],issues=[],dispositions=[],priorReviews=new Map(),values={analysis:[],evidence:[],visual:[]};
  for(const [i,raw] of inputs.entries()){
   let result=raw;
   if(typeof raw==='string')try{result=JSON.parse(raw.replace(/^```(?:json)?\s*|\s*```$/g,''));}catch{errors.push('结果'+i+'为未解析自然语言，须解析核对或补查');continue;}
@@ -42,11 +43,17 @@ function aggregateCurrent(audit,inputs,{baseDir=process.cwd(),auditDir=baseDir,i
   catch(e){found=['审查合同无效：'+e.message];}
   errors.push(...found.map(e=>'结果'+i+'：'+e));
   if(!result||typeof result!=='object')continue;
+  if(result.priorReview&&typeof result.priorReview==='object'){
+   const prior=JSON.parse(JSON.stringify(result.priorReview));
+   for(const key of ['audit','review'])if(typeof prior[key]?.path==='string')prior[key].path=path.relative(baseDir,path.resolve(inputDirs[i]||baseDir,prior[key].path));
+   const key=contract.stable({audit:prior.audit,review:prior.review,reviewScope:prior.reviewScope||'complete'});
+   if(!priorReviews.has(key))priorReviews.set(key,prior);
+  }
   for(const c of Array.isArray(result.coverage)?result.coverage:[]){
    if(!c||typeof c!=='object')continue;
    const copy=JSON.parse(JSON.stringify(c));
    // 输入review可在独立目录；继承文件路径必须保留原始解析基准。
-   for(const key of ['audit','review'])if(typeof copy.inheritedFrom?.[key]?.path==='string')copy.inheritedFrom[key].path=path.resolve(inputDirs[i]||baseDir,copy.inheritedFrom[key].path);
+   for(const key of ['audit','review'])if(typeof copy.inheritedFrom?.[key]?.path==='string')copy.inheritedFrom[key].path=path.relative(baseDir,path.resolve(inputDirs[i]||baseDir,copy.inheritedFrom[key].path));
    coverage.push(copy);
   }
   issues.push(...(Array.isArray(result.issues)?result.issues:[]));
@@ -60,7 +67,9 @@ function aggregateCurrent(audit,inputs,{baseDir=process.cwd(),auditDir=baseDir,i
   checks[key]={status:items.length&&items.every(c=>allowed.includes(c.status))?(items.some(c=>c.status==='pass')?'pass':'not_applicable'):'not_reviewed',basis:[...new Set(items.map(c=>c.basis).filter(v=>typeof v==='string'&&v.trim()))].sort().join('\n')};
  }
  const sorted=items=>items.sort((a,b)=>contract.stable(a).localeCompare(contract.stable(b)));
- const review={schemaVersion:3,status:'complete',reviewer:[...new Set(coverage.map(c=>c.reviewer).filter(v=>typeof v==='string'))].sort().join('; '),independence:coverage.some(c=>c.independence==='independent')?'independent':'author',htmlSha256:audit.htmlArtifact?.sha256,pdfSha256:audit.pdfArtifact?.sha256,auditSha256:contract.hash(contract.stable(audit)),coverage:sorted(coverage),warningReview:sorted([...new Map(dispositions.filter(w=>w&&typeof w.warning==='string').map(w=>[w.warning,w])).values()]),checks,issues:sorted(issues)};
+ const review={schemaVersion:3,status:'complete',reviewer:[...new Set(coverage.map(c=>c.reviewer).filter(v=>typeof v==='string'))].sort().join('; '),independence:coverage.some(c=>c.independence==='independent')?'independent':'author',htmlSha256:audit.htmlArtifact?.sha256,pdfSha256:audit.pdfArtifact?.sha256,auditSha256:contract.hash(contract.stable(audit)),coverage:sorted(coverage),warningReview:sorted([...new Map(dispositions.filter(w=>w&&typeof w.warning==='string').map(w=>[w.warning,w])).values()]),checks,issues:sorted([...new Map(issues.map(issue=>[contract.stable(issue),issue])).values()])};
+ if(priorReviews.size===1)review.priorReview=[...priorReviews.values()][0];
+ else if(priorReviews.size>1)errors.push('同轮审查的 priorReview 来源不一致，须明确同一前序审查后再聚合');
  // 迭代/冒烟档的 audit 没有证据清单，聚不出可交付的 review；这里点名说清，避免只看到"缺证据"。
  if((audit.tier??'acceptance')!=='acceptance'||audit.acceptance?.complete===false)errors.push('audit 来自 '+(audit.tier??'acceptance')+' 档（未跑完的检查：'+((audit.acceptance?.missingStages||[]).join('、')||'不完整')+'），只有验收档能作为审查与交付依据');
  try{errors.push(...reviewContract.validate(review,audit,{baseDir,auditDir}));}catch(e){errors.push('审查合同无效：'+e.message);}

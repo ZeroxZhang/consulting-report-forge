@@ -1,8 +1,6 @@
-/* 布局合同：把"这一页长什么样"从散文变成可核对的模块几何。
-   目录（assets/layout-atlas/catalog.json）是唯一权威：脚本不重复描述布局，只引用 layout.ref。
-   页面侧的约定是——布局固定结构，作者只填每一格的形式。所以 pages.json 的 regions 按序
-   对应目录里的 modules，几何、槽位、角色都来自目录，作者写不写都不改变事实，写错则报错。
-   几何计算在 assets/deck-grid.js，本模块只做目录合法性与页面↔目录的对账。 */
+/* 布局合同：目录布局由 catalog 定义几何，页面逐格声明形式；v4 也支持按内容自定阅读区。
+   自定义布局不生成虚构的网格坐标，实际溢出、可读性与来源安全区交给浏览器及目视检查。
+   目录几何仍由 assets/deck-grid.js 计算，v1-v3 的既有约束保持不变。 */
 'use strict';
 const fs = require('node:fs');
 const path = require('node:path');
@@ -14,6 +12,7 @@ const CATALOG_FILE = path.join(__dirname, '../assets/layout-atlas/catalog.json')
 const MODULE_STYLES = ['plain', 'tinted', 'compact', 'nohead', 'finding'];
 /* 角色沿用 pages.json 的既有词汇，并补上含义块——布局与页面用同一套角色，才能互相校验。 */
 const MODULE_ROLES = ['primary', 'support', 'context', 'evidence', 'implication'];
+const CUSTOM_SLOTS = ['main', 'left', 'right', 'top', 'bottom', 'aside', 'full'];
 const MIN_REASON = 12;
 /* 布局丰富度下限：页数越多，越不该靠一两种结构撑满全篇。阈值与图表种数下限同量级，
    但更宽松——同一布局换形式就是另一种读法，所以它比图表类型更容易复用。
@@ -219,6 +218,34 @@ function pageErrors(page, at = '本页', ratio = grid.DEFAULT_RATIO) {
   return errors;
 }
 
+/* v4 自定义阅读区：span 表示区内相对份额，不是十二栏坐标。它不能证明实际容量充足。
+   同页可重复同一种形式做小多图，也可让一个主图充分展开后接一条支持证据带。 */
+function customPageErrors(page, at = '本页', ratio = grid.DEFAULT_RATIO) {
+  const errors = [], bad = message => errors.push(message);
+  try { grid.ratioOf(ratio); } catch (error) { bad(at + ' ' + error.message); }
+  if (!page || typeof page !== 'object' || Array.isArray(page)) return [...errors, at + ' 须为页面对象'];
+  if (page.layout !== 'custom') bad(at + ' 自定义阅读区须声明 layout="custom"');
+  const regions = page.regions;
+  if (!Array.isArray(regions) || !regions.length) return [...errors, at + ' custom 布局须有非空 regions 阅读区'];
+  const primaries = regions.filter(region => region && region.role === 'primary');
+  if (primaries.length !== 1) bad(at + ' regions 必须恰好有一个 role="primary"，当前 ' + primaries.length + ' 个');
+  regions.forEach((region, index) => {
+    const where = at + ' regions[' + index + ']';
+    if (!region || typeof region !== 'object' || Array.isArray(region)) { bad(where + ' 须为对象'); return; }
+    if (!CUSTOM_SLOTS.includes(region.slot)) bad(where + ' slot 须为 ' + CUSTOM_SLOTS.join('/'));
+    if (!MODULE_ROLES.includes(region.role)) bad(where + ' role 须为 ' + MODULE_ROLES.join('/'));
+    if (typeof region.span !== 'number' || !Number.isFinite(region.span) || region.span <= 0) bad(where + ' span 须为正有限数，表示阅读区相对份额');
+    try { forms.get(region.form); } catch (error) { bad(where + ' ' + error.message); }
+    if (region.form === 'svg.custom' && !norm(region.visual)) bad(where + ' svg.custom 必须用 visual 声明实际表达');
+    if (region.visual !== undefined && (typeof region.visual !== 'string' || !norm(region.visual))) bad(where + ' visual 须为非空字符串');
+  });
+  if (primaries.length === 1) {
+    if (norm(primaries[0].form) !== norm(page.form)) bad(at + ' 主区形式与 page.form 不一致：' + norm(primaries[0].form) + ' ≠ ' + norm(page.form));
+    if (primaries[0].visual !== undefined && norm(primaries[0].visual) !== norm(page.visual)) bad(at + ' 主区 visual 与 page.visual 不一致');
+  }
+  return errors;
+}
+
 const slotFormList = slot => forms.list().filter(form => grid.slotAccepts(slot, form)).join('/');
 
 /* 逐格展开：几何 + 该格实际填的形式。装配与浏览器审计都用它，避免两边各算一遍。 */
@@ -256,6 +283,8 @@ const layoutsOf = doc => {
 /* 整册的布局下限 + 单条布局的复用理由。与图表丰富度是两条独立的下限：
    图表管"表达方式有没有变"，布局管"页面结构有没有变"——三页同一种图不同，三页同一种结构也不同。 */
 function validate(doc) {
+  // v4 的数量与重复只作审稿线索，不能迫使同口径对照为了配额换构图。
+  if (doc && doc.version === 4) return [];
   const errors = [];
   const pages = (doc && Array.isArray(doc.pages)) ? doc.pages : [];
   const counts = layoutsOf(doc);
@@ -289,7 +318,7 @@ function inventory(doc) {
   const counts = layoutsOf(doc);
   const used = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
   const pages = (doc && Array.isArray(doc.pages)) ? doc.pages : [];
-  const required = requiredLayouts(pages.length);
+  const required = doc && doc.version === 4 ? 0 : requiredLayouts(pages.length);
   const reason = norm(doc && doc.layoutDiversityReason);
   return {
     layouts: Object.fromEntries(used),
@@ -297,15 +326,53 @@ function inventory(doc) {
     layoutRequired: required,
     layoutExempt: required > 0 && counts.size < required && reason.length >= MIN_REASON,
     layoutDiversityReason: reason,
-    families: [...new Set(used.map(([ref]) => has(ref) ? get(ref).familyName : '未知'))],
-    masters: [...new Set(used.map(([ref]) => has(ref) ? get(ref).master : '未知'))]
+    families: [...new Set(used.map(([ref]) => has(ref) ? get(ref).familyName : doc.version === 4 && ref === 'custom' ? '自定义阅读区' : '未知'))],
+    masters: [...new Set(used.map(([ref]) => has(ref) ? get(ref).master : doc.version === 4 && ref === 'custom' ? 'custom' : '未知'))]
   };
 }
 
+/* 观察声明的阅读结构，不把所有 custom 页当成同一种布局，也不靠目录 id 改名制造变化。
+   自定义区域的位置和份额仍只是意图，最终结构需在实际 DOM 与截图中确认。 */
+function readingStructure(page) {
+  if (!page || typeof page !== 'object') return '';
+  if (page.layout === 'custom') {
+    return 'custom:' + JSON.stringify((Array.isArray(page.regions) ? page.regions : []).map(region =>
+      region && [region.slot, region.role, region.span]));
+  }
+  if (has(page.layout)) return 'catalog:' + JSON.stringify(get(page.layout).modules.map(module =>
+    [module.c, module.r, module.w, module.h, module.role]));
+  return norm(page.layout);
+}
+
+function diagnostics(doc) {
+  const pages = doc && Array.isArray(doc.pages) ? doc.pages.filter(Boolean) : [];
+  if (!pages.length) return [];
+  const structures = new Map(), runs = [];
+  pages.forEach(page => {
+    const key = readingStructure(page);
+    if (!key) return;
+    if (!structures.has(key)) structures.set(key, []);
+    structures.get(key).push(page.page);
+    const last = runs[runs.length - 1];
+    if (last && last.structure === key) last.pages.push(page.page);
+    else runs.push({structure: key, pages: [page.page]});
+  });
+  const result = [{code: 'L-LAYOUT-INVENTORY', pages: pages.map(page => page.page),
+    distinctStructures: structures.size, message: '本稿观察到 ' + structures.size + ' 种阅读结构；数量不代表质量，请结合证据关系检查全篇节奏。'}];
+  structures.forEach((pageNumbers, structure) => {
+    if (pageNumbers.length >= 3) result.push({code: 'L-REPEATED-LAYOUT', pages: pageNumbers, structure,
+      message: '这些页面复用同一阅读结构；同口径比较或连续证据可以合理重复，请核对是否帮助阅读，无需为变化而换布局。'});
+  });
+  runs.filter(run => run.pages.length >= 3).forEach(run => result.push({code: 'L-CONSECUTIVE-LAYOUT', ...run,
+    message: '这些连续页面保持同一阅读结构，请实际看图判断比较效率与节奏；重复本身不是错误。'}));
+  return result;
+}
+
 module.exports = {
-  CATALOG_FILE, MODULE_STYLES, norm, MODULE_ROLES, MIN_REASON, LAYOUT_TIERS,
+  CATALOG_FILE, MODULE_STYLES, norm, MODULE_ROLES, CUSTOM_SLOTS, MIN_REASON, LAYOUT_TIERS,
   catalog, reset, list, masters, get, has, master, masterOf, memberLayouts,
   primaryIndex, moduleLabels, measure, catalogErrors, formFit, sizeErrors,
   validToken, acceptsToken, formInAccepts, slotFormList,
-  pageErrors, resolveModules, requiredLayouts, layoutsOf, validate, inventory
+  pageErrors, customPageErrors, resolveModules, requiredLayouts, layoutsOf, validate, inventory,
+  readingStructure, diagnostics
 };

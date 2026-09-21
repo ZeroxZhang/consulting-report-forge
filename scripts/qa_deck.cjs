@@ -97,14 +97,20 @@ function parseArgs(argv){
  }
  // 逐页形式声明：独立于装配器重新对账一次，并给出全篇形式清单供审查者判断节奏。
  const pagesApi=require('./check_pages.cjs');
+ let boundPages=null;
  let pagesCheck={status:'NOT_PROVIDED',reason:partial?'只检查了部分页面，不能对账逐页形式':'任务合同未绑定 pages.json；S3 未产出逐页形式声明，不能正式交付'};
  if(modern&&taskContract?.pages&&!partial){
   try{
    const record=path.resolve(path.dirname(input),taskContract.pages.record);
    if(!fs.existsSync(record)||taskContracts.fileHash(record)!==taskContract.pages.sha256)throw Error('pages记录缺失或sha256与任务合同不符');
    const doc=JSON.parse(fs.readFileSync(record,'utf8')),checked=pagesApi.check(doc,{ratio:taskContract.ratio});
-   const mismatches=pagesApi.verifyDeck(doc,rows.map(r=>({page:r.page,form:r.form,visual:r.visual,proves:r.proves,densityProfile:r.densityProfile,layout:r.layout,modules:r.modules,waterfall:r.waterfall,role:r.bookends?.role})));
-   const all=[...checked.errors,...mismatches];
+   if(doc.version===4)boundPages=doc;
+   const mismatches=pagesApi.verifyDeck(doc,rows.map(r=>({...r,role:r.bookends?.role})));
+   const all=[...checked.errors,...mismatches,...taskContracts.verifyPlan(taskContract,path.dirname(input),doc)];
+   if(doc.version===4&&await p.locator('html').getAttribute('data-page-contract-version')!=='4')all.push('v4 成稿缺少页面策略版本标记');
+   if(doc.version!==4&&await p.locator('html').getAttribute('data-page-contract-version')==='4')all.push('历史 pages 合同不能冒用 v4 页面策略标记');
+   if(doc.version!==4&&rows.some(r=>r.bindings?.length||r.contentHash||r.pagePlanHash))all.push('有内容绑定的成稿不能使用历史 pages 合同');
+   warnings.push(...(checked.warnings||[]).map(w=>'表达诊断：'+JSON.stringify(w)));
    // 布局对账：声明了布局的页，每一格必须真的落在网格上。量出来的矩形才是事实。
    const layoutApi=require('./layout_contract.cjs');
    for(const page of doc.pages){
@@ -156,6 +162,11 @@ function parseArgs(argv){
   const printMissing=await p.evaluate(expected=>expected.filter(item=>{const e=document.querySelector('[data-deck-exhibit-id="'+item.id+'"]');if(!e)return true;const r=e.getBoundingClientRect();if(!r.width||!r.height)return true;for(let n=e;n&&n.nodeType===1;n=n.parentElement){const s=getComputedStyle(n);if(s.display==='none'||s.visibility==='hidden'||s.visibility==='collapse'||Number(s.opacity)===0)return true;}return false;}),expected);
   printMissing.forEach(e=>errors.push('打印缺少第'+e.page+'页展品 '+e.id));
   printCheck={expected:expected.length,missing:printMissing};
+  if(boundPages){
+   const printed=[];
+   for(const row of rows)printed.push({...await p.locator('.slide').nth(row.page-1).evaluate(pageProbe.inspectDom,pageProbe.WF_FORMS),page:row.page,role:row.bookends?.role});
+   errors.push(...pagesApi.verifyDeck(boundPages,printed).map(e=>'打印内容：'+e));
+  }
   if(modern){await geometry.settle(p);for(const row of rows){const slide=p.locator('.slide').nth(row.page-1);row.printCritical=await slide.evaluate(criticalContent.inspectSlide);errors.push(...criticalContent.verifyPrint(row.critical,row.printCritical).map(e=>'第'+row.page+'页：'+e));row.printVisualPolicy=await slide.evaluate(visualPolicy.inspectSlide);errors.push(...row.printVisualPolicy.errors.map(e=>'第'+row.page+'页打印视觉禁令：'+JSON.stringify(e)));warnings.push(...row.printVisualPolicy.warnings.map(e=>'第'+row.page+'页打印视觉诊断：'+JSON.stringify(e)));}}
   if(!acceptance)await p.emulateMedia({media:'screen'});
  }
@@ -165,9 +176,13 @@ function parseArgs(argv){
   pdfFonts=execFileSync('pdffonts',[pdfPath],{encoding:'utf8'});const fontRows=pdfFonts.split('\n').slice(2).filter(Boolean);if(!fontRows.length||fontRows.some(row=>row.trim().split(/\s+/).slice(-5,-2).some(v=>v!=='yes')))errors.push('PDF 字体未完整嵌入或缺少字符映射');
   const normalize=s=>s.replace(/\s+/g,'');
   const printedPages=execFileSync('pdftotext',['-layout',pdfPath,'-'],{encoding:'utf8'}).split('\f').map(normalize);
-  const rawPages=rows.some(r=>['references','cover','back-cover'].includes(r.bookends.role))?execFileSync('pdftotext',['-raw',pdfPath,'-'],{encoding:'utf8'}).split('\f').map(normalize):[];
+  const rawPages=boundPages||rows.some(r=>['references','cover','back-cover'].includes(r.bookends.role))?execFileSync('pdftotext',['-raw',pdfPath,'-'],{encoding:'utf8'}).split('\f').map(normalize):[];
   for(const row of rows){
     const pageText=printedPages[row.page-1]||'';
+    if(boundPages)for(const binding of row.bindings||[]){
+      const text=normalize(binding.text||'');
+      if(text&&!pageText.includes(text)&&!(rawPages[row.page-1]||'').includes(text))errors.push('PDF第'+row.page+'页缺少关键内容绑定：'+binding.key);
+    }
     if(!pageText.includes(normalize(row.title)))errors.push('PDF缺少第'+row.page+'页标题');
     if(['cover','back-cover'].includes(row.bookends.role))for(const [field,value] of Object.entries(row.bookends.meta)){
       if(value&&!pageText.includes(normalize(value))&&!(rawPages[row.page-1]||'').includes(normalize(value)))errors.push('PDF第'+row.page+'页缺少首尾元信息: '+field);

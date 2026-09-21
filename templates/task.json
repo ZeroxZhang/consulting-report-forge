@@ -9,5 +9,6 @@
   "ratio": "16x9",
   "kind": "fragment",
   "pages": {"record": "pages.json"},
+  "blueprint": {"record": "deck-blueprint.json"},
   "critical": []
 }

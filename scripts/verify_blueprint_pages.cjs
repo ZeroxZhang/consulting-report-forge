@@ -17,6 +17,10 @@ function verify(blueprint, pagesDoc) {
   if (blueprintCheck.status !== 'PASS') return ['blueprint 未准备好：' + blueprintCheck.errors.join('；')];
   const pagesCheck = pagesApi.check(pagesDoc, {ratio:blueprint.deck.ratio || '16x9'});
   if (pagesCheck.status !== 'PASS') return ['pages.json 无效：' + pagesCheck.errors.join('；')];
+  if (blueprint.schemaVersion === 2) {
+    const expected = require('./content_contract.cjs').compile(blueprint);
+    return stable(expected) === stable(pagesDoc) ? [] : ['pages.json 与权威 blueprint 的编译结果不同：请重新编译，不要手改派生记录'];
+  }
   const slides = contentSlides(blueprint), pages = pagesDoc.pages;
   if (slides.length !== pages.length) errors.push('正文页数不一致：blueprint 有 ' + slides.length + ' 页，pages.json 有 ' + pages.length + ' 页；封面/章节/参考/封底不计入 pages.json');
   for (let index = 0; index < Math.min(slides.length, pages.length); index++) {

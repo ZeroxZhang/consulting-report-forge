@@ -3,6 +3,7 @@ function inspectSlide(slide) {
   const errors = [], warnings = [], findings = [];
   const sr = slide.getBoundingClientRect(), scale = sr.width / (slide.offsetWidth || sr.width) || 1;
   const densityProfile = slide.dataset.densityProfile || '';
+  const contentLedLayout = document.documentElement.dataset.pageContractVersion === '4';
   const bounds = el => { const r = el.getBoundingClientRect(); return { x: (r.left-sr.left)/scale, y: (r.top-sr.top)/scale, width:r.width/scale, height:r.height/scale }; };
   const shown = el => { if (!el.getClientRects().length) return false; for(let n=el;n&&n.nodeType===1;n=n.parentElement){const s=getComputedStyle(n);if(s.display==='none'||s.visibility!=='visible'||+s.opacity===0)return false;}const r=el.getBoundingClientRect();return r.width>0&&r.height>0; };
   const label = el => { const parts=[];for(let n=el;n&&n!==slide;n=n.parentElement){const tag=n.localName;parts.unshift(`${tag}:nth-child(${Array.prototype.indexOf.call(n.parentElement.children,n)+1})`);}return parts.join(' > ')||':scope'; };
@@ -66,9 +67,9 @@ function inspectSlide(slide) {
   const body=slide.querySelector('.slide__body');
   if(body&&shown(body)){
     const leaves=[...body.querySelectorAll('*')].filter(el=>shown(el)&&!el.closest('.source')&&(el.matches('svg,canvas,img,table')||(!el.children.length&&(el.textContent||'').trim())));
-    const br=bounds(body);if(leaves.length){const bottom=Math.max(...leaves.map(el=>{const b=bounds(el);return b.y+b.height;})),gap=br.y+br.height-bottom;if(gap>120){const message=`正文实际对象下方约 ${Math.round(gap)}px 剩余空间，需检查其分组、强调或节奏用途。`;if(['balanced','dense'].includes(densityProfile))add(errors,'V-UNDERFILLED-PAGE',body,message,{densityProfile,trailingGap:Math.round(gap)});else add(warnings,'V-BODY-REMAINDER',body,message,{densityProfile:densityProfile||'undeclared',trailingGap:Math.round(gap)});}}
+    const br=bounds(body);if(leaves.length){const bottom=Math.max(...leaves.map(el=>{const b=bounds(el);return b.y+b.height;})),gap=br.y+br.height-bottom;if(gap>120){const message=`正文实际对象下方约 ${Math.round(gap)}px 剩余空间，需检查其分组、强调或节奏用途。`;if(contentLedLayout)add(warnings,'V-BODY-REMAINDER',body,message+' 须实际看图记录保留或调整的判断，不能仅据空白尺寸补图。',{densityProfile:densityProfile||'undeclared',trailingGap:Math.round(gap),requiresReview:true});else if(['balanced','dense'].includes(densityProfile))add(errors,'V-UNDERFILLED-PAGE',body,message,{densityProfile,trailingGap:Math.round(gap)});else add(warnings,'V-BODY-REMAINDER',body,message,{densityProfile:densityProfile||'undeclared',trailingGap:Math.round(gap)});}}
     // 文字、图表或表格之间出现大面积“空洞”时，底部是否有 takeaway 已无法说明页面均衡。
-    // 仅对作者在 pages.json 中主动承诺为 balanced/dense 的页面升级为错误；sparse 必须由合同写明理由后再作人工判断。
+    // 历史 balanced/dense 页仍按旧规则报错；v4 只定位空白，要求人工判断其阅读用途。
     const units=[...body.querySelectorAll('svg,canvas,img,table,p,ol,ul')].filter(el=>shown(el)&&!el.closest('.source')&&(el.matches('svg,canvas,img,table')||!el.closest('svg,table'))&&bounds(el).width>=42&&bounds(el).height>=8).map(bounds).sort((a,b)=>a.y-b.y);
     const merged=[];
     for(const unit of units){const last=merged[merged.length-1];if(last&&unit.y<=last.bottom+8)last.bottom=Math.max(last.bottom,unit.y+unit.height);else merged.push({top:unit.y,bottom:unit.y+unit.height});}
@@ -77,7 +78,8 @@ function inspectSlide(slide) {
     const largest=gaps.sort((a,b)=>b.gap-a.gap)[0];
     if(largest&&largest.gap>112&&largest.gap>br.height*.18){
       const message=`正文第${Math.round(largest.from-br.y)}–${Math.round(largest.to-br.y)}px 出现约 ${Math.round(largest.gap)}px 的内容空洞；应补强支持证据、注释或解释，或收紧布局，不能以拉伸容器维持空白。`;
-      if(['balanced','dense'].includes(densityProfile)) add(errors,'V-UNDERFILLED-PAGE',body,message,{densityProfile,verticalGap:Math.round(largest.gap)});
+      if(contentLedLayout) add(warnings,'V-INTERNAL-VOID',body,`正文出现约 ${Math.round(largest.gap)}px 的内容间隙；须实际看图记录分组、比较或停顿的用途及保留或调整判断。证据不足时重新组织或合页，不为填空增加内容。`,{densityProfile:densityProfile||'undeclared',verticalGap:Math.round(largest.gap),requiresReview:true});
+      else if(['balanced','dense'].includes(densityProfile)) add(errors,'V-UNDERFILLED-PAGE',body,message,{densityProfile,verticalGap:Math.round(largest.gap)});
       else add(warnings,'V-INTERNAL-VOID',body,message,{densityProfile:densityProfile||'undeclared',verticalGap:Math.round(largest.gap)});
     }
     const source=slide.querySelector('.source');if(source&&shown(source)){const top=bounds(source).y;for(const el of leaves){const b=bounds(el);if(b.y<top&&b.y+b.height>top+1)add(warnings,'V-SOURCE-COLLISION',el,'正文对象进入来源区域，请检查来源安全区与关键限定。');}}

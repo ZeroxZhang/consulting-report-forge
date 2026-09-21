@@ -37,7 +37,7 @@ function validate(doc, options = {}) {
   const errors = [], bad = message => errors.push(message);
   const ready = options.ready === true;
   if (!doc || typeof doc !== 'object' || Array.isArray(doc)) return {status: 'FAIL', errors: ['blueprint 须为对象']};
-  if (doc.schemaVersion !== 1) bad('blueprint.schemaVersion 只接受 1');
+  if (![1, 2].includes(doc.schemaVersion)) bad('blueprint.schemaVersion 只接受 1（历史）或 2（统一内容）');
   const deck = doc.deck;
   if (!deck || typeof deck !== 'object') bad('blueprint 缺少 deck');
   else {
@@ -69,8 +69,9 @@ function validate(doc, options = {}) {
         // 版式不是自由文案：从布局目录里选一条，页面才有可核对的骨架，作者也才知道每格能放什么。
         // 确实没有合适布局时写 layoutExemptReason 说清楚——出口要有，但不能是静默的。
         if (!norm(slide.visual.layout)) bad(where + '.visual.layout 须填布局编号（见 assets/layout-atlas.html 或 assets/layout-atlas/catalog.json，形如 L09）');
+        else if (doc.schemaVersion === 2 && slide.visual.layout === 'custom') { /* 自由区域由编译后的 v4 合同检查 */ }
         else if (!layouts.has(norm(slide.visual.layout))) {
-          if (norm(slide.visual.layoutExemptReason).length >= layouts.MIN_REASON) { /* 已声明豁免 */ }
+          if (doc.schemaVersion === 1 && norm(slide.visual.layoutExemptReason).length >= layouts.MIN_REASON) { /* 历史豁免 */ }
           else bad(where + '.visual.layout="' + norm(slide.visual.layout) + '" 不是目录里的布局编号：'
             + '布局目录共 ' + layouts.list().length + ' 条（' + layouts.list().slice(0, 3).map(item => item.id).join('/') + '…）；'
             + '选一条承载得住这一页的布局，或写 visual.layoutExemptReason（≥' + layouts.MIN_REASON + '字）说明为什么目录里没有可用结构');
@@ -96,7 +97,8 @@ function validate(doc, options = {}) {
   const first = doc.slides[0], body = doc.slides.filter(s => CONTENT_ROLES.has(s?.pageRole));
   if (first?.pageRole !== 'cover') bad('第1页须为 cover；从读者要解决的决策问题建立叙事，而非直接堆数据');
   if (body.length >= 3 && ![...beats].some(beat => ['diagnosis', 'insight'].includes(beat))) bad('至少三页正文时须有 diagnosis 或 insight，不能只有背景与行动口号');
-  if (body.length >= 3 && ![...beats].some(beat => ['choice', 'action'].includes(beat))) bad('至少三页正文时须有 choice 或 action，把分析收束为判断、取舍或下一步');
+  if (doc.schemaVersion === 1 && body.length >= 3 && ![...beats].some(beat => ['choice', 'action'].includes(beat))) bad('至少三页正文时须有 choice 或 action，把分析收束为判断、取舍或下一步');
+  if (doc.schemaVersion === 2) errors.push(...require('./content_contract.cjs').validate(doc));
   return {status: errors.length ? 'FAIL' : 'PASS', errors, inventory: inventory(doc)};
 }
 

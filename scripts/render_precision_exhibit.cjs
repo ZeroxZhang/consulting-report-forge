@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /* 静态 SVG 的专业标注入口：数值只由数据派生，文字按交付字体测量。 */
 const fs=require('node:fs'),path=require('node:path');
+const WaterfallBridge=require('../assets/waterfall-bridge.js');
 const G=require('../assets/exhibit-geometry.js'),Typography=require('../assets/deck-typography.js'),Themes=require('../assets/deck-themes.js'),Metrics=require('./font_metrics.cjs');
 const esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const attrs=data=>Object.entries(data).filter(([,v])=>v!==undefined&&v!==null).map(([k,v])=>`${k}="${esc(v)}"`).join(' ');
@@ -285,7 +286,7 @@ function build(spec){
   const model={version:'1.1.0',type:spec.type,width,height,fontSize,typography:profile.id,theme:spec.theme||'mckinsey',domain,plot:{x:plotLeft,y:plotTop,width:plotRight-plotLeft,height:plotBottom-plotTop},breaks:scale.breaks,marks,labels,routes,anchors,layerTracks};
   const audit=auditLayout(model);if(!audit.ok)throw Error('内部布局检查失败: '+JSON.stringify(audit.issues));
   const out=[],line=(a,b,color,extra={})=>`<line ${attrs({x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:color,...extra})}/>`;
-  const commonData=mark=>({'data-item':mark.item,'data-series':mark.series,'data-value':mark.value,'data-from':mark.from,'data-to':mark.to,'data-mark-id':mark.id});
+  const commonData=mark=>({'data-item':mark.item,'data-series':mark.series,'data-value':mark.value,'data-from':mark.from,'data-to':mark.to,'data-mark-id':mark.id,'data-semantic':mark.type});
   // 统一锚点契约：与 ExhibitKit 同一组 data-anchor-*，供 AnnotationLayer.collect 与跨图型旁解读复用。
   const anchorData=(mark,piece,i)=>({'data-anchor-id':mark.pieces.length>1?mark.id+'#'+i:mark.id,
     'data-anchor-x':piece.x+piece.width/2,'data-anchor-y':piece.height===0?piece.y:mark.to>=mark.from?piece.y:piece.y+piece.height,
@@ -298,7 +299,8 @@ function build(spec){
     'data-residual':tick===0&&chart?(chart.residual===null||chart.residual===undefined?'':chart.residual):undefined,
     'data-tolerance':tick===0&&chart?chart.tolerance:undefined,
     /* 节点数也回显：pages.json 声明的 nodes 要有个能对账的现场，否则那个数字没人核得了。 */
-    'data-nodes':tick===0&&chart?chart.bars.length:undefined}));
+    'data-nodes':tick===0&&chart?chart.bars.length:undefined,
+    'data-waterfall-model':tick===0&&chart?WaterfallBridge.auditModel(chart):undefined}));
   marks.forEach(mark=>{
     mark.pieces.forEach((piece,i)=>out.push(piece.height===0?line(point(piece.x,piece.y),point(piece.x+piece.width,piece.y),mark.fill,{'stroke-width':2,'data-role':'bar',...commonData(mark),...anchorData(mark,piece,i)}):`<rect ${attrs({x:piece.x,y:piece.y,width:piece.width,height:piece.height,fill:mark.fill,stroke:mark.weight===600?palette.ink:'white','stroke-width':mark.weight===600?1.6:.8,'data-role':'bar','data-semantic':mark.type,'data-piece':i,...commonData(mark),...anchorData(mark,piece,i)})}/>`));
     for(const band of scale.breaks)if(Math.min(mark.from,mark.to)<band.from&&Math.max(mark.from,mark.to)>band.to){const y=band.center;out.push(`<path d="M ${mark.x-barWidth/2} ${y+3} l ${barWidth*.33} -6 l ${barWidth*.34} 6 l ${barWidth*.33} -6" fill="none" stroke="${esc(palette.ink)}" stroke-width="1.3" data-role="mark-break" ${attrs(commonData(mark))}/>`);}

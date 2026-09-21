@@ -1,0 +1,136 @@
+{
+  "schemaVersion": 2,
+  "deck": {
+    "title": "内容与呈现联动验证 · 合成样稿",
+    "audience": "技能维护者与页面审稿者",
+    "decision": "验证真实成稿是否保留统一内容及其边界",
+    "governingThought": "数值、情景与定性判断都应从同一内容记录进入可见成稿。",
+    "mode": "reading",
+    "ratio": "16x9"
+  },
+  "sources": {
+    "S1": {"label": "合成验证数据", "locator": "upgrade-blueprint.json 固定输入；不代表真实业务"},
+    "S2": {"label": "合成情景假设", "locator": "upgrade-blueprint.json 三档情景；不是预测"},
+    "S3": {"label": "合成决策条件", "locator": "upgrade-blueprint.json 演示规则；不是业务建议"}
+  },
+  "slides": [
+    {
+      "id": "cover", "sequence": 1, "pageRole": "cover", "storyBeat": "context",
+      "title": "内容与呈现联动验证", "subtitle": "合成数据 · 工程验收样稿",
+      "cornerLabel": "TEST FIXTURE", "speakerIntent": "此蓝图包含封面描述，片段验收只渲染三页正文。"
+    },
+    {
+      "id": "comparison", "sequence": 2, "pageRole": "analysis", "storyBeat": "diagnosis",
+      "title": "甲区规模高于乙区，差额应使用同一单位核对",
+      "subtitle": "合成同期数据；图与差额来自同一份输入", "cornerLabel": "01 · 比较",
+      "speakerIntent": "先读同轴条形，再读计算差额和适用边界。",
+      "proves": "甲区与乙区的规模差异及其算术差额。",
+      "visual": {
+        "form": "custom", "semanticType": "comparison", "primary": "两地区同轴水平条形比较",
+        "rationale": "使用全宽主图和下方差额支持带，以一致长度编码展示合成比较。",
+        "layout": "custom", "readingPath": "标题 → 两条同轴数据 → 差额 → 限制与来源",
+        "regions": [
+          {"slot": "main", "role": "primary", "form": "custom", "span": 3},
+          {"slot": "bottom", "role": "support", "form": "html.text", "span": 1}
+        ]
+      },
+      "density": {
+        "profile": "balanced",
+        "evidenceUnits": [
+          {"role": "primary", "purpose": "共同量尺比较两个地区的规模。"},
+          {"role": "support", "purpose": "差额复算明确比较幅度与单位。"}
+        ],
+        "spaceIntent": "主图充分展开；下方支持带连接差额和限制，不用装饰填空。"
+      },
+      "sourcePlan": {
+        "status": "verified", "keys": ["S1"],
+        "claims": [{
+          "id": "regional-gap", "statement": "甲区规模较大；差额只描述规模，不解释原因。",
+          "kind": "fact", "verification": "provided", "sourceKeys": ["S1"],
+          "period": "同一合成期间", "population": "甲乙两区", "unit": "万元",
+          "denominator": "不适用：绝对数比较", "calculation": "甲区减乙区",
+          "inference": "同口径规模可以直接比较", "limitation": "合成输入，不代表真实市场或因果关系",
+          "metrics": [
+            {"id": "region-a", "unit": "万元", "decimals": 0, "value": 120},
+            {"id": "region-b", "unit": "万元", "decimals": 0, "value": 80},
+            {"id": "gap", "unit": "万元", "decimals": 0, "formula": {"op": "subtract", "args": ["region-a", "region-b"]}}
+          ]
+        }]
+      }
+    },
+    {
+      "id": "scenario", "sequence": 3, "pageRole": "analysis", "storyBeat": "insight",
+      "title": "情景结果随假设变化，不能把上沿当成预测",
+      "subtitle": "合成低、中、高情景；不赋予发生概率", "cornerLabel": "02 · 情景",
+      "speakerIntent": "比较三档结果，强调各点是条件值而非预测。",
+      "proves": "情景结果存在范围，基准与高情景不能混为一谈。",
+      "visual": {
+        "form": "custom", "semanticType": "scenario", "primary": "同一量尺上的三档情景点图",
+        "rationale": "并列的条件点保留情景身份，不以趋势线暗示时间或概率。",
+        "layout": "custom", "readingPath": "标题 → 三档情景 → 条件与推断限制 → 来源",
+        "regions": [
+          {"slot": "left", "role": "primary", "form": "custom", "span": 2},
+          {"slot": "right", "role": "support", "form": "html.text", "span": 1}
+        ]
+      },
+      "density": {
+        "profile": "balanced",
+        "evidenceUnits": [
+          {"role": "primary", "purpose": "将三种假设下的结果置于同一量尺。"},
+          {"role": "support", "purpose": "说明情景不是预测，也没有发生概率。"}
+        ],
+        "spaceIntent": "左侧点图充分展开；右侧直接解释条件身份与外推限制。"
+      },
+      "sourcePlan": {
+        "status": "verified", "keys": ["S2"],
+        "claims": [{
+          "id": "scenario-range", "statement": "三档结果由不同假设定义，未估计发生概率。",
+          "kind": "assumption", "verification": "provided", "sourceKeys": ["S2"],
+          "period": "同一合成周期", "population": "同一演示方案", "unit": "万元",
+          "denominator": "不适用：绝对数情景", "calculation": "直接列出三档合成输入",
+          "inference": "结果范围说明假设敏感性", "limitation": "合成情景，不是市场预测",
+          "metrics": [
+            {"id": "low", "unit": "万元", "decimals": 0, "value": 8},
+            {"id": "base", "unit": "万元", "decimals": 0, "value": 12},
+            {"id": "high", "unit": "万元", "decimals": 0, "value": 18}
+          ]
+        }]
+      }
+    },
+    {
+      "id": "conditions", "sequence": 4, "pageRole": "action", "storyBeat": "action",
+      "title": "先核对适用条件，再决定是否推进试点",
+      "subtitle": "定性条件与行动对应；不伪造评分", "cornerLabel": "03 · 条件",
+      "speakerIntent": "逐行核对条件与对应动作，再确认不可外推的范围。",
+      "proves": "推进条件和停止条件须有不同的行动后果。",
+      "visual": {
+        "form": "html.table", "semanticType": "qualitative", "primary": "条件与行动共同表头对照",
+        "layout": "L19", "readingPath": "标题 → 两类条件与动作 → 合成范围 → 来源",
+        "regions": [{"form": "html.table"}, {"form": "html.text"}]
+      },
+      "density": {
+        "profile": "balanced",
+        "evidenceUnits": [
+          {"role": "primary", "purpose": "用共同表头对应推进与停止条件。"},
+          {"role": "support", "purpose": "明确演示规则的适用边界。"}
+        ],
+        "spaceIntent": "共同表头减少重复说明，底部结论带说明判断应如何使用。"
+      },
+      "sourcePlan": {
+        "status": "verified", "keys": ["S3"],
+        "claims": [
+          {"id": "proceed", "statement": "来源、责任和核验标准就绪后，才进入小范围试点。",
+            "kind": "recommendation", "verification": "provided", "sourceKeys": ["S3"],
+            "period": "不适用：定性规则", "population": "合成演示任务", "unit": "不适用：无评分",
+            "denominator": "不适用：无比例", "calculation": "不适用：定性对应",
+            "inference": "条件就绪后才进入下一步", "limitation": "需在真实业务中重新定义条件"},
+          {"id": "stop", "statement": "关键证据发生冲突时，停止扩展并回到原始材料复核。",
+            "kind": "recommendation", "verification": "provided", "sourceKeys": ["S3"],
+            "period": "不适用：定性规则", "population": "合成演示任务", "unit": "不适用：无评分",
+            "denominator": "不适用：无比例", "calculation": "不适用：定性对应",
+            "inference": "不把争议掩盖为确定答案", "limitation": "演示流程，不代替业务决策"}
+        ]
+      }
+    }
+  ]
+}

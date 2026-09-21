@@ -80,8 +80,8 @@ ok('根变量 --grid-module-title', px(cssVars(rootBlock)['module-title']) === g
 ok('根变量 --grid-module-unit', px(cssVars(rootBlock)['module-unit']) === grid.MODULE.unitBand);
 /* 网格只在 layout 页生效：历史页保持 fr 分栏，重新打包不会变形。 */
 const layouts = fs.readFileSync(path.join(__dirname, '../assets/consulting-layouts.css'), 'utf8');
-ok('网格块以 reading[data-layout] 限定', /\.slide\.reading\[data-layout\]\s*\.slide__body\{/.test(layouts));
-ok('标题带与正文区用 flex 基准而非 display', !/\.slide\.reading\[data-layout\]\s*\{[^}]*display:/.test(layouts));
+ok('目录网格块排除 custom 阅读区', /\.slide\.reading\[data-layout\]:not\(\[data-layout="custom"\]\)\s*\.slide__body\{/.test(layouts));
+ok('标题带与正文区用 flex 基准而非 display', !/\.slide\.reading\[data-layout\][^{]*\{[^}]*display:/.test(layouts));
 
 /* —— 5. 形式槽位：每个形式都得有明确的槽位归属，缺一个就会让布局声明无从校验 —— */
 for (const form of forms.list()) {

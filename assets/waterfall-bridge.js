@@ -509,8 +509,15 @@
     return report;
   }
 
+  /* 生产合同与两个渲染器共用模型编码，避免不同输入仅因残差/节点数相同而互相冒认。 */
+  function auditModel(chart) {
+    if (!chart || !Array.isArray(chart.bars)) throw new Error('缺少瀑布模型');
+    return JSON.stringify({mode:chart.mode,metric_type:chart.metric_type,metric:chart.metric,unit:chart.unit,display_divisor:chart.display_divisor,
+      bars:chart.bars.map(b=>({label:b.label,type:b.type,value:b.value,from:b.from,to:b.to}))});
+  }
+
   return {
-    diagnose, present, number, formatValue, percentText, growthText, labelLines, decimalsFor,
+    diagnose, present, auditModel, number, formatValue, percentText, growthText, labelLines, decimalsFor,
     decimalFromText, decimalToText, decimalToNumber, add, sub, mul, abs, neg, isZero, sumOf, ZERO, BridgeError
   };
 });

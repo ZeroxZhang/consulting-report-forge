@@ -1,15 +1,16 @@
 {
   "name": "consulting-report-forge-runtime",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "private": true,
   "license": "Apache-2.0",
   "description": "Shared blueprint, evidence-density, and static-report runtime for consulting-grade decision materials.",
   "scripts": {
     "setup-fonts": "sh scripts/setup_font_venv.sh",
-    "test": "node scripts/test_deck_grid.cjs && node scripts/test_layout_contract.cjs && node scripts/test_density_contract.cjs && node scripts/test_deck_blueprint.cjs && node scripts/test_blueprint_pages.cjs && node scripts/build_layout_css.cjs --check && node scripts/build_layout_atlas.cjs --check && node scripts/test_waterfall_bridge.cjs && node scripts/test_waterfall_contract.cjs && node scripts/test_propose_annotations.cjs && node scripts/test_report_regressions.cjs",
+    "test": "node scripts/test_deck_grid.cjs && node scripts/test_layout_contract.cjs && node scripts/test_density_contract.cjs && node scripts/test_deck_blueprint.cjs && node scripts/test_blueprint_pages.cjs && node scripts/build_layout_css.cjs --check && node scripts/build_layout_atlas.cjs --check && node scripts/test_waterfall_bridge.cjs && node scripts/test_waterfall_contract.cjs && node scripts/test_propose_annotations.cjs && node scripts/test_report_regressions.cjs && node scripts/test_layout_policy.cjs && node scripts/test_content_contract.cjs && node scripts/test_review_reuse.cjs",
     "atlas": "node scripts/build_layout_atlas.cjs && node scripts/build_layout_css.cjs",
     "check:grid": "node scripts/check_layout_grid.cjs both",
-    "test:render": "node scripts/test_report_regressions.cjs --browser"
+    "test:render": "node scripts/test_report_regressions.cjs --browser && node scripts/test_layout_policy.cjs --browser && node scripts/test_waterfall_binding.cjs",
+    "test:upgrade-render": "node scripts/test_upgrade_render.cjs"
   },
   "dependencies": {
     "@napi-rs/canvas": "^1.0.9",

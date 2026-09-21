@@ -51,9 +51,9 @@ function captureDocument() {
   return {pages, dependencies: {styles, scripts, fonts, ratio: document.body.dataset.ratio}};
 }
 function manifest(snapshot, rows, pdfRows, artifacts, task, directory, environment) {
-  // deck 级身份留在公共依赖里；task.pages 只绑定 pages.json 的记录本身，不参与逐页判据，
-  // 否则"改一页的 proves"会连带把已经审过的其他页全部作废。
-  const deckTask = task ? Object.fromEntries(Object.entries(task).filter(([key]) => key !== 'pages')) : null;
+  // pages/blueprint 绑定输入记录；v4 的逐页 contentHash 已在 section 中，由 pageSha256 捕捉。
+  // 改一页不连带作废其他页。全局分析/证据/视觉结论从不由继承准备工具代填。
+  const deckTask = task ? Object.fromEntries(Object.entries(task).filter(([key]) => !['pages', 'blueprint'].includes(key))) : null;
   const dependenciesSha256 = hash(stable({dependencies: snapshot.dependencies, task: deckTask, environment}));
   if (new Set(snapshot.pages.map(p => p.pageId)).size !== snapshot.pages.length) throw Error('data-page-id重复，无法绑定页身份');
   const entries = [];

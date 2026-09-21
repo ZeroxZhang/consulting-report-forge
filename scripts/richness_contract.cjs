@@ -1,10 +1,5 @@
-/* 共享的表达丰富度合同：正文页数决定表达种数的下限，避免阈值在门禁与文档间漂移。
-   与 repetitionErrors 的分工：那边管"重复要解释"（不设下限），这边管"丰富度要有下限"。
-
-   计数口径是"页面上实际出现的每一种表达"，不是"每一页的主形式"。
-   这一条是冲着"单页只塞一种图表、版面单薄"来的：一页四格填四种不同表达，就该被记成四种。
-   按页主形式计数时，把表格、卡片、小图补进其余格子不会得到任何记分，
-   于是"填空"没有回报，页面自然越做越薄。 */
+/* 表达清单与审稿线索：统计页面各阅读区的实际形式，数量本身不证明证据充分。
+   v1-v3 保留历史配额；v4 把重复、种数和同形式分面交给实际阅读判断。 */
 'use strict';
 const forms = require('../assets/deck-forms.js');
 const layout = require('./layout_contract.cjs');
@@ -33,7 +28,11 @@ const requiredTypes = pageCount => {
 
 /* 一页上实际出现的表达清单。v3 页按格取：布局定了有几格，作者每格填了什么就是什么。
    v1/v2 页没有格，退回页级 form/visual，历史稿的计数口径不变。 */
-const expressionsOf = page => {
+const expressionsOf = (page, version) => {
+  if (version === 4 && page && page.layout === 'custom' && Array.isArray(page.regions)) {
+    return page.regions.filter(region => region && norm(region.form))
+      .map(region => ({form: norm(region.form), visual: norm(region.visual)}));
+  }
   const modules = layout.resolveModules(page);
   if (!modules.length) return [{ form: norm(page && page.form), visual: norm(page && page.visual) }];
   return modules.filter(m => m.form).map(m => ({ form: m.form, visual: m.visual }));
@@ -54,7 +53,7 @@ const typesOf = doc => {
   const keys = new Set();
   pages.forEach(page => {
     if (!page) return;
-    expressionsOf(page).forEach(expression => {
+    expressionsOf(page, doc.version).forEach(expression => {
       if (!countable(expression.form)) return;
       const key = keyOf(expression);
       if (key) keys.add(key);
@@ -70,7 +69,7 @@ const typesOf = doc => {
 const perPage = doc => {
   const pages = (doc && Array.isArray(doc.pages)) ? doc.pages : [];
   return pages.map((page, index) => {
-    const filled = expressionsOf(page).map(keyOf).filter(Boolean);
+    const filled = expressionsOf(page, doc.version).map(keyOf).filter(Boolean);
     const distinct = [...new Set(filled)];
     return {
       index, page: page && page.page, expressions: filled.length, distinct: distinct.length, keys: distinct,
@@ -87,6 +86,7 @@ const thinPages = doc => perPage(doc).filter(item => item.expressions >= 3 && it
 const display = key => key.replace(/^svg\.custom:/, 'custom/');
 
 function validate(doc) {
+  if (doc && doc.version === 4) return [];
   const errors = [];
   const pages = (doc && Array.isArray(doc.pages)) ? doc.pages : [];
   const required = requiredTypes(pages.length);
@@ -117,4 +117,27 @@ function validate(doc) {
   return errors;
 }
 
-module.exports = { TIERS, EXCLUDED_FAMILIES, MIN_REASON, requiredTypes, typeKey, countable, expressionsOf, keyOf, typesOf, perPage, thinPages, validate };
+function diagnostics(doc) {
+  const pages = doc && Array.isArray(doc.pages) ? doc.pages.filter(Boolean) : [];
+  if (!pages.length) return [];
+  const types = typesOf(doc), use = new Map();
+  pages.forEach(page => {
+    const keys = new Set(expressionsOf(page, doc.version).filter(expression => countable(expression.form)).map(keyOf));
+    keys.forEach(key => {
+      if (!use.has(key)) use.set(key, []);
+      use.get(key).push(page.page);
+    });
+  });
+  const result = [{code: 'R-EXPRESSION-INVENTORY', pages: pages.map(page => page.page), chartTypes: types,
+    distinctChartTypes: types.length, message: '本稿包含 ' + types.length + ' 种图表或图示表达；按读者需要选择，无最低种数要求。'}];
+  use.forEach((pageNumbers, form) => {
+    if (pageNumbers.length >= 3) result.push({code: 'R-REPEATED-EXPRESSION', pages: pageNumbers, form,
+      message: display(form) + ' 在这些页面重复；请核对共同口径与比较任务，合理重复可直接保留，不为凑种数换图。'});
+  });
+  perPage(doc).filter(item => item.expressions >= 3 && item.distinct === 1).forEach(item =>
+    result.push({code: 'R-SAME-EXPRESSION-PANELS', pages: [item.page], expressions: item.expressions,
+      message: '本页多个阅读区使用同一表达，可能是合理小多图或逐项对照；请检查是否共用必要尺度、减少重复说明，而非凭形式数量判为单薄。'}));
+  return result;
+}
+
+module.exports = { TIERS, EXCLUDED_FAMILIES, MIN_REASON, requiredTypes, typeKey, countable, expressionsOf, keyOf, typesOf, perPage, thinPages, validate, diagnostics };

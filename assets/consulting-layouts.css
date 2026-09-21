@@ -81,31 +81,31 @@
 .reading.analytical .decision-strip{background:transparent;color:var(--ink);padding:12px 0 0}
 
 /* ══════════════ 有布局引用的页：上模块网格 ══════════════
-   只有声明了 data-layout 的页走网格，历史页保持原样的 fr 分栏——重新打包不会因新规则变形。
+   只有目录布局走网格，custom 由作者声明区域几何，历史页保持原样的 fr 分栏——重新打包不会因新规则变形。
    模块用 grid-column / grid-row 落在 12×6 上，尺寸由网格决定而不是 fr 比例：
    这样"第几栏第几行、跨几栏几行"才是可核对的合同，而不是渲染完才知道的偶然结果。
 
    为什么不把 .slide 改成 grid：引擎用 .slide.active{display:flex} 控制翻页，
    在 .slide 上写 display 会以更高优先级让所有未激活的页同时可见。改用 flex 固定基准，
    标题带与正文区都是基准尺寸，正文起点恒定在版心 y=128。 */
-.slide.reading[data-layout]{--frame-rule-offset:0}
-.slide.reading[data-layout] .slide__header{flex:0 0 var(--grid-title-band)}
-.slide.reading[data-layout] .slide__body{
+.slide.reading[data-layout]:not([data-layout="custom"]){--frame-rule-offset:0}
+.slide.reading[data-layout]:not([data-layout="custom"]) .slide__header{flex:0 0 var(--grid-title-band)}
+.slide.reading[data-layout]:not([data-layout="custom"]) .slide__body{
   flex:0 0 var(--grid-body-height);height:var(--grid-body-height);margin-top:0;
   gap:var(--grid-gutter);
   grid-template-columns:repeat(12,minmax(0,1fr));
   grid-template-rows:repeat(6,minmax(0,1fr));
 }
 /* 行高钉到整数：容量核算的分母必须等于真实行高，否则"h 行装几行字"只是估算。 */
-.slide.reading[data-layout] .bullet{line-height:var(--grid-line)}
-.slide.reading[data-layout] .finding__verdict{line-height:var(--grid-line)}
-.slide.reading[data-layout] .finding__why,
-.slide.reading[data-layout] .finding__limit{line-height:var(--grid-note-line)}
-.slide.reading[data-layout] .annotation{line-height:var(--grid-note-line)}
-.slide.reading[data-layout] .exhibit{padding:var(--grid-module-pad)}
+.slide.reading[data-layout]:not([data-layout="custom"]) .bullet{line-height:var(--grid-line)}
+.slide.reading[data-layout]:not([data-layout="custom"]) .finding__verdict{line-height:var(--grid-line)}
+.slide.reading[data-layout]:not([data-layout="custom"]) .finding__why,
+.slide.reading[data-layout]:not([data-layout="custom"]) .finding__limit{line-height:var(--grid-note-line)}
+.slide.reading[data-layout]:not([data-layout="custom"]) .annotation{line-height:var(--grid-note-line)}
+.slide.reading[data-layout]:not([data-layout="custom"]) .exhibit{padding:var(--grid-module-pad)}
 /* 模块标题带 25 + 8 = 33、单位行 18 + 8 = 26：与 deck-grid.js 的 MODULE 常量同值。 */
-.slide.reading[data-layout] .exhibit h2{line-height:25px}
-.slide.reading[data-layout] .exhibit .unit{line-height:18px}
+.slide.reading[data-layout]:not([data-layout="custom"]) .exhibit h2{line-height:25px}
+.slide.reading[data-layout]:not([data-layout="custom"]) .exhibit .unit{line-height:18px}
 
 /* ═══ @generated:layout-placement —— 由 scripts/build_layout_css.cjs 生成，不要手改 ═══ */
 /* 每条布局把正文区切成固定的 12×6 格，模块按 data-module 的出现顺序逐格落位。

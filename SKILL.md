@@ -1,192 +1,89 @@
 ---
 name: consulting-report-forge
 description: >-
-  Build top-tier consulting-style, evidence-led decision materials from research, data, interviews, financials, or operating evidence. Use for strategy and operating reviews, market/industry research, investment theses, board narratives, and rigorous Chinese or bilingual reports that require a governing storyline, conclusion-led pages, high-density visual evidence, precise layouts, and strict but lightweight QA. Produces a self-contained HTML report plus a matching PDF through this skill's own Node/HTML/PDF toolchain, with chart and exhibit selection made by this skill itself. Do not use for a single chart, poster, pure copyediting, or mechanical existing-file format conversion.
+  Create evidence-led consulting reports for strategy, market research, operating reviews, investment analysis, and qualitative research. Combine business analysis, a coherent argument, precise visual exhibits, and reading-oriented layouts. Use for Chinese or bilingual decision reports and thoughtful restructuring of approved content. Produce self-contained HTML plus matching PDF with the bundled toolchain. Do not use for a single chart, poster, pure copyediting, PPTX, or mechanical format conversion.
 ---
 
-# 咨询级材料锻造 · Consulting Deck Forge
+# 咨询报告制作
 
-> 目标不是“好看的一组页”，而是**顶级咨询公司水准的、可供决策的视觉论证**：每一页有结论、证据、限制和行动含义；整套页有可连读的故事线、严格的图表编码和稳定的版式系统。
+目标是可核查、可阅读、能支持判断的报告。默认中文、16:9、阅读模式、自包含 HTML + 同版 PDF；用户指定的语言、画幅、品牌、页数和范围优先。不要承诺“完美”或把检查通过等同于咨询质量。
 
-默认使用中文、16:9与高对比度阅读设计。用户明确指定语言、品牌、画幅、页数或媒介时覆盖默认值。
+## 工作方式
 
-## 不可妥协的五项标准
+主笔负责总判断、方法选择、整篇标题链和最终成稿。仅在研究、计算、领域知识出现明确缺口时启用相应专家；复杂或重大材料另需实际独立实例审查。分工、输入输出和隔离要求见 [协作协议](references/collaboration.md)。没有可用的独立实例时，继续完成可做的工作并如实报告未独立验收，不能以换角色提示词冒充。
 
-1. **决策优先**：先写读者要做的具体选择，再组织信息；没有决策问题的“行业概览”不能直接进入制作。
-2. **证据优先**：事实、估计、假设、预测和建议分开；数值有来源、期间、分母、单位和状态；反证与未知不被静默删除。
-3. **标题即论证**：标题连读应构成一段可成立的判断；每个强词都要在本页主展品中找到对应证据或限定。
-4. **视觉即推理**：关系由位置、长度、共同基线、直接标签、机制结构或精确表格表达；不要用装饰、色块或演讲稿替代证据。
-5. **密度而不拥挤**：每页根据证明任务配置主展品、支持证据和含义；不接受普通分析页的大面积无解释留白，也不接受用卡片、图标或微字伪造饱满。
+开始时简要说明目标、材料缺口、预计页数范围及验收方式，然后直接工作。已知信息不重复问，阶段节点不要求用户批准。只在答案会改变任务方向且无法从材料确定时提问，同时推进不受影响的部分。记录主要阶段实际耗时、返工原因及可得的资源消耗；未测量不承诺固定用时。长报告先做代表页，不要求每完成一页都重建整册。
 
-## 先选路线
+## 1. 确定问题与证据边界
 
-| 用户要的成品 | 路线 | 实际制作工具 | 最终交付 |
-|---|---|---|---|
-| 可离线阅读、研究型长报告、决策材料、网页翻阅稿 | **静态报告路线** | 本技能随包 Node / HTML / PDF 工具链 | 自包含 HTML + 同版 PDF |
-| 单张图、海报、纯文案、PPT/PPTX、机械转格式 | 不触发本技能 | 使用图表、设计、写作或演示文稿能力 | 按具体任务 |
+确认读者、用途、核心问题、期间、对象、可用证据及限制。三种工作模式：
 
-本技能只产出静态报告：先生成一份**咨询 deck blueprint**，再进入制作，使用本技能的 `task.json`、`pages.json` 和 QA 脚本。它不产出 PPT/PPTX，也不把静态工具链冒充演示文稿生产。
+- `editorial`：已确认内容的组织与重排，保留原意，不擅自增加新结论。
+- `analytical`：需要计算、比较、建模或判断，先校验方法及口径。
+- `exploratory`：开放研究，允许以有限发现、未知和下一步验证收束，不强造投资建议或行动页。
 
-## 统一生产闭环
+用户材料先核对原文；本地材料已提供不等于外部事实已核实。只有任务需要时补充检索。把影响判断的主张区分为事实、估计、预测、假设、建议，记录来源、期间、对象、分母、单位、计算与限制。未知不填零，样本不当市场，相关性不当因果。
 
-### 0. 先估量级，报给用户，再动手
+## 2. 选方法，完成分析
 
-开工前先大致估一遍这一单有多大，**一次性**把结论告诉用户。这是**知情**，不是征求意见——说完就开始做，不要停下来等批复。
+按业务问题读取 [分析方法路由](references/analysis-methods.md)，选择解决当前问题的最少方法组合。需要的产物是可检验的关系及其边界，不是框架名称。经营拆解、规模与强度、单位经济、情景敏感性、竞争选择和定性机制各有不同前提。
 
-判断只看四项：
+审查特别注意：成本占比不能证明成本随规模的变化；人均收入不能直接证明生产率或盈利；作者设定的阈值只能触发核查，不能自动证明因果；预测及情景不能悄然写成历史事实。必要计算用可复算数据完成，不在正文里心算。
 
-| 看什么 | 小 | 中 | 大 |
-|---|---|---|---|
-| 正文页数 | ≤8 | 9–20 | >20 |
-| 证据来源 | 用户已给齐 | 需少量补充核实 | 需外部检索／多源对账 |
-| 计算口径 | 直接引用 | 有换算与归一 | 桥接／加权／多口径归一 |
-| 合同档位 | `simple` | `complex` | `complex` ＋ `majorConclusion: true`（触发独立复核） |
+## 3. 形成标题链与统一蓝图
 
-命中任一条即按**长任务**处理：**正文 >10 页**、**需要外部检索或多源对账**、**要独立复核**。拿不准就按长任务报——多说一句的成本，远低于让用户干等半天不知道在等什么。
+先写有条件的 `governingThought`，再按 [叙事方法](references/consulting-storyline.md) 形成“问题—证据—判断—边界”的推进。标题连读应有完整论证；每页 `proves` 对应画面能证明的关系。证据不够就缩小结论，不用强词弥补。
 
-长任务慢在哪要说清楚：不在写得多，而在**每一页都要走一遍装配 → 逐页预览 → 返工**，再加四道门禁和一次 PDF 导出。20 页就是 20 轮以上的反复，不是一次成稿。
-
-长任务开场说这一段（**只说一次**）：
-
-> 这一单规模偏大（约 N 页正文，需要做 X），在本技能里属于**长任务**：耗时明显长于普通写作，token 消耗也大，中间会有大量装配、预览、返工和审计。**建议现在开启自动授权**，否则每一条命令都要你点一次确认；开好之后**耐心等待**即可——我会按节点向你汇报（蓝图定稿、首版成页、整册过审），只有真正需要你拍板的事才会打断你。
-
-短任务（≤8 页且材料已给齐）不要念这段话，照常直接开工。
-
-三条纪律：
-
-- **只报一次**。范围没变就不重复播报，更不要逐页汇报进度。
-- **不是缩水的借口**。它只是知情，不豁免任何证据、审计或密度要求；页数由决策问题决定，不由预算决定。
-- **要问就问一件**。确实需要用户拍板时（例如 30 页以上是否拆批、是否先出 3 页样张再全量），只提这一个问题，不要附赠一串选项。
-
-**这一条没有任何脚本检查**——你没报量不会被拦住，它只能靠你执行。
-
-### 1. 定义决策合同
-
-提取并记录：读者及其决策权、决策问题、范围/期间、必须回答的问题、可用证据、已知限制、交付媒介、页数与品牌要求。用户已经说明的内容直接执行；仅在缺失会改变结论、范围、权限或外部行动时追问。
-
-将每项重要主张标记为**事实、估计、假设、预测或建议**。把会改变判断的口径、期间、分母、反例、阈值和未知列为必须保留的信息，而不是放入泛化免责声明。
-
-### 2. 先分析，不先压缩
-
-从原始材料中提炼关系：对象比较、时间变化、构成、分布、贡献、机制、条件、权衡和行动门槛。完成必要计算与口径核验；不要把相关性写成因果、把样本写成市场、把不同统计身份的数据并成一个总数。
-
-研究型任务先建立来源清单和主张—证据映射，再写正文。将改变判断的主张直接登记在蓝图的 `sourcePlan.claims`，沿用同一记录生成正文限定和来源索引，避免另维护相互漂移的台账；字段与状态见[证据身份记录](references/evidence-ledger.md)。本地材料已核对不等于外部来源已核实。
-
-### 3. 写总判断与叙事弧线
-
-先写一句 `governingThought`：对象、方向和条件/取舍必须明确。再选择符合问题的叙事弧线，例如“机会到取舍”“问题到修复”“不确定性到下注”或“证据到观点”。完整方法见 [咨询叙事与决策架构](references/consulting-storyline.md)。
-
-将所有页面标题连读。若它仍像“市场概览—竞争分析—建议”，停下来重写；应形成“为什么现在要做这个决定 → 证据显示什么 → 有什么边界/选项 → 推荐什么并如何验证”的连续推理。
-
-### 4. 先写并校验 deck blueprint
-
-新任务从 [deck blueprint 模板](templates/deck-blueprint.json) 创建一个蓝图。每页必须写清：
-
-- 页面角色与故事节拍；
-- 结论型标题、可选副标题、角标和讲述意图；
-- `proves`：读者必须看出的一个关系；
-- `visual`：主展品、图表/信息图形式、版式和阅读路径；
-- `density`：`dense` / `balanced` / `sparse`，以及不同职责的证据单元和留白用途；
-- `sourcePlan`：已核实、待核实，或为何不需外部来源。
-
-上面是“要写什么”。下面这些是“不写就过不去”，`deck_blueprint.cjs` 逐条拦：`schemaVersion` 只接受 `1`；**第 1 页必须是 `cover`**；`slide.id` 小写 kebab-case 且不重复；`sequence` 必须等于它在数组里的序号；`subtitle`／`cornerLabel`／`speakerIntent` **三个字段必须显式写出字符串**（内容可以为空，但字段不能省）；**正文达 3 页及以上**时，故事节拍里必须同时有 `diagnosis` 或 `insight`——不能只有背景和口号——**以及** `choice` 或 `action`；`visual.layout` 必须是布局目录里的编号（确实没有承载得住的骨架时写 `layoutExemptReason`，≥12 字）；`visual.form` 写 `custom` 时必须写 `rationale`。
-
-在制作前运行：
+新稿使用 [schemaVersion 2 蓝图](templates/deck-blueprint-v2.json) 与 [内容制作合同](references/content-authoring.md)。蓝图是标题、关键主张、来源、计算、密度和页面意图的权威源；`pages.json` version 4 是编译结果，不手工维护第二套内容。旧 schemaVersion 1 与 pages version 1–3 保留兼容，历史模板不作为新任务默认入口。
 
 ```sh
-node scripts/deck_blueprint.cjs /任务/deck-blueprint.json
+node scripts/deck_blueprint.cjs /任务/deck-blueprint.json --ready
+node scripts/compile_blueprint.cjs /任务/deck-blueprint.json /任务/pages.json
 ```
 
-校验失败时先修蓝图，不要直接在画布中堆内容。研究完成、进入实际画页前，再运行 `node scripts/deck_blueprint.cjs /任务/deck-blueprint.json --ready`；它会拒绝仍处于 `to_verify` 的主张。`dense` 页必须有主证据、背景/限制与行动/判断；`balanced` 页必须有主证据和一个不同职责的支持单元；`sparse` 页必须解释为何留白有助于决策。共享字段、模板与规则见 [页面密度合同](templates/deck-blueprint.json)。
+正文页必须有关键主张登记。已登记标题、主张身份、口径限制、来源和指标用可见 `data-content-key` 节点进入成稿；装配自动填值，最终 QA 重新验证。复杂材料先让独立实例复核标题链、计算和推断边界，解决会推翻整篇的错误后再批量制作。这不是用户审批，也不替代最终审查。
 
-复杂或重大材料在画页前让独立复核者先看标题链、关键主张记录、计算分母和条件分支，先解决会改变论证的错误。该复核是最终独立审查的前置部分，不增加用户审批，也不替代最终HTML/PDF逐页复核。
+## 4. 从证据关系选择表达与布局
 
-### 5. 先定布局，再定表达
+先确定比较、变化、构成、机制、条件或取舍，再选图形和可承载的布局；容量不足时重新组织，两者迭代。不要先选格子再凑证据。
 
-顺序不能颠倒：**先落母版（这是哪种页）→ 再从布局目录选布局（这一页的骨架）→ 最后决定每一格填什么形式（每一格放什么表达）**。
+- 目录布局是经过测量的原型：按需读 `assets/layout-atlas/catalog.json`，用 `layout_contract.measure()` 检查尺寸；选择后保留其模块和几何合同。
+- `visual.layout: "custom"` 是正常路线：声明阅读区域，自己写 CSS，接受相同的可读性、溢出、证据和打印检查。
+- 自绘 SVG 必须说明实际语义。瀑布统一从权威原始输入经内核诊断，起点、增量、终点必须闭合；示意图也不能出现错误加减关系。
+- 同类分面、连续同型图和表格可帮助比较。新稿不因图型/布局种数、重复次数或空白像素直接失败；相关诊断仍须结合画面解释或修复。
 
-布局不是建议，是约束。每条布局已经把正文区切成固定的 12×6 格子，并指定了每一格的槽位（能装图表、表格还是文字）、角色与容量（这一格装得下几行）。选定之后，作者的自由落在“每一格放哪种表达”，而不再需要发明结构。
+具体表达见 [表达指南](references/expression-guide.md)，区域、密度与组件类名见 [单页系统](references/consulting-page-system.md)。需要组件时运行 `node scripts/sweep_forms.cjs` 查询，原生 SVG 与 HTML 表格同样是有效表达。禁止伪 3D、无意义色条、未说明截轴、只靠颜色、悬停才可读的关键内容与以微字塞满页面。
 
-选布局**读** `assets/layout-atlas/catalog.json`（正文页取 `master: "analysis"` 的那 30 条），每条带 `use`（什么场合）、`path`（阅读路径）、`trade`（代价）、`avoid`（禁用条件）、`fill`、`modules`（逐格槽位、角色与容量）——选型要用的都在里面，不必打开网页。`assets/layout-atlas.html` 是同一份数据生成的人类视图（`scripts/build_layout_atlas.cjs`，`--check` 防漂移）。**布局清单只此一处权威**，方法论文档不再复述。
+## 5. 代表页收敛后批量生产
 
-选中布局后，用 `layout_contract.measure(布局编号, 画幅)` 查看逐格 `formFits`（调用示例见静态路线）。它按真实内区排除放不下的组件；有模块标题、单位行或多阶段流程时声明 `sizing`，蓝图与页面合同同步。没有登记最低尺寸的形式仍需实际预览。
+先做 2–3 张能够暴露不同风险的代表页：核心定量页、最密或最复杂页、定性/行动页。少于此规模时直接做全部。实际预览确认主图、支持证据、口径、字号、留白与来源安全区，再扩展全篇；保留合理重复的视觉语言。
 
-每一格的形式**不靠回忆挑**，按三步定：
+依 [静态 HTML/PDF 路线](references/static-html-pdf.md) 创建 `task.json`，绑定 blueprint 与 pages。首次环境运行或依赖变化时完成字体与能力探测；可复用已验证环境。制作期只预览受影响页，整册成形后做 smoke；不为每页导出一遍完整 PDF。
 
-1. **先读清单**：跑 `node scripts/sweep_forms.cjs`，它按族打印本技能登记的全部形式（带容量与旁解读）。**从打印出来的清单里挑**——登记的形式比你此刻想起来的那个多，凭记忆召回的结果永远是最近用过的那一个。
-2. **再写下这一格内容之间的真实关系**：并列？有序？有量值？还是一份整体的切分？
-3. **最后才问“用什么图”**，并在清单里找到与这个关系对应的形式。
+## 6. 验收和修订
 
-已见过三次“退回到最像的那个”，都发生在跳过第 1 步时：
+工程验证与判断审查各有边界，二者都要完成：
 
-| 这一格其实是 | 常见的错画法 | 该用的形式 |
-|---|---|---|
-| 一份整体的切分（几块相加正好是总量） | 画成排序柱状图——份额被读成名次 | `kit.shareBar`（单期）／`kit.stacked` |
-| 有序但没有任何数值（“三者的可防守性依次上升”） | 画成并列的几个框——次序被抹掉 | `html.finding`（依据层用**等宽**档位条标次序，不按长度画） |
-| 少量核心指标卡 | 自己手搓栅格——卡数一变就留空列 | `html.kpi`（`.kpi-grid` 按列流铺满整行） |
+1. **分析**：标题是否被支持，方法前提、分母、身份、边界与反证是否正确。字段齐全不能证明结论成立。
+2. **视觉**：实际查看最终 HTML/PDF 每页；读者能否看清关系、关键限定与来源。重点重看最密、最大空白、最复杂图、来源最多与最强结论页。
+3. **工程**：`qa_deck.cjs --tier acceptance` 核对绑定、布局、溢出、字体、打印、离线和最终证据；自动检查不替代读图。
+4. **交付**：实际作者与独立审查者分别记录所见，处置 warnings；合并 review 后打包。未解决 major/blocking 问题不称完成，未独立验收不冒充正式交付。
 
-表达选择、编码底线与禁忌见 [表达选型](references/expression-guide.md)；网格算术、容量表、槽位语义与留白纪律见 [咨询级单页系统](references/consulting-page-system.md)。
+具体命令与记录格式见 [静态路线](references/static-html-pdf.md) 和 [视觉验收](references/visual-qa.md)。首次完成审查后，使用 [审查快照与复用](references/review-reuse.md) 冻结原稿、证据与审查链。局部修订可准备继承草稿；变化页和全局判断仍须真实复核，工具不会预填 PASS。
 
-默认页面阅读顺序为：**结论标题 → 主展品 → 支持证据/限制 → 含义或行动 → 来源**。骨架可以不对称、可以阶梯推进、可以分面或泳道，但不要退回默认左图右文、等宽三栏卡片或金字塔——这三种结构不承载论证关系（色条、大图标等禁令见「单页硬规则」）。
+完成时给出 HTML/PDF、主要结论或变更、验证范围与尚存限制。没有做同题同模型对照实验，不声称某版本更快或总体更优。
 
-### 6. 执行生产路线
+## 按需参考
 
-阅读 [静态 HTML/PDF 路线](references/static-html-pdf.md)——**各命令的完整参数以那一份为唯一权威**，本节只点名脚本。使用 `task.json` 与 `pages.json`（新稿用模板里的 `v3`，它是布局三件生效的前提），并将每页的 `data-density-profile` 与页面合同一致。
-
-首次使用、升级依赖或浏览器环境变化时，先跑 `npm run setup-fonts` 与 `node scripts/probe_capabilities.cjs`：探测输出的挑战图**必须实际打开看过**，再以 `--verify` 记录结论。漏掉这两步，PDF 会在后面以难查的方式失败。`setup-fonts` 自己挑 ≥3.10 的解释器，挑不到会列出机器上的解释器并退出非 0——用 `FONT_PYTHON` 指一个，或先装一个，**不要改脚本去适配本机**。每完成一页即装配、预览和返工，而不是整册完成后才发现版式问题。
-
-### 7. 用轻量但严格的门禁收口
-
-不要用冗长的重复检查替代判断。只执行下面四道门：
-
-1. **蓝图门**：`node scripts/deck_blueprint.cjs`（进入画页前加 `--ready`，它会拒绝仍处于 `to_verify` 的主张）；蓝图与 `pages.json` 都定稿后，用 `node scripts/verify_blueprint_pages.cjs` 对账——页数、`proves`、形式、布局、密度不许漂移。
-2. **逐页门**：`node scripts/assemble_deck.cjs` 装配 → `node scripts/preview_page.cjs` 单页自查（制作期用，**物理上不产 audit 与证据**）→ 整册用 `node scripts/qa_deck.cjs --tier smoke`。实际预览中检查主证据、支持证据、标题—图形匹配、留白、来源安全区、对齐、文字对比和图表编码。逐页看不够——整册的类型种数有下限，见 [整册硬规则](#整册硬规则)。
-3. **最坏页门**：重看每种风险最高的一页：最密、最大留白、图表最复杂、来源最多、行动最强。复杂／重大材料由未参与制作者复核这些页和标题链——**这不是建议**：`complexity: complex` 或 `majorConclusion: true` 时 `reviewPolicy` 会被强制为 `independent`，缺 `independent.json` 交不了货。
-4. **交付门**：`node scripts/qa_deck.cjs --tier acceptance`（不带 `--tier` 时的默认档）→ `node scripts/aggregate_reviews.cjs` 汇总审查 → `node scripts/package_delivery.cjs` 打包。**所有 audit warnings 必须逐条处置**（`warningReview` 里写 `accepted` 或 `fixed`），未处置即失败。未看预览、未核实关键数字或未导出最终媒介，一律不称完成。
-
-## 单页硬规则
-
-下面 11 条分两类，标签必须看清：**［会拦］**＝成稿审计里有对应判据，违反会被脚本退回；**［自觉］**＝全库没有任何检查代码，只能靠作者判断和复核。两类在别处长得一模一样，混起来的代价是对称的——**把［自觉］当成会被拦，会一直等一个永远不会来的报错；把［会拦］当成可商量，会直接被退回。**
-
-- **［自觉］标题必须表达判断**；“驱动、导致、主要、最优、显著、唯一”等词必须有证据或改为条件性表述。没有强词检测器，脚本只查标题非空——这条只能靠自己和复核者。
-- **［自觉］主图承担第一页视线**；支持证据不能只是重复数字，而应提供基准、分母、异常、反例、机制条件、敏感性、风险或行动含义。脚本只查每页恰有一个 `primary` 角色，其余全靠判断。
-- **［会拦］空白与空档是硬判据，不是“能解释就行”**：`dense` / `balanced` 页上，正文对象下方空档 >120px、或正文内部空档 >112px 且超过正文高度 18%，成稿审计**直接报错**；**没有任何字段可以写理由**。真有正当理由（分组、聚焦、比较间隙、来源安全区）时的唯一出口是把这一页声明为 `sparse`——那会同时放宽本页密度要求，且必须写 `sparseReason`。返工顺序：补真实证据（基准／分母／反例／机制／行动含义）→ 重组阅读路径 → 收紧或改变主辅比例 → **最后**才调字号与间距，或改密度档。另有模块内“文字下方 >72px 且模块高 >140px”的警告。
-- **［自觉］用位置、长度、共同基线、直接标签和冗余编码表达比较**；颜色只辅助语义，不能成为唯一含义。几何只在作者自己写了 `data-geo-*` 锚点时才被量；“颜色不能是唯一含义”无人强制。
-- **［自觉］实际、预测、目标、缺失、零值、百分比和百分点必须分开**；构成图仅用于互斥可加的部分。只有瀑布与构成在渲染期拦得住。
-- **［会拦］瀑布、桥接与贡献排序必须能对账**：起点、增量、终点要对得上；缺失不等于 0，说不清的差额不许自动抹平。数据侧（原始记录怎么进、费率怎么加权、残差什么时候才承认）以 [瀑布数据合同](references/waterfall-bridge.md) 为唯一权威，渲染器不自己再算一遍；这一页在 `pages.json` 里声明 `waterfall` 后，成稿上的对账标记会被逐字核对。
-- **［自觉］机制图中箭头必须说明流向、条件、责任或证据状态**；箭头和等宽节点本身不证明因果、规模或时长。只查节点与泳道 id 唯一，箭头上的语义无人检查。
-- **［自觉／局部会拦］文字、表格、脚注和来源必须有足够对比度与安全区**；不以浅字配浅底、深字配深底，也不把决定判断的信息压成微字。**页面对比度没有任何检查代码**，来源安全区只报警告；硬的只有微字——正文 HTML 文字有效字号 <10px 直接报错，<12px 与图内数据文字 <13.5px 报警告。
-- **［会拦，仅 `html.finding`］`html.*` 形式是作者写标记、技能只给样式**，类名以 [类名契约](references/consulting-page-system.md) 为准，不要自己编：`html.kpi` 用 `.kpi-grid > .kpi-card > .kpi-label` / `.kpi-value` / `.kpi-note`，`html.finding` 用 `.finding__verdict` ＋ `.finding__grounds > .finding__step` ＋ `.finding__limit`。名字对不上时**既不报错也没有样式**——校验只认它认得的那几个类名，认不得的会被当成你自己的标记放过。`html.finding` 另有三条硬要求：依据**至少 3 条**、每条都要有 `.finding__label` 与 `.finding__why`、**画了档位条就必须至少亮到第 k 格**（全部不画可以）；判断／限定缺一、依据不足 3 条都会被拦。
-- **［会拦］每页必须显式声明 `data-frame-boundary="line"`｜`"integrated"`｜`"space"`**——没有静默默认值，**不写，装配阶段直接失败**；三种取值按这一页正文的结构选（有标题线／线与正文融合／纯留白分隔），不要照抄上一页。
-- **［会拦，仅装饰性边条族］禁止**伪3D定量图、装饰性色条（含**内嵌阴影模拟的边条**与**绝对定位窄色块贴边**）、顶部色条数字卡、无意义图标阵列、未说明量尺、依赖悬停的关键信息和“内容不足时的极简伪装”。其中**只有装饰性边条族有检测器**（还会报出用伪元素模仿边条的做法），其余全部靠自觉。
-
-## 整册硬规则
-
-单页看都对，整册仍可能因为通篇只有两三种图型而变得单调、论证方式单一。以下四条由 `pages.json` 校验强制，不靠自觉——**与「单页硬规则」不同，这一节没有一条属于［自觉］**。
-
-- **表达丰富度有下限**：正文**超过 10 页**须至少 **8 种**不同的图表/信息图/图示类型，**超过 20 页**须至少 **12 种**（可计入的形式取约三到四成，口径见 `scripts/richness_contract.cjs`）。计数口径是**页面网格里实际出现的每一种表达，逐格计数**——一页里三格分别是折线、瀑布、哑铃，就算三种。表格族（`table`）与结构化文字（`text`）不算图表，不计入；`svg.custom` 按作者在 `visual` 里声明的实际图型**分别计数**。
-  - **单页也不许只用一种**：一页网格已有 3 格以上、却只填出一种表达，直接报错。把空白格填满表格或 KPI 行不再是"凑版面"，它真的把这一页的表达撑开了。若那几格确实是同一证据的分面，写 `page.varietyReason`（至少 12 字）说明是哪个维度在分面。
-  - 不达标的**正路是补真实证据**以引入新的表达形式——不要为了凑数改用不合适的图型，那正是 [表达选型](references/expression-guide.md) 里说的"默认大概就用最像的那个"。若本主题确实用不了更多形式，写 `pages.diversityReason`（至少 12 字）说明原因；豁免会被记进 audit，不是静默放行。
-- **重复必须被解释**：同一形式第 3 次起、或连续 3 页同形式，须写 `repetitionReason`。这条不设下限，与上一条职责不同——重复本身可以是对的，但要说得出为什么。
-- **布局也要有变化**：正文**超过 10 页**须至少 **6 种**不同布局，**超过 20 页**须至少 **10 种**。表达管"用什么方式讲"，布局管"页面结构长什么样"，两者是独立的下限：三页同一种图不同，三页同一种结构也不同。这两个数与"同一布局第 3 次起须写 `layoutReason`"是对齐的——不写理由时每条布局最多用两次，N 页的天然上限就是 N/2，下限各留一条复用口子。可选的骨架有 30 条（analysis 母版），够用；确实只能用少数骨架时写 `pages.layoutDiversityReason`（至少 12 字）。
-- **布局必须真的落地**：每页声明 `layout` 后，`regions` 要按序逐格写形式，一格不能多也不能少，且不得在 `regions` 里写 `c/r/w/h`——几何由布局决定。成稿里每页要有 `data-layout`，每个模块要有 `data-module="<槽位>"` 且 DOM 顺序与布局逐格一致。QA 会逐格量实际矩形，模块没落在 12×6 的格线上，直接报出偏了几像素。
-
-版本边界要说准：密度与表达丰富度从 `pages.json v2` 起生效，布局那三条（`regions` 逐格对账、`data-layout`／`data-module` 对账、布局多样性下限）只对 `v3` 生效，老稿不会被它们追上。**但「重复必须被解释」没有版本门控，对 `v1` 也生效**——老稿里同一形式出现第 3 次而没写 `repetitionReason`，一样会被打回。
-
-## 按需读取
-
-| 需要解决的问题 | 打开文件 |
+| 任务 | 文件 |
 |---|---|
-| 形成总判断、标题链、页面角色、反证和行动门槛 | [咨询叙事与决策架构](references/consulting-storyline.md) |
-| **选这一页的骨架**：按母版找布局，看用途、代价与逐格容量 | [布局图谱](assets/layout-atlas.html)（数据源 `assets/layout-atlas/catalog.json`） |
-| 选择图表、表格、机制图、流程或复合表达 | [表达选型](references/expression-guide.md) |
-| 做瀑布图/桥接图：原始记录怎么进、费率怎么加权、残差什么时候才承认、怎么出图 | [瀑布数据合同](references/waterfall-bridge.md) |
-| 理解 12×6 网格算术、容量表、槽位语义与留白纪律；**查 `html.*` 形式的类名契约** | [咨询级单页系统](references/consulting-page-system.md) |
-| 生成离线 HTML/PDF、理解 task/pages/review 合同 | [静态 HTML/PDF 路线](references/static-html-pdf.md) |
-| 执行逐页视觉、证据和交付验收 | [视觉与证据验收](references/visual-qa.md) |
+| 业务方法与适用边界 | [analysis-methods](references/analysis-methods.md) |
+| 专家分工与独立审查 | [collaboration](references/collaboration.md) |
+| 总判断、标题链、有限结论 | [consulting-storyline](references/consulting-storyline.md) |
+| 蓝图、计算、可见内容绑定 | [content-authoring](references/content-authoring.md) |
+| 来源与主张身份 | [evidence-ledger](references/evidence-ledger.md) |
+| 瀑布数据与诊断 | [waterfall-bridge](references/waterfall-bridge.md) |
 
 ## 归因
 
-随包运行时基于 **Zerox Zhang 的 `consulting_deck_skill_concise`** 重组，遵循 Apache-2.0。保留随包 [LICENSE](LICENSE)；对外再分发时保留原许可证及适用归因。
-
-瀑布图的数据侧判据（三模式、加权费率与百分点贡献、容差用原始单位、“缺失≠0／不自动平账／残差不自动配平”、缺口清单按责任方分组）端口自 **`aeolus-period-waterfall`** 的 `diagnose()` 决策逻辑。**是端口而非依赖**：本技能不引入 Python、不读取该目录、不在任何路径上耦合它，只保留结论与规则，并把它们写进 [瀑布数据合同](references/waterfall-bridge.md)。
+运行时基于 Zerox Zhang 的 `consulting_deck_skill_concise` 重组，遵循 Apache-2.0，保留 [LICENSE](LICENSE)。瀑布数据判据端口自 `aeolus-period-waterfall` 的诊断逻辑；是规则移植，不依赖其目录。

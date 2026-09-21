@@ -182,7 +182,7 @@
     /* 对账结论挂在已有的零轴线上做属性，不做成可见文字：−0.0000004 这种串既超宽又没人要读。 */
     /* data-nodes 让 pages.json 声明的节点数有个能对账的现场：声明里的数字要么能核对，要么不该写。
        整串只在声明了内核报告时生成，未声明时仍是空串，老 spec 的输出逐字节不变。 */
-    const audit=chart?` data-role="reconciliation" data-residual="${esc(chart.residual===null||chart.residual===undefined?'':chart.residual)}" data-tolerance="${esc(chart.tolerance)}" data-nodes="${chart.bars.length}"`:'';
+    const audit=chart?` data-role="reconciliation" data-residual="${esc(chart.residual===null||chart.residual===undefined?'':chart.residual)}" data-tolerance="${esc(chart.tolerance)}" data-nodes="${chart.bars.length}" data-waterfall-model="${esc(WaterfallBridge.auditModel(chart))}"`:'';
     c.line(60,y(0),c.w-30,y(0),c.p.grid,audit);
     steps.forEach((v,i)=>{const x=65+i*dx;const barTop=y(Math.max(v.from,v.to)),barH=Math.abs(y(v.from)-y(v.to));const seen=(labelSeen.get(v.label)||0)+1;labelSeen.set(v.label,seen);const aw=c.anchor({id:'bar:'+(seen>1?v.label+'#'+seen:v.label),x:x+bw/2,y:barTop+barH/2,side:'top',value:v.value,label:v.label,box:{x,y:barTop,width:bw,height:barH},group:v.type});c.rect(x,barTop,bw,barH,v.type==='residual'?c.p.residual:v.type==='delta'?(v.value>=0?c.p.positive:c.p.negative):c.p.accent,`${aw} data-from="${v.from}" data-to="${v.to}"`);
       if(v.from===v.to)c.line(x,y(v.to),x+bw,y(v.to),c.p.ink);

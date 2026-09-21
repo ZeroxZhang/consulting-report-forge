@@ -28,6 +28,12 @@ async function assemble(options={}){
  const task=contractFile?contractApi.load(contractFile,outputFile,defaults):contractApi.normalize({},defaults);
  for(const key of ['kind','theme','typography','ratio'])if(options[key]!==undefined&&options[key]!==task[key])throw Error('命令参数与任务合同冲突：'+key);
  const {kind,theme,typography,ratio}=task;
+ const pagesRecord=contractFile?contractApi.authoredPageRecord(contractFile):null;
+ if(contractFile&&!pagesRecord)throw Error('任务合同缺少 pages.record');
+ const pagesApi=require('./check_pages.cjs');
+ const pagesContract=pagesRecord?pagesApi.load(pagesRecord,{ratio}):null;
+ if(pagesContract){const errors=contractApi.verifyPlan(task,path.dirname(path.resolve(outputFile)),pagesContract.doc);if(errors.length)throw Error(errors.join('；'));}
+ const contentPages=pagesContract?.doc.version===4?pagesContract.doc.pages.map(p=>({...p,pagePlanHash:contractApi.hash(contractApi.stable(p)),bindingMap:require('./content_contract.cjs').bindings(p)})):null;
  const input=path.resolve(pagesFile),output=path.resolve(outputFile),cssPath=cssFile?path.resolve(cssFile):null;
  if([input,cssPath,path.resolve(__dirname,'../assets/deck_engine.html')].includes(output))throw Error('输出不能覆盖正文、CSS或源引擎');
  if(!['fragment','report','collection'].includes(kind))throw Error('kind须为fragment/report/collection');
@@ -42,7 +48,7 @@ async function assemble(options={}){
   browser=await playwright().chromium.launch({channel:process.env.CHROME_CHANNEL||'chrome',headless:true});
   const page=await browser.newPage(),issues=[];page.on('pageerror',e=>issues.push(e.message));
   await page.route('**/*',route=>route.abort());
-  const assembled=await page.evaluate(({engine,pages,css,title,kind,ratio,mode,explicitContract,upto})=>{
+  const assembled=await page.evaluate(({engine,pages,css,title,kind,ratio,mode,explicitContract,upto,contentPages})=>{
    const doc=new DOMParser().parseFromString(engine,'text/html'),stage=doc.querySelector('#stage');
    if(!stage||doc.querySelectorAll('#stage').length!==1||stage.parentElement.id!=='viewport'||![...doc.querySelectorAll('.slide')].every(s=>stage.contains(s)))throw Error('引擎#stage结构已变化，需更新装配适配器');
    const template=document.createElement('template');template.innerHTML=pages;
@@ -52,7 +58,25 @@ async function assemble(options={}){
     if(node.nodeType!==Node.ELEMENT_NODE||node.tagName!=='SECTION'||!node.classList.contains('slide'))throw Error('顶层仅允许完整section.slide、style与空白/注释');
    }
    const all=[...template.content.children];if(!all.length||template.content.querySelectorAll('.slide').length!==all.length)throw Error('每页必须是独立的顶层section.slide，不能嵌套slide');
+   if(!contentPages&&template.content.querySelector('[data-content-key],[data-content-hash],[data-page-plan-hash]'))throw Error('内容绑定需要 schemaVersion 2 蓝图及 pages version 4，不能按历史片段静默处理');
    const BOOKENDS=['cover','references','back-cover','divider'];
+   if(contentPages){
+    const body=all.filter(s=>!BOOKENDS.includes(s.dataset.pageRole));
+    if(body.length!==contentPages.length)throw Error('正文片段与蓝图页数不一致');
+    body.forEach((slide,i)=>{
+     const p=contentPages[i];
+     if(slide.dataset.pageId!==p.id)throw Error('正文第'+(i+1)+'页 data-page-id 与蓝图id不一致');
+     const attrs={form:p.form,visual:p.visual||'',proves:p.proves,densityProfile:p.density.profile,layout:p.layout,semanticType:p.semanticType||'',contentHash:p.contentHash,pagePlanHash:p.pagePlanHash};
+     for(const [key,value] of Object.entries(attrs)){if(slide.dataset[key]!==undefined&&slide.dataset[key]!==value)throw Error(p.id+' 显式元数据冲突：'+key);slide.dataset[key]=value;}
+     for(const el of slide.querySelectorAll('[data-content-key]')){
+      if(el.children.length)throw Error('内容绑定必须为叶节点，不能覆盖已有图表或结构');
+      const raw=el.dataset.contentKey,keys=raw.startsWith('[')?JSON.parse(raw):[raw];
+      if(!Array.isArray(keys)||!keys.length||keys.some(k=>!Object.hasOwn(p.bindingMap,k)))throw Error(p.id+' 未知内容绑定：'+raw);
+      el.textContent=keys.map(k=>p.bindingMap[k]).join('；');
+     }
+    });
+    doc.documentElement.dataset.pageContractVersion='4';
+   }
    // 制作期只看前 N 页：首尾页留着（它们是整册骨架），正文只留前 N 页，其余从片段里摘掉。
    // 切在这里而不是切文件：上面已经用真解析器验过结构，再拿正则去截字符串只会引入第二套语法。
    if(upto){let content=0;for(const slide of all){if(BOOKENDS.includes(slide.dataset.pageRole))continue;if(content++<upto)continue;slide.remove();}
@@ -104,20 +128,17 @@ async function assemble(options={}){
    for(const script of doc.querySelectorAll('script[type="module"]')){if(script.textContent.includes('@icon-park/svg'))script.remove();else throw Error('未知引擎模块依赖');}
    const style=doc.createElement('style');style.id='deck-author';style.textContent=authorCSS.join('\n');doc.head.append(style);
    return {html:'<!DOCTYPE html>\n'+doc.documentElement.outerHTML,pages:slides.length,slideForms,partial:upto||null};
-  },{engine,pages,css,title,kind,ratio,mode:task.mode,explicitContract:!!contractFile,upto});
+  },{engine,pages,css,title,kind,ratio,mode:task.mode,explicitContract:!!contractFile,upto,contentPages});
   // 形式取值走封闭枚举：写了就必须是真能渲染出来的入口，不是自造名字。
   const deckForms=require('../assets/deck-forms.js');
   for(const item of assembled.slideForms)if(item.form){try{deckForms.get(item.form);}catch(error){throw Error('第'+item.page+'页 data-form="'+item.form+'"：'+error.message);}}
   // pages.json 是 S3 的机器可读产物：逐页形式必须与成稿一一对应。
-  const pagesRecord=contractFile?contractApi.authoredPageRecord(contractFile):null;
-  if(contractFile&&!pagesRecord)throw Error('任务合同缺少 pages：页面蓝图阶段须产出 pages.json，并在 task.json 用 {"pages":{"record":"pages.json","sha256":"..."}} 绑定（字段见 references/static-html-pdf.md）');
-  if(pagesRecord){
-   const pagesApi=require('./check_pages.cjs'),pagesContract=pagesApi.load(pagesRecord,{ratio});
+  if(pagesContract){
    // verifyDeck 要把 pages.json 的 waterfall 声明与成稿零轴线上的属性逐字对账。上面那个 evaluate 只搬结构，
    // 不产生 DOM 事实；缺了事实，对账会把"没法核对"误报成"成稿里没有对账零轴"——一句假话，且必然阻断。
    // 所以这里补一次现场测量。复用 page_probe 的 inspectDom 而不是再抄一遍属性名：
    // 两处各写一份的话，改一处漏一处就会重新长出这种假事实。只对真的声明了 waterfall 的册子跑，老稿不受影响。
-   if(pagesContract.doc.pages.some(page=>page&&page.waterfall)){
+   if(contentPages||pagesContract.doc.pages.some(page=>page&&page.waterfall)){
     const probe=require('./page_probe.cjs');
     // 上面那个 evaluate 产出的是一个 DOMParser 文档再序列化出来的字符串，页面里那个 #stage 并不是它；
     // 而且此时成稿还没上主题、引擎脚本也还没跑。所以另开一个关掉脚本的页面来量：
@@ -127,7 +148,11 @@ async function assemble(options={}){
      await probePage.setContent(assembled.html,{waitUntil:'domcontentloaded'});
      const slidesLoc=probePage.locator('#stage .slide'),count=await slidesLoc.count();
      if(count!==assembled.slideForms.length)throw Error('装配后 #stage 下有 '+count+' 页，与逐页形式表 '+assembled.slideForms.length+' 条对不上');
-     for(let i=0;i<count;i++)assembled.slideForms[i].waterfall=(await slidesLoc.nth(i).evaluate(probe.inspectDom,probe.WF_FORMS)).waterfall;
+     for(let i=0;i<count;i++){
+      await slidesLoc.evaluateAll((es,index)=>es.forEach((s,j)=>s.classList.toggle('active',index===j)),i);
+      const facts=await slidesLoc.nth(i).evaluate(probe.inspectDom,probe.WF_FORMS);
+      Object.assign(assembled.slideForms[i],{waterfall:facts.waterfall,bindings:facts.bindings,title:facts.title,contentHash:facts.contentHash,semanticType:facts.semanticType,pagePlanHash:facts.pagePlanHash,pageId:facts.pageId});
+     }
     }finally{await probePage.close();}
    }
    // pages.json 记录的 sha256 仍在 load 里照常核对——切片只收窄成稿要对账的条目，不改动那份记录。

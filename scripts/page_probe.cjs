@@ -87,7 +87,12 @@ function inspectDom(s, wfForms) {
     /* 多于一条对账零轴意味着这一页有两次体检结论，声明只能写一个，必然对不上。 */
     residual: auditAxes.length === 1 ? (auditAxes[0].getAttribute('data-residual') || '') : null,
     tolerance: auditAxes.length === 1 ? (auditAxes[0].getAttribute('data-tolerance') || '') : null,
-    nodes: auditAxes.length === 1 ? Number(auditAxes[0].getAttribute('data-nodes')) : null
+    nodes: auditAxes.length === 1 ? Number(auditAxes[0].getAttribute('data-nodes')) : null,
+    model: auditAxes.length === 1 ? auditAxes[0].getAttribute('data-waterfall-model') : null,
+    bars: auditAxes.length === 1 ? [...(auditAxes[0].closest('svg')?.querySelectorAll('[data-from][data-to]')||[])].filter(e=>e.getAttribute('data-role')==='bar'||e.tagName.toLowerCase()==='rect'&&(e.getAttribute('data-anchor-id')||'').startsWith('bar:')).map(e=>{
+      const numeric=key=>e.hasAttribute(key)&&e.getAttribute(key).trim()!==''?Number(e.getAttribute(key)):null;
+      return {label:e.getAttribute('data-anchor-label'),type:e.getAttribute('data-semantic')||e.getAttribute('data-anchor-group'),value:e.hasAttribute('data-value')?numeric('data-value'):numeric('data-anchor-value'),from:numeric('data-from'),to:numeric('data-to')};
+    }):[]
   };
   const notePad = [], noteSeen = new Set();
   for (const e of s.querySelectorAll('*')) {
@@ -113,6 +118,30 @@ function inspectDom(s, wfForms) {
     };
   });
   return {
+    bindings: [...s.querySelectorAll('[data-content-key]')].map(e => {
+      const r=e.getBoundingClientRect(); let visible=r.width>0&&r.height>0;
+      const reasons=[];
+      if(typeof e.checkVisibility==='function'&&!e.checkVisibility({checkOpacity:true,checkVisibilityCSS:true,contentVisibilityAuto:true}))reasons.push('浏览器判定不可见');
+      // 关键文字不能借裁切/遮罩藏起来。图形可裁切，但绑定标签应放到未裁切的文字层。
+      for(let p=e;p&&p!==s.parentElement;p=p.parentElement){
+        const cs=getComputedStyle(p);
+        if(cs.display==='none'||cs.visibility==='hidden'||cs.visibility==='collapse'||Number(cs.opacity)===0||cs.contentVisibility==='hidden')reasons.push('隐藏祖先或节点');
+        if(cs.clipPath&&cs.clipPath!=='none'||cs.clip&&cs.clip!=='auto'||cs.maskImage&&cs.maskImage!=='none'||cs.webkitMaskImage&&cs.webkitMaskImage!=='none')reasons.push('关键文字处于裁切或遮罩层');
+        if(/opacity\(\s*0(?:\.0+)?%?\s*\)/.test(cs.filter||''))reasons.push('透明滤镜');
+      }
+      const cs=getComputedStyle(e);
+      // SVG 的 fill-opacity/stroke-opacity 可从 g 继承，文字仍在 DOM/PDF 文本层而没有像素。
+      // 同时允许无填充但有可见描边的文字，不能仅凭 fill:none 判隐藏。
+      const hasPaint=(paint,opacity=1)=>Number(opacity)>0&&paint!=='transparent'&&paint!=='none'&&!/rgba\([^)]*,\s*0(?:\.0+)?\s*\)/.test(paint)&&!/[\/]\s*0(?:\.0+)?%?\s*\)$/.test(paint);
+      const painted=e instanceof SVGElement
+        ?hasPaint(cs.fill,cs.fillOpacity)||(parseFloat(cs.strokeWidth)>0&&hasPaint(cs.stroke,cs.strokeOpacity))
+        :hasPaint(cs.webkitTextFillColor||cs.color);
+      if(!painted)reasons.push('文字透明');
+      const box=s.getBoundingClientRect();if(r.right<=box.left||r.left>=box.right||r.bottom<=box.top||r.top>=box.bottom)reasons.push('位于页面之外');
+      visible=visible&&!reasons.length;
+      return {key:e.dataset.contentKey,text:e.textContent,visible,...(reasons.length?{visibilityReasons:[...new Set(reasons)]}:{})};
+    }),
+    pageId:s.dataset.pageId||'',pagePlanHash:s.dataset.pagePlanHash||'',contentHash: s.dataset.contentHash || '', semanticType:s.dataset.semanticType || '',
     exhibits, finding, textEvidence, unreadableText: unreadable, form: s.dataset.form || null, visual: s.dataset.visual || '', proves: s.dataset.proves || '', densityProfile: s.dataset.densityProfile || '',
     // v3 布局绑定：QA 拿它和 pages.json、布局目录三方对账。
     layout: s.dataset.layout || '', modules: [...s.querySelectorAll('[data-module]')].map(e => e.dataset.module || ''),

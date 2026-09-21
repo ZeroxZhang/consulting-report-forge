@@ -129,7 +129,7 @@ node scripts/deck_blueprint.cjs /任务/deck-blueprint.json
 
 阅读 [静态 HTML/PDF 路线](references/static-html-pdf.md)——**各命令的完整参数以那一份为唯一权威**，本节只点名脚本。使用 `task.json` 与 `pages.json`（新稿用模板里的 `v3`，它是布局三件生效的前提），并将每页的 `data-density-profile` 与页面合同一致。
 
-首次使用、升级依赖或浏览器环境变化时，先跑 `npm run setup-fonts` 与 `node scripts/probe_capabilities.cjs`：探测输出的挑战图**必须实际打开看过**，再以 `--verify` 记录结论。漏掉这两步，PDF 会在后面以难查的方式失败。每完成一页即装配、预览和返工，而不是整册完成后才发现版式问题。
+首次使用、升级依赖或浏览器环境变化时，先跑 `npm run setup-fonts` 与 `node scripts/probe_capabilities.cjs`：探测输出的挑战图**必须实际打开看过**，再以 `--verify` 记录结论。漏掉这两步，PDF 会在后面以难查的方式失败。`setup-fonts` 自己挑 ≥3.10 的解释器，挑不到会列出机器上的解释器并退出非 0——用 `FONT_PYTHON` 指一个，或先装一个，**不要改脚本去适配本机**。每完成一页即装配、预览和返工，而不是整册完成后才发现版式问题。
 
 ### 7. 用轻量但严格的门禁收口
 

@@ -14,6 +14,10 @@ node scripts/probe_capabilities.cjs /tmp/report-forge-probe
 node scripts/probe_capabilities.cjs /tmp/report-forge-probe --verify
 ```
 
+`setup-fonts` 不假定系统 `python3` 够用。它按 `FONT_PYTHON` > `python3.13/3.12/3.11/3.10/python3/python` 的顺序挑第一个满足下限的解释器（当前 ≥3.10，来自 `scripts/requirements-fonts.txt` 里 zopfli 的版本 pin）；已有 venv 的解释器够用就复用，版本不足就重建。`FONT_PYTHON` 与 `pack_fonts.cjs`、`probe_capabilities.cjs` 是同一个覆盖口，指一次即可，后续构建沿用同一个解释器。
+
+挑不到时它退出非 0，并列出机器上找到的每个解释器及版本、标出哪个版本不足。这时**不要改脚本去适配本机**——按输出里的两条路自己判断：优先 `FONT_PYTHON=/已有的/解释器 npm run setup-fonts`；确实没有 ≥3.10 的解释器，就先装一个（uv / pyenv / 系统包管理器）再重跑。这一步只影响构建期的字体子集嵌入，不阻断已生成的成稿与交付。
+
 默认调用本地 Chrome。若环境没有 Chrome，可安装 Playwright Chromium，并在所有启动浏览器的命令前设置 `CHROME_CHANNEL=chromium`：
 
 ```sh

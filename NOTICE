@@ -1,0 +1,21 @@
+Consulting Report Forge
+Copyright 2026 Zerox Zhang
+
+This project's original code, skill documentation, and original demonstration
+materials are licensed under the Apache License, Version 2.0. See LICENSE.
+
+The bundled report runtime is derived from Zerox Zhang's
+consulting_deck_skill_concise:
+https://github.com/ZeroxZhang/consultancy_charts_concise/tree/main/consulting_deck_skill_concise
+It has been reorganized and modified for this project.
+
+The inherited LICENSE contains these attribution notices, retained here:
+Portions Copyright (c) Microsoft Corporation.
+Portions Copyright 2017 Google Inc.
+
+The waterfall data rules were ported from the diagnose() decision logic of
+aeolus-period-waterfall, as documented in SKILL.md. It is not a runtime dependency.
+
+Bundled fonts retain their SIL Open Font License notices in assets/fonts/.
+Third-party components and third-party source materials retain their respective
+licenses and rights. See THIRD_PARTY_NOTICES.md.

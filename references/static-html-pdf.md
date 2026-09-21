@@ -4,7 +4,7 @@
 
 ## 安装与环境探测
 
-在实际技能根目录运行。首次使用、升级依赖或浏览器环境变化时执行探测；探测输出的挑战图必须实际打开查看，再以 `--verify` 记录结论。构建需要 Node 18+、Chrome、Playwright、Poppler、Python/fontTools 和随包字体资源。
+在实际技能根目录运行。首次使用、升级依赖或浏览器环境变化时执行探测；探测输出的挑战图必须实际打开查看，再以 `--verify` 记录结论。构建需要 Node 20+（当前锁定的 Playwright/PDF.js 依赖要求）、Chrome、Playwright、Poppler、Python/fontTools 和随包字体资源。
 
 ```sh
 npm ci

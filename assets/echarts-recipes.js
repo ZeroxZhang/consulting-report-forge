@@ -1,14 +1,17 @@
 /* ECharts 6 咨询图表配方：统一输入校验、标签、语义色和静态渲染入口。 */
 (function(root,factory){
-  const api=factory();
+  const policy=typeof module==='object'&&module.exports?require('./form-capacity.js'):root.FormCapacity;
+  const api=factory(policy);
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(root)root.EChartsRecipes=api;
-})(typeof window!=='undefined'?window:null,function(){
+})(typeof window!=='undefined'?window:null,function(policy){
   'use strict';
+  if(!policy)throw new Error('EChartsRecipes 需要 form-capacity.js');
 
   const VERSION='1.1.0';
   const colors=['@accent','@cat-2','@cat-3','@cat-4','@cat-5','@cat-6'];
-  const limits={rankedBar:24,groupedBar:12,timeSeries:36,composition:12,histogram:24,scatter:200,heatmap:160,sankeyNodes:30,sankeyLinks:60,treeNodes:48};
+  const cap=(form,key)=>policy.limit('recipe.'+form,key);
+  const limits={rankedBar:cap('rankedBar','items'),groupedBar:cap('groupedBar','categories'),groupedSeries:cap('groupedBar','series'),timeSeries:cap('timeSeries','periods'),timeSeriesSeries:cap('timeSeries','series'),composition:cap('composition','items'),compositionSeries:cap('composition','series'),histogram:cap('histogram','bins'),scatter:cap('scatter','items'),heatmap:cap('heatmap','cells'),sankeyNodes:cap('sankey','nodes'),sankeyLinks:cap('sankey','links'),treeNodes:cap('tree','nodes')};
 
   function fail(message){throw new Error(message);}
   function list(value,name){if(!Array.isArray(value)||!value.length)fail(name+' 必须是非空数组');return value;}
@@ -46,7 +49,7 @@
 
   function groupedBar(spec={}){
     const categories=list(spec.categories,'categories').map((d,i)=>text(d,'categories['+i+']'));
-    const series=list(spec.series,'series');count(categories.length,limits.groupedBar,'簇状柱类别数');count(series.length,4,'簇状柱系列数');
+    const series=list(spec.series,'series');count(categories.length,limits.groupedBar,'簇状柱类别数');count(series.length,limits.groupedSeries,'簇状柱系列数');
     series.forEach((s,i)=>{text(s.name,'series['+i+'].name');if(!Array.isArray(s.values)||s.values.length!==categories.length)fail('series['+i+'].values 与 categories 长度不一致');s.values.forEach((v,j)=>num(v,'series['+i+'].values['+j+']'));});
     const hasNegative=series.some(s=>s.values.some(v=>v<0));
     return {animation:false,tooltip:{show:false},legend:{bottom:0,textStyle:{color:'@gray-1'}},grid:grid({bottom:48}),xAxis:categoryAxis(categories,{axisLabel:{color:'@ink',interval:0}}),yAxis:valueAxis(spec,{min:hasNegative?undefined:0}),series:series.map((s,i)=>({name:s.name,type:'bar',barMaxWidth:30,itemStyle:{color:roleColor(s.role,i)},label:{show:true,position:'top',formatter:'{c}',color:'@ink'},data:s.values.map(v=>({value:v,label:{position:v<0?'bottom':'top'}}))}))};
@@ -54,7 +57,7 @@
 
   function timeSeries(spec={}){
     const periods=list(spec.periods,'periods').map((d,i)=>text(d,'periods['+i+']'));
-    const series=list(spec.series,'series');count(periods.length,limits.timeSeries,'时间点数');count(series.length,5,'折线系列数');
+    const series=list(spec.series,'series');count(periods.length,limits.timeSeries,'时间点数');count(series.length,limits.timeSeriesSeries,'折线系列数');
     series.forEach((s,i)=>{text(s.name,'series['+i+'].name');if(!Array.isArray(s.values)||s.values.length!==periods.length)fail('series['+i+'].values 与 periods 长度不一致');s.values.forEach((v,j)=>{if(v!==null)num(v,'series['+i+'].values['+j+']');});});
     const values=series.flatMap(s=>s.values).filter(v=>v!==null);
     // 每个期间都必须出现：交给 axisLabel.interval 自动抽稀会静默丢掉期号，实测验收看不出被丢的是哪一期。
@@ -74,7 +77,7 @@
   function composition(spec={}){
     if(!['absolute','percent',undefined].includes(spec.mode))fail('composition.mode 应为 absolute 或 percent');
     const items=list(spec.items,'items');count(items.length,limits.composition,'构成类别数');
-    const first=list(items[0].segments,'items[0].segments').map((d,i)=>text(d.label,'items[0].segments['+i+'].label'));count(first.length,6,'构成系列数');
+    const first=list(items[0].segments,'items[0].segments').map((d,i)=>text(d.label,'items[0].segments['+i+'].label'));count(first.length,limits.compositionSeries,'构成系列数');
     if(new Set(first).size!==first.length)fail('构成系列名称必须唯一');
     const rows=items.map((item,i)=>{text(item.label,'items['+i+'].label');const segs=list(item.segments,'items['+i+'].segments');if(segs.length!==first.length)fail('所有类别必须显式列出相同系列');const values=segs.map((seg,j)=>{if(text(seg.label,'segment.label')!==first[j])fail('所有类别的系列顺序必须一致');const v=num(seg.value,'segment.value');if(v<0)fail('构成值不能为负数');return v;});const total=values.reduce((a,b)=>a+b,0);if(total<=0)fail('构成总量必须大于0');return {label:item.label,values,total};});
     const percent=spec.mode==='percent';
@@ -94,7 +97,7 @@
     const actualMax=Math.max(0,...items.map(d=>d.size||0));
     const maxSize=spec.sizeDomainMax===undefined?actualMax:num(spec.sizeDomainMax,'sizeDomainMax');
     if(maxSize<actualMax||maxSize<0)fail('sizeDomainMax必须覆盖全部规模');
-    return {animation:false,tooltip:{show:false},grid:grid({right:58,top:46,bottom:60}),xAxis:valueAxis({unit:spec.xUnit||''},{name:(spec.xLabel||'X')+(spec.xUnit?'（'+spec.xUnit+'）':''),nameLocation:'middle',nameGap:28}),yAxis:valueAxis({unit:spec.yUnit||''},{name:(spec.yLabel||'Y')+(spec.yUnit?'（'+spec.yUnit+'）':'')}),series:[{type:'scatter',clip:false,symbolSize:v=>v[2]===null?10:maxSize===0?0:Math.sqrt(v[2]/maxSize)*42,data:items.map((d,i)=>({name:d.label,value:[d.x,d.y,d.size],itemStyle:{color:d.selected?'@accent':roleColor(d.role||'neutral',i),opacity:d.selected?1:.78},label:{show:d.selected||items.length<=15,formatter:d.label,position:'top',color:'@ink',fontWeight:d.selected?700:400}})),markLine:spec.referenceLines?{symbol:'none',silent:true,lineStyle:{color:'@gray-3',type:'dashed'},data:spec.referenceLines}:undefined}]};
+    return {animation:false,tooltip:{show:false},grid:grid({right:58,top:46,bottom:60}),xAxis:valueAxis({unit:spec.xUnit||''},{name:(spec.xLabel||'X')+(spec.xUnit?'（'+spec.xUnit+'）':''),nameLocation:'middle',nameGap:28}),yAxis:valueAxis({unit:spec.yUnit||''},{name:(spec.yLabel||'Y')+(spec.yUnit?'（'+spec.yUnit+'）':'')}),series:[{type:'scatter',clip:false,symbolSize:v=>v[2]===null?10:maxSize===0?0:Math.sqrt(v[2]/maxSize)*42,data:items.map((d,i)=>({name:d.label,value:[d.x,d.y,d.size],itemStyle:{color:d.selected?'@accent':roleColor(d.role||'neutral',i),opacity:d.selected?1:.78},label:{show:d.selected||items.length<=policy.limit('recipe.scatter','labeledPoints','softMax'),formatter:d.label,position:'top',color:'@ink',fontWeight:d.selected?700:400}})),markLine:spec.referenceLines?{symbol:'none',silent:true,lineStyle:{color:'@gray-3',type:'dashed'},data:spec.referenceLines}:undefined}]};
   }
 
   function heatmap(spec={}){

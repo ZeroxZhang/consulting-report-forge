@@ -34,10 +34,15 @@ function claimErrors(source, where, ready) {
 }
 
 function validate(doc, options = {}) {
+  if (doc?.schemaVersion === 3) {
+    const errors = require('./analysis_contract.cjs').validate(doc, {...options, stage: options.ready ? 'ready' : (options.stage || 'research')});
+    return {status: errors.length ? 'FAIL' : 'PASS', errors, inventory: inventory(doc)};
+  }
   const errors = [], bad = message => errors.push(message);
   const ready = options.ready === true;
   if (!doc || typeof doc !== 'object' || Array.isArray(doc)) return {status: 'FAIL', errors: ['blueprint 须为对象']};
   if (![1, 2].includes(doc.schemaVersion)) bad('blueprint.schemaVersion 只接受 1（历史）或 2（统一内容）');
+  if(doc.analysis!==undefined||doc.claims!==undefined||doc.artifacts!==undefined)bad('分析字段只能使用 schemaVersion 3，不能降级隐藏分析合同');
   const deck = doc.deck;
   if (!deck || typeof deck !== 'object') bad('blueprint 缺少 deck');
   else {
@@ -121,14 +126,22 @@ function load(file, options = {}) {
   return {doc, inventory: result.inventory};
 }
 
+module.exports = {PAGE_ROLES, STORY_BEATS, CONTENT_ROLES, claimErrors, validate, inventory, load};
+
 if (require.main === module) {
   try {
-    const args = process.argv.slice(2), ready = args.includes('--ready'), files = args.filter(arg => arg !== '--ready');
-    if (files.length !== 1) throw Error('用法: node scripts/deck_blueprint.cjs blueprint.json [--ready]；--ready 会拒绝仍待核实的来源计划');
-    const result = validate(JSON.parse(fs.readFileSync(files[0], 'utf8')), {ready});
+    const args=process.argv.slice(2), file=args.shift(), options={};
+    if(!file)throw Error('用法：node scripts/deck_blueprint.cjs blueprint.json [--task task.json] [--stage research|synthesis] [--ready] [--preview]');
+    for(let i=0;i<args.length;i++) {
+      if(args[i]==='--ready')options.ready=true;
+      else if(args[i]==='--preview')options.preview=true;
+      else if(args[i]==='--stage'&&args[i+1])options.stage=args[++i];
+      else if(args[i]==='--task'&&args[i+1])options.task=require('./report_contract.cjs').readAnalysisTask(args[++i],file);
+      else throw Error('未知或缺值的选项：'+args[i]);
+    }
+    options.baseDir=require('node:path').dirname(require('node:path').resolve(file));
+    const result = validate(JSON.parse(fs.readFileSync(file, 'utf8')), options);
     console.log(JSON.stringify(result, null, 2));
     if (result.status !== 'PASS') process.exitCode = 1;
   } catch (error) { console.error(error.message); process.exitCode = 1; }
 }
-
-module.exports = {PAGE_ROLES, STORY_BEATS, CONTENT_ROLES, validate, inventory, load};

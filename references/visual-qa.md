@@ -13,7 +13,7 @@
 | 最坏页 | 最高风险视觉和证据问题 | 在逐页检查基础上，每类重点复看一页：最密、最大空白、最复杂图、来源最多、最强结论 | 无微字、遮挡、空洞、误导编码或来源丢失；标题与主证据一致 |
 | 交付 | 最终媒介及未决风险 | acceptance audit + 真实审查 | 无 blocking/major 未决项；最终媒介实际打开；审查引用实际预览而非自动结果 |
 
-蓝图校验：`node scripts/deck_blueprint.cjs /任务/deck-blueprint.json`。成稿还须执行 acceptance 档作为交付门禁。
+蓝图校验：`node scripts/deck_blueprint.cjs /任务/deck-blueprint.json --task /任务/task.json --ready`。成稿还须执行 acceptance 档作为交付门禁。
 
 ## 整页检查
 

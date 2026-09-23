@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 3,
+  "deck": {
+    "title": "合成示例：同口径收入比较",
+    "audience": "经营研究读者",
+    "decision": "理解收入变化及预测边界",
+    "mode": "reading",
+    "ratio": "16x9"
+  },
+  "sources": {},
+  "slides": [],
+  "claims": [],
+  "artifacts": [],
+  "analysis": {
+    "brief": {
+      "question": "收入增长能否证明利润改善？",
+      "purpose": "diagnosis",
+      "scope": "合成业务",
+      "period": "2024–2025",
+      "baseline": "2024同口径收入",
+      "constraints": "缺成本",
+      "successCriteria": "区分已知变化与利润未知"
+    },
+    "issues": [],
+    "gaps": [],
+    "workItems": [],
+    "options": [],
+    "synthesis": {
+      "answerClaimRefs": [],
+      "openIssueRefs": [],
+      "basis": ""
+    }
+  }
+}

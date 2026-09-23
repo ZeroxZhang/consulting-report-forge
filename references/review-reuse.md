@@ -15,7 +15,7 @@ node scripts/snapshot_review.cjs /任务/renders/audit.json /任务/renders/revi
 快照包含：
 
 - 原字节的 HTML、PDF、HTML/PDF 页面图像；
-- `task.pages` 与 `task.blueprint` 引用的原始记录（存在时）；
+- `task.pages`、`task.blueprint`、`task.analysisReview` 引用的原始记录，以及 schema3 登记的本地输入/模型附件（存在时）；
 - 重写为相对路径并重新计算关联摘要的 audit 和 review；
 - 被继承的历史审查及其全部验证依赖，递归复制到 `history/`；
 - 记录每个文件摘要的 `snapshot.json`。
@@ -68,3 +68,5 @@ node scripts/snapshot_review.cjs /任务/renders/audit.json /任务/renders/revi
 快照会把这些 partial 历史依赖一同复制并重新绑定。循环、超过 12 层的来源链、无效摘要、目录外依赖及篡改都会被拒绝。新一轮快照不会静默删除历史引用来伪装成直接审查。
 
 `node scripts/test_review_reuse.cjs` 使用文件级两轮验收夹具，覆盖原位置覆写、单页复用、样式/图像失效、身份与双媒介范围、历史 partial、目录迁移、来源合同不一致与篡改拒绝。它测试复用机制，不替代实际报告的视觉和分析验收。
+
+新分析使用最终 review4；复用草稿的 analysisSha256 初始为空，须实际确认本轮分析后填写。分析审查摘要不直接进入视觉公共依赖，但其真实性和当前分析适用性仍由前置及最终合同核对。快照可能含内部数据，不能默认当对外材料发送。

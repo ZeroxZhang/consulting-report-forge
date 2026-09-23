@@ -49,7 +49,22 @@ function inspectDom(s, wfForms) {
   }).map((e, j) => {
     const id = 'p' + ([...s.parentElement.querySelectorAll('.slide')].indexOf(s) + 1) + '-ex' + j;
     e.setAttribute('data-deck-exhibit-id', id);
-    return {id, tag: e.tagName, labels: [...e.querySelectorAll('text')].map(t => t.textContent.trim()).filter(Boolean)};
+    const form=e.getAttribute('data-form')||null;
+    const visiblePart=part=>{if(!part)return false;const r=part.getBoundingClientRect();if(r.width<=0&&r.height<=0)return false;for(let n=part;n&&n!==e.parentElement;n=n.parentElement){const cs=getComputedStyle(n);if(cs.display==='none'||cs.visibility==='hidden'||cs.visibility==='collapse'||Number(cs.opacity)===0)return false;}return true;};
+    const colorVisible=value=>!!value&&value!=='none'&&value!=='transparent'&&!/^rgba?\([^)]*,\s*0(?:\.0+)?\)$/.test(value);
+    const strokeVisible=part=>{if(!visiblePart(part))return false;const cs=getComputedStyle(part);return colorVisible(cs.stroke)&&Number(cs.strokeOpacity)>0&&parseFloat(cs.strokeWidth)>0;};
+    const shapeVisible=part=>{if(!visiblePart(part))return false;const cs=getComputedStyle(part);return colorVisible(cs.fill)&&Number(cs.fillOpacity)>0||strokeVisible(part);};
+    const diagram=form?.startsWith('diagram.')?{
+      contract:e.getAttribute('data-diagram-contract'),
+      nodes:[...e.querySelectorAll('[data-node]')].filter(visiblePart).map(n=>({id:n.getAttribute('data-node'),role:n.getAttribute('data-node-role'),lane:n.getAttribute('data-lane'),stage:n.getAttribute('data-stage'),shape:shapeVisible(n.querySelector('polygon'))?'diamond':shapeVisible(n.querySelector('rect'))&&n.querySelector('rect').getAttribute('rx')==='12'?'round':'rect',label:[...n.querySelectorAll('text')].filter(shapeVisible).map(t=>t.textContent.trim()).join(' ')})),
+      edges:[...e.querySelectorAll('[data-edge]')].filter(g=>visiblePart(g)&&strokeVisible(g.querySelector('polyline'))).map(g=>{const line=g.querySelector('polyline'),style=getComputedStyle(line);return {from:g.getAttribute('data-from'),to:g.getAttribute('data-to'),role:g.getAttribute('data-edge-role'),relation:g.getAttribute('data-relation'),evidenceStatus:g.getAttribute('data-evidence-status'),feedback:g.getAttribute('data-feedback')==='true',condition:g.getAttribute('data-condition'),probability:g.hasAttribute('data-probability')?Number(g.getAttribute('data-probability')):undefined,probabilityBasis:g.getAttribute('data-probability-basis'),label:[...g.querySelectorAll('text')].filter(shapeVisible).map(t=>t.textContent.trim()).join(' '),dashed:style.strokeDasharray!=='none',arrow:style.markerEnd!=='none',strokeWidth:parseFloat(style.strokeWidth),lineVisible:true};}),
+      laneBands:[...e.querySelectorAll('[data-role="lane-band"] > rect')].filter(shapeVisible).length,
+      laneTitles:[...e.querySelectorAll('text[data-role="lane-title"]')].filter(shapeVisible).length,
+      stageTitles:[...e.querySelectorAll('text[data-role="stage-title"]')].filter(shapeVisible).length,
+      laneTitleText:[...e.querySelectorAll('text[data-role="lane-title"]')].filter(shapeVisible).map(t=>t.textContent.trim()),
+      stageTitleText:[...e.querySelectorAll('text[data-role="stage-title"]')].filter(shapeVisible).map(t=>t.textContent.trim())
+    }:null;
+    return {id, tag: e.tagName, form, capacity:e.getAttribute('data-capacity')||null, diagram, labels: [...e.querySelectorAll('text')].map(t => t.textContent.trim()).filter(Boolean)};
   });
   const textEvidence = [], walker = document.createTreeWalker(s, NodeFilter.SHOW_TEXT); let node;
   while (node = walker.nextNode()) {
@@ -105,7 +120,7 @@ function inspectDom(s, wfForms) {
   }
   /* 判断／依据／限定不是装饰：三级缺一，这一格就退回散文，而散文数得出字数、数不出依据条数。
      所以这里数的是结构而不是字数——只有结构判得出「这一格是不是只装了三分之一」。 */
-  const finding = [...s.querySelectorAll('.finding')].map(f => {
+  const finding = [...s.querySelectorAll('.finding')].filter(f=>{const r=f.getBoundingClientRect(),cs=getComputedStyle(f);return r.width>0&&r.height>0&&cs.display!=='none'&&cs.visibility!=='hidden';}).map(f => {
     const txt = el => ((f.querySelector(el) || {}).textContent || '').trim();
     return {
       verdict: txt('.finding__verdict').length,
@@ -142,7 +157,7 @@ function inspectDom(s, wfForms) {
       return {key:e.dataset.contentKey,text:e.textContent,visible,...(reasons.length?{visibilityReasons:[...new Set(reasons)]}:{})};
     }),
     pageId:s.dataset.pageId||'',pagePlanHash:s.dataset.pagePlanHash||'',contentHash: s.dataset.contentHash || '', semanticType:s.dataset.semanticType || '',
-    exhibits, finding, textEvidence, unreadableText: unreadable, form: s.dataset.form || null, visual: s.dataset.visual || '', proves: s.dataset.proves || '', densityProfile: s.dataset.densityProfile || '',
+    exhibits, finding, kpiCards:[...s.querySelectorAll('.slide__body .kpi-card')].filter(e=>{const r=e.getBoundingClientRect(),cs=getComputedStyle(e);return r.width>0&&r.height>0&&cs.display!=='none'&&cs.visibility!=='hidden';}).length, textEvidence, unreadableText: unreadable, form: s.dataset.form || null, visual: s.dataset.visual || '', proves: s.dataset.proves || '', densityProfile: s.dataset.densityProfile || '',
     // v3 布局绑定：QA 拿它和 pages.json、布局目录三方对账。
     layout: s.dataset.layout || '', modules: [...s.querySelectorAll('[data-module]')].map(e => e.dataset.module || ''),
     waterfall,

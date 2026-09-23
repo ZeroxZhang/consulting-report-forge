@@ -95,6 +95,7 @@ function packageDelivery({htmlFile,pdfFile,outputDir,baseName,auditFile,reviewFi
   if(!fs.statSync(inputHtml,{throwIfNoEntry:false})?.isFile())fail('需要定稿 HTML 文件');
   if(!fs.statSync(inputPdf,{throwIfNoEntry:false})?.isFile())fail('需要已验收 PDF 文件');
   const html=fs.readFileSync(inputHtml,'utf8'),pdf=fs.readFileSync(inputPdf);
+  if(!preview&&require('./report_contract.cjs').read(html)?.analysisPreview)fail('分析预览须用 --preview；完成分析审查后重新编译装配');
   if(!pdf.subarray(0,5).equals(Buffer.from('%PDF-')))fail('输入文件不是有效 PDF');
   const htmlPages=pageCountFromHtml(html),pdfPages=pageCountFromPdf(inputPdf);
   if(!htmlPages)fail('HTML 中没有 .slide 页面');

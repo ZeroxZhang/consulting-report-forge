@@ -2,6 +2,23 @@
 
 形成关键判断前读。先按问题定位下表，只执行能改变答案的方法；不以框架数量证明分析深度。分析结果进入同一份蓝图的关键主张与证据记录，计算脚本是其可复算附件，不另建一套结论台账。
 
+## 按需加载
+
+先执行 [统一分析流程](analysis-workflow.md)，再按当前核心问题只读取匹配的 playbook：
+
+| 场景 | 执行手册 |
+|---|---|
+| 利润、扩张、单位贡献 | [利润与单位经济](playbooks/profit-unit-economics.md) |
+| 市场边界、竞争、进入方式 | [市场进入](playbooks/market-entry.md) |
+| 拉新、留存、价格/套餐 | [增长与定价](playbooks/growth-pricing.md) |
+| 周期、瓶颈、产能、降本 | [运营与成本](playbooks/operations-cost.md) |
+| 企业方向与资源配置 | [战略与组合](playbooks/strategy-portfolio.md) |
+| 决策权、协作、组织接口 | [组织与运营模式](playbooks/organization-operating-model.md) |
+| 技术机会、价值与规模化 | [数字化与 AI](playbooks/digital-ai-value.md) |
+| 投资逻辑、风险、商业尽调 | [投资与尽调](playbooks/investment-diligence.md) |
+
+公共方法按需要读：[问题与证据](methods/problem-and-evidence.md)、[经济与情景](methods/economics-and-scenarios.md)、[原因与验证](methods/causality-and-validation.md)、[战略取舍](methods/strategy-and-options.md)。框架不是白名单，自定义方法须同样交代输入、步骤、输出、检验和反证。无需一次加载全部手册。
+
 ## 先定深度，再选方法
 
 - **分析**：原始数据或访谈需要诊断、选择或建议。列出关键问题、竞争解释、要找的证据，优先做可能改变结论的分析。

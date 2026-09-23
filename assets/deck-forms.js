@@ -1,44 +1,41 @@
 /* 实现入口登记：组件不是图型全集。其他原生、组合与手写 SVG 走 svg.custom，
    pages.visual 记录实际表达；入口一致性由 test_blueprint_pages.cjs 验证。 */
 'use strict';
+const capacityPolicy = require('./form-capacity.js');
 
 const FORMS = {
   // —— 构建期静态咨询展品（assets/exhibit-kit.js）——
-  /* capacity 与 references/expression-guide.md 的瀑布行手工同形，改一处须改两处。
-     limits 是机器可校验的那部分：maxNodes 比的是 bars.length，含起点与终点，渲染器超限直接拒绝、不静默截断；
-     所以 capacity 说"贡献项 ≤ 16"而 maxNodes 写 18，两者是同一条线的两种数法，不是笔误；
-     reconciles 标出"这一形式必须能对账"，QA 探针按它分派瀑布判据——两边共用这一份，
-     不在这里和探针里各写一个形式清单，否则加第三个瀑布形式时探针不会知道。 */
-  'kit.waterfall': { family: 'comparison', label: '瀑布图', kind: 'svg', module: 'exhibit-kit', export: 'waterfall', annotation: 'layer', capacity: '贡献项 ≤ 16（另占起点与终点，有残差柱再减 1）；不闭合不做', limits: { maxNodes: 18, reconciles: true } },
-  'kit.dumbbell': { family: 'comparison', label: '哑铃图', kind: 'svg', module: 'exhibit-kit', export: 'dumbbell', annotation: 'layer', capacity: '行 ≤ 14；两期同口径同量尺' },
-  'kit.slope': { family: 'comparison', label: '坡度图', kind: 'svg', module: 'exhibit-kit', export: 'slope', annotation: 'layer', capacity: '行 ≤ 10；同量尺两期数值或名次；横距不编码连续时间' },
-  'kit.bullet': { family: 'kpi', label: '子弹图', kind: 'svg', module: 'exhibit-kit', export: 'bullet', annotation: 'layer', capacity: '指标 ≤ 6；分档须另有业务定义' },
-  'kit.heatmap': { family: 'correlation', label: '矩阵热力图', kind: 'svg', module: 'exhibit-kit', export: 'heatmap', annotation: 'layer', capacity: '≤ 160 格；固定 domain；只接受有限数值，未观察／缺失用自定义 SVG 或 HTML 单独编码' },
-  'kit.mekko': { family: 'composition', label: '百分轴 Mekko', kind: 'svg', module: 'exhibit-kit', export: 'mekko', annotation: 'layer', capacity: '列 ≤ 6；窄列与小片自动改走同侧引线通道，通道放不下时报错' },
-  'kit.stacked': { family: 'composition', label: '堆积构成', kind: 'svg', module: 'exhibit-kit', export: 'stacked', annotation: 'layer', capacity: '列 ≤ 12 × 系列 ≤ 6；仅非负组成；小片与零值走引线通道' },
+  /* 数字容量统一取 form-capacity.js；reconciles 只登记瀑布对账语义。 */
+  'kit.waterfall': { family: 'comparison', label: '瀑布图', kind: 'svg', module: 'exhibit-kit', export: 'waterfall', annotation: 'layer', capacity: '含起点与终点；不闭合不做', limits: { reconciles: true } },
+  'kit.dumbbell': { family: 'comparison', label: '哑铃图', kind: 'svg', module: 'exhibit-kit', export: 'dumbbell', annotation: 'layer', capacity: '两期同口径同量尺' },
+  'kit.slope': { family: 'comparison', label: '坡度图', kind: 'svg', module: 'exhibit-kit', export: 'slope', annotation: 'layer', capacity: '同量尺两期数值或名次；横距不编码连续时间' },
+  'kit.bullet': { family: 'kpi', label: '子弹图', kind: 'svg', module: 'exhibit-kit', export: 'bullet', annotation: 'layer', capacity: '分档须另有业务定义' },
+  'kit.heatmap': { family: 'correlation', label: '矩阵热力图', kind: 'svg', module: 'exhibit-kit', export: 'heatmap', annotation: 'layer', capacity: '固定 domain；只接受有限数值，缺失须另行编码' },
+  'kit.mekko': { family: 'composition', label: '百分轴 Mekko', kind: 'svg', module: 'exhibit-kit', export: 'mekko', annotation: 'layer', capacity: '窄列与小片走同侧引线通道，放不下时报错' },
+  'kit.stacked': { family: 'composition', label: '堆积构成', kind: 'svg', module: 'exhibit-kit', export: 'stacked', annotation: 'layer', capacity: '仅非负组成；小片与零值走引线通道' },
   /* shareBar 与 stacked 的分工写进两条 capacity：一条比「一份里分成哪几块」，一条比「几期之间怎么变」。
      单期就该用 shareBar——它段内直标、不要图例，而图例那一行在四格宽的模块里正是最贵的一行。 */
-  'kit.shareBar': { family: 'composition', label: '单期构成条', kind: 'svg', module: 'exhibit-kit', export: 'shareBar', annotation: 'layer', capacity: '1–2 条 × 系列 ≤ 6；段宽即份额，单条时省略类别行；三期以上改用 kit.stacked；两条更吃格子，标注通道放不下会报错' },
-  'kit.tree': { family: 'hierarchy', label: '层级树', kind: 'svg', module: 'exhibit-kit', export: 'tree', annotation: null, capacity: '≤ 48 节点；每层同一拆分逻辑' },
-  'kit.swimlane': { family: 'diagram', label: '泳道图', kind: 'svg', module: 'exhibit-kit', export: 'swimlane', annotation: null, capacity: '单元格仅 1 节点；复杂分支换专门路径' },
-  'kit.processFlow': { family: 'diagram', label: '阶段流程', kind: 'svg', module: 'exhibit-kit', export: 'processFlow', annotation: null, capacity: '3–6 段线性；等宽不表示等时长' },
+  'kit.shareBar': { family: 'composition', label: '单期构成条', kind: 'svg', module: 'exhibit-kit', export: 'shareBar', annotation: 'layer', capacity: '段宽即份额，单条省略类别行；更多期数考虑逐列比较' },
+  'kit.tree': { family: 'hierarchy', label: '层级树', kind: 'svg', module: 'exhibit-kit', export: 'tree', annotation: null, capacity: '每层同一拆分逻辑' },
+  'kit.swimlane': { family: 'diagram', label: '泳道图', kind: 'svg', module: 'exhibit-kit', export: 'swimlane', annotation: null, capacity: '同一主体与阶段单元格不得重叠节点；复杂分支换专门路径' },
+  'kit.processFlow': { family: 'diagram', label: '阶段流程', kind: 'svg', module: 'exhibit-kit', export: 'processFlow', annotation: null, capacity: '线性阶段；等宽不表示等时长' },
   'kit.comparisonTable': { family: 'table', label: '比较表（HTML）', kind: 'html', module: 'exhibit-kit', export: 'comparisonTable', annotation: null, capacity: '高度由内容决定，须自行分页' },
 
   // —— ECharts 配方（assets/echarts-recipes.js，构建期 SSR 成内联 SVG）——
-  'recipe.rankedBar': { family: 'comparison', label: '排序条形', kind: 'svg', module: 'echarts-recipes', export: 'rankedBar', annotation: 'layer', capacity: '≤ 24 项，正文宜更少' },
-  'recipe.groupedBar': { family: 'comparison', label: '分组柱状', kind: 'svg', module: 'echarts-recipes', export: 'groupedBar', annotation: 'layer', capacity: '≤ 12 类 × 4 系列' },
-  'recipe.timeSeries': { family: 'trend', label: '时间序列折线', kind: 'svg', module: 'echarts-recipes', export: 'timeSeries', annotation: 'layer', capacity: '≤ 36 期 × 5 系列，更多分面' },
-  'recipe.composition': { family: 'composition', label: '堆积／100% 堆积', kind: 'svg', module: 'echarts-recipes', export: 'composition', annotation: 'layer', capacity: '≤ 12 类 × 6 系列' },
+  'recipe.rankedBar': { family: 'comparison', label: '排序条形', kind: 'svg', module: 'echarts-recipes', export: 'rankedBar', annotation: 'layer', capacity: '正文宜少量类别' },
+  'recipe.groupedBar': { family: 'comparison', label: '分组柱状', kind: 'svg', module: 'echarts-recipes', export: 'groupedBar', annotation: 'layer', capacity: '多类别和系列需分面' },
+  'recipe.timeSeries': { family: 'trend', label: '时间序列折线', kind: 'svg', module: 'echarts-recipes', export: 'timeSeries', annotation: 'layer', capacity: '期间与系列过多时分面' },
+  'recipe.composition': { family: 'composition', label: '堆积／100% 堆积', kind: 'svg', module: 'echarts-recipes', export: 'composition', annotation: 'layer', capacity: '仅非负且可加的组成' },
   'recipe.histogram': { family: 'distribution', label: '直方图', kind: 'svg', module: 'echarts-recipes', export: 'histogram', annotation: 'layer', capacity: '须已正确分箱，不从均值伪造' },
-  'recipe.scatter': { family: 'correlation', label: '散点／气泡', kind: 'svg', module: 'echarts-recipes', export: 'scatter', annotation: 'layer', capacity: '> 15 点只标关键点' },
-  'recipe.heatmap': { family: 'correlation', label: '连续矩阵热力', kind: 'svg', module: 'echarts-recipes', export: 'heatmap', annotation: 'layer', capacity: '≤ 160 格；只接受有限数值，未观察／缺失用自定义 SVG 或 HTML 单独编码' },
-  'recipe.sankey': { family: 'flow', label: '桑基图', kind: 'svg', module: 'echarts-recipes', export: 'sankey', annotation: 'layer', capacity: '≤ 30 节点 / 60 边；须守恒无环' },
-  'recipe.tree': { family: 'hierarchy', label: '层级树（ECharts）', kind: 'svg', module: 'echarts-recipes', export: 'tree', annotation: 'layer', capacity: '≤ 48 节点' },
+  'recipe.scatter': { family: 'correlation', label: '散点／气泡', kind: 'svg', module: 'echarts-recipes', export: 'scatter', annotation: 'layer', capacity: '超过建议阅读量时只标关键点' },
+  'recipe.heatmap': { family: 'correlation', label: '连续矩阵热力', kind: 'svg', module: 'echarts-recipes', export: 'heatmap', annotation: 'layer', capacity: '只接受有限数值，缺失须另行编码' },
+  'recipe.sankey': { family: 'flow', label: '桑基图', kind: 'svg', module: 'echarts-recipes', export: 'sankey', annotation: 'layer', capacity: '须守恒无环' },
+  'recipe.tree': { family: 'hierarchy', label: '层级树（ECharts）', kind: 'svg', module: 'echarts-recipes', export: 'tree', annotation: 'layer', capacity: '每层同一拆分逻辑' },
 
   // —— 专业标注入口（scripts/render_precision_exhibit.cjs）——
-  'precision.columns': { family: 'comparison', label: '数值柱（含小计／断轴／Δ）', kind: 'svg', module: 'precision', type: 'columns', annotation: 'layer', capacity: '≥ 400×260；类别 ≤ 4 行' },
+  'precision.columns': { family: 'comparison', label: '数值柱（含小计／断轴／Δ）', kind: 'svg', module: 'precision', type: 'columns', annotation: 'layer', capacity: '类别标签行数与画布尺寸受硬约束' },
   'precision.stacked': { family: 'composition', label: '数值堆积（含层比较）', kind: 'svg', module: 'precision', type: 'stacked', annotation: 'layer', capacity: '仅非负组成；列内须列全系列' },
-  'precision.waterfall': { family: 'comparison', label: '数值瀑布（含累计连接）', kind: 'svg', module: 'precision', type: 'waterfall', annotation: 'layer', capacity: '须闭合；累计连接只用于瀑布；贡献项 ≤ 16（另占起点与终点）；不接受破轴', limits: { maxNodes: 18, reconciles: true } },
+  'precision.waterfall': { family: 'comparison', label: '数值瀑布（含累计连接）', kind: 'svg', module: 'precision', type: 'waterfall', annotation: 'layer', capacity: '须闭合；累计连接只用于瀑布；不接受破轴', limits: { reconciles: true } },
 
   // —— 语义图示（scripts/render_diagram.cjs）——
   'diagram.mechanism': { family: 'diagram', label: '机制／反馈图', kind: 'svg', module: 'diagram', annotation: null, capacity: '边须写含义与证据状态；循环标反馈' },
@@ -50,12 +47,12 @@ const FORMS = {
   // —— 作者手写结构 ——
   'html.table': { family: 'table', label: '精确数据表', kind: 'html', annotation: null, capacity: '一列一种单位；总计由作者提供' },
   'html.matrix': { family: 'table', label: '评估矩阵／RACI', kind: 'html', annotation: null, capacity: '权重与评分锚点须透明' },
-  'html.kpi': { family: 'kpi', label: 'KPI 卡组', kind: 'html', annotation: null, capacity: '建议 ≤ 5 张卡；实际值需单位与期间，目标仅在有依据时添加' },
+  'html.kpi': { family: 'kpi', label: 'KPI 卡组', kind: 'html', annotation: null, capacity: '实际值需单位与期间，目标仅在有依据时添加' },
   'html.text': { family: 'text', label: '结构化文字／证据组', kind: 'html', annotation: null, capacity: '无共同维度时保留结构化文字' },
   /* finding 是判断 + 多项依据 + 限定的专用结构；text 可用于其他有证据的文字组织。
      组件结构约定不等于文字或证据的普遍条数要求。
      依据有序时用档位条标次序，但档位条只数「第几档」、不量值——长度会把它谎报成测得的量级。 */
-  'html.finding': { family: 'text', label: '判断／依据／限定', kind: 'html', annotation: null, capacity: '本组件依据至少 3 条，建议 3–5 条；保留判断与限定；更少依据可选 html.text' },
+  'html.finding': { family: 'text', label: '判断／依据／限定', kind: 'html', annotation: null, capacity: '保留判断、依据与限定；依据少时可用 html.text' },
   'svg.custom': { family: 'custom', label: '自定义矢量构图', kind: 'svg', annotation: null, capacity: '几何与语义由作者负责，须实际看图' },
 };
 
@@ -73,7 +70,7 @@ const list = () => Object.keys(FORMS);
 const get = form => {
   const entry = FORMS[form];
   if (!entry) throw new Error('未知图示形式: ' + form + '（可用：' + list().join('、') + '）');
-  return Object.assign({ form }, entry);
+  return Object.assign({ form }, entry, {capacityRules: capacityPolicy.rules(form), limits: {...entry.limits, ...(capacityPolicy.limit(form, 'nodes') ? {maxNodes:capacityPolicy.limit(form, 'nodes')} : {})}});
 };
 const familyOf = form => get(form).family;
 /* 该形式是否把数据变成图形：false 表示它只承载查数或陈述，凑数时不算一种表达。 */
@@ -90,4 +87,4 @@ const minimumSize = (form, sizing = {}) => {
   const entry = get(form);
   return entry.module === 'exhibit-kit' ? require('./exhibit-kit.js').minimumSize(entry.export, sizing) : null;
 };
-module.exports = { version: '1.2.0', forms: FORMS, familyLabels: FAMILY_LABELS, NON_EXPRESSIVE_FAMILIES, list, get, familyOf, expressive, annotationEntry, byFamily, minimumSize };
+module.exports = { version: '1.3.0', forms: FORMS, familyLabels: FAMILY_LABELS, NON_EXPRESSIVE_FAMILIES, list, get, familyOf, expressive, annotationEntry, byFamily, minimumSize };

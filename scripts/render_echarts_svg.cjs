@@ -4,6 +4,7 @@ const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypt
 const pinned=require('../package.json').dependencies.echarts;
 const type=require('../assets/deck-typography.js'),metrics=require('./font_metrics.cjs');
 const Anchors=require('../assets/echarts-anchors.js'),AnnotationLayer=require('../assets/annotation-layer.js');
+const Capacity=require('../assets/form-capacity.js');
 
 /* 锚点框要的是"图元画出来的几何"，不含描边——这正是浏览器 getBBox() 给的东西。
    而 zrender 的 getBoundingRect() 对带描边的图元返回的是外扩过的框（Path.js:185 起：有填充按 lineWidth 外扩半宽，
@@ -143,6 +144,7 @@ function render(payload){
       const inner=chartSvg.replace(/^\s*<svg\b[^>]*>/,'').replace(/<\/svg>\s*$/,'');
       svg=`${head}width="${outer.width}" height="${outer.height}" viewBox="0 0 ${outer.width} ${outer.height}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><rect width="${outer.width}" height="${outer.height}" fill="${settings.tokens['page-bg']}"/><g transform="translate(${padding},${padding})">${inner}</g>${leaders}</svg>`;
     }else svg=chartSvg.replace('<svg ',head).replace(/<\/svg>\s*$/,(leaders||'')+'</svg>');
+    if(plan.recipe){const form='recipe.'+plan.recipe;svg=svg.replace(/^<svg\b/,`<svg data-form="${form}" data-capacity="${Capacity.encoded(form,payload.spec||{})}"`);}
     svg=namespaceIds(svg,(plan.recipe||'option')+'|'+settings.width+'x'+settings.height+'|'+JSON.stringify(plan.pages[0].option));
     if(/(?:translate|matrix|[MLCQ])[^<>]*\b(?:NaN|Infinity)\b/.test(svg))throw Error('SVG出现非有限坐标');
     return {...plan,padding,typography_id:profile.id,typography_version:profile.version,measurement,font_delivery:'requires-embedding-in-host',report,anchors:list.map(made=>made.anchor),annotations,pages:plan.pages.map(page=>({...page,svg}))};

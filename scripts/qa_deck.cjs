@@ -105,7 +105,9 @@ function parseArgs(argv){
    if(!fs.existsSync(record)||taskContracts.fileHash(record)!==taskContract.pages.sha256)throw Error('pages记录缺失或sha256与任务合同不符');
    const doc=JSON.parse(fs.readFileSync(record,'utf8')),checked=pagesApi.check(doc,{ratio:taskContract.ratio});
    if(doc.version===4)boundPages=doc;
-   const mismatches=pagesApi.verifyDeck(doc,rows.map(r=>({...r,role:r.bookends?.role})));
+   const formWarnings=[];
+   const mismatches=pagesApi.verifyDeck(doc,rows.map(r=>({...r,role:r.bookends?.role})),{warnings:formWarnings});
+   warnings.push(...formWarnings.map(w=>'成稿容量诊断：'+w));
    const all=[...checked.errors,...mismatches,...taskContracts.verifyPlan(taskContract,path.dirname(input),doc)];
    if(doc.version===4&&await p.locator('html').getAttribute('data-page-contract-version')!=='4')all.push('v4 成稿缺少页面策略版本标记');
    if(doc.version!==4&&await p.locator('html').getAttribute('data-page-contract-version')==='4')all.push('历史 pages 合同不能冒用 v4 页面策略标记');
@@ -139,13 +141,18 @@ function parseArgs(argv){
  // 声明为图的形式必须在成稿里真的出现 SVG：绘图受阻不能退成表格再沿用原图型名称通过。
  if(modern)for(const r of rows){
   if(!r.form)continue;let entry=null;try{entry=deckForms.get(r.form);}catch(e){warnings.push('第'+r.page+'页的形式 '+r.form+' 不在 deck-forms 词汇表内：该页未做"图形实现必须有 SVG"核对，请确认装配期已拦截');continue;}
+  const cap=require('../assets/form-capacity.js');
+  const kpiReview=cap.inspect('html.kpi',{items:r.kpiCards||0});
+  if((r.kpiCards||0)>0)warnings.push(...kpiReview.warnings.map(w=>'第'+r.page+'页 '+w));
   if(entry.kind==='svg'&&!r.shapes.svg)errors.push('第'+r.page+'页声明 '+r.form+'（'+entry.label+'）是图形实现，但正文里没有 SVG'+(r.shapes.tables?'，只有表格（含 '+(r.shapes.sparklines||0)+' 个表格内数据条）':'')+'：图型不因容量不足被替换');
   for(const c of r.charts||[])if(c.risks)warnings.push('第'+r.page+'页图表预算提示：'+c.risks);
   /* 声明了 html.finding 就要真的三级俱全。缺哪一级就报哪一级——
      报"结构不完整"没用，作者得知道是判断、依据还是限定没写。 */
   for(const f of r.finding||[]){
    if(!f.verdict)errors.push('第'+r.page+'页的 .finding 缺「判断」一级（.finding__verdict）：没有判断，依据就只是一堆事实');
-   if(f.grounds.length<3)errors.push('第'+r.page+'页的 .finding 只有 '+f.grounds.length+' 条依据（.finding__step），下限 3 条：不足 3 条说明这一格还没拆开');
+   const findingCapacity=cap.inspect('html.finding',{items:f.grounds.length});
+   if(findingCapacity.errors.length)errors.push('第'+r.page+'页的 .finding 只有 '+f.grounds.length+' 条依据（.finding__step），下限 '+cap.limit('html.finding','items','hardMin')+' 条：不足时请换用 html.text，不凑数');
+   warnings.push(...findingCapacity.warnings.map(w=>'第'+r.page+'页 '+w));
    const broken=f.grounds.findIndex(g=>!g.label||!g.why);
    if(broken>=0)errors.push('第'+r.page+'页第 '+(broken+1)+' 条依据缺标签（.finding__label）或说明（.finding__why）');
    const misrank=f.grounds.findIndex((g,i)=>g.rank!==0&&g.rank<i+1);

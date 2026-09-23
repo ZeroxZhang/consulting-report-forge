@@ -1,12 +1,12 @@
 # 从同一内容真源制作页面
 
-从蓝图模板开始（保留 `schemaVersion: 2` 字段）：正文主张、来源、派生数值和页面关系只在蓝图维护，`pages.json` 由编译器生成。图形仍由作者构思，内容绑定不会自动产生一份完整报告，也不证明来源真实或推理成立。
+从蓝图模板开始（新任务使用 `schemaVersion: 3`）：正文主张、来源、派生数值和页面关系只在蓝图维护，`pages.json` 由编译器生成。图形仍由作者构思，内容绑定不会自动产生一份完整报告，也不证明来源真实或推理成立。
 
 ## 来源与指标
 
-蓝图顶层 `sources` 是来源索引，键映射到 `{label, locator}`。每页 `sourcePlan.keys` 和每条 `claims[].sourceKeys` 引用这些键；`locator` 写实际可复查的文件/行号或来源网址及定位。每页正文必须有关键主张，原有 `kind`、期间、分母、推论及限制字段继续使用，见[证据身份](evidence-ledger.md)。
+蓝图顶层 `sources` 是来源索引，键映射到 `{label, locator}`。顶层 `claims[].sourceKeys` 引用这些键；正文页用 `claimRefs` 引用主张、`metricRefs` 选择需要单独可见的指标，不手写 sourcePlan；`locator` 写实际可复查的文件/行号或来源网址及定位。每页正文必须有关键主张，原有 `kind`、期间、分母、推论及限制字段继续使用，见[证据身份](evidence-ledger.md)。
 
-每条主张可加 `metrics`。同页指标 id 唯一，引用可跨本页不同主张，不能跨页；只在一处给数，图、标签和注释复用计算结果。
+每条主张可加 `metrics`。指标 id 全局唯一，公式可跨主张与页面引用；只在一处给数，图、标签和注释复用计算结果。
 
 ```json
 {"sources":{"S1":{"label":"合成销售输入","locator":"inputs/synthetic.csv:L2-L3"}}}
@@ -36,19 +36,21 @@
 
 身份沿公式依赖传递：`fact` 不能引用任何非事实指标；`estimate` 不能引用预测、假设或建议。其他输出身份仍由作者明确选择，编译器保留不同的上游身份，例如 `132 万元（预测；含假设输入）`，不自动把主张升级为事实。`provided`、`source_checked` 等核验状态也不会改变证据身份。
 
-在标题、`proves` 和主张文本字段（如 `statement/denominator/calculation/inference/limitation`）复用关键数字时，必须引用 `{{metric:id}}`，不要重复手填。例如 `"title":"收入增长{{metric:growth}}，利润变化仍待核对"` 会编译成 `收入增长20.0%，利润变化仍待核对`。数字、单位和身份使用同一份 `metric.text`；改基数后标题、主张及图中标签一同更新。未知或不完整 token 被拒绝，不支持任意表达式。代码不会猜测自然语言里的数字，未使用 token 的手写文字仍需作者和独立审查核对。需要比较原蓝图文字与编译结果时，用 `resolveText(slide, text)` 解析，勿把带 token 的原文与成稿直接比较。
+在标题、`proves` 和主张文本字段（如 `statement/denominator/calculation/inference/limitation`）复用关键数字时，必须引用 `{{metric:id}}`，不要重复手填。例如 `"title":"收入增长{{metric:growth}}，利润变化仍待核对"` 会编译成 `收入增长20.0%，利润变化仍待核对`。数字、单位和身份使用同一份 `metric.text`；改基数后标题、主张及图中标签一同更新。未知或不完整 token 被拒绝，不支持任意表达式。代码不会猜测自然语言里的数字，未使用 token 的手写文字仍需作者和独立审查核对。schema3 的解析使用全局指标池；读取编译结果，不把带 token 的原文与成稿直接比较。历史 schema2 仍可用 `resolveText(slide,text)`。
 
 瀑布在 `slide.waterfall.input` 保存唯一输入 `{items或records, config, options?}`，编译时调用现有内核体检并派生对账结果；作者只可另给有依据的 `residualReason`，不能手填零残差或节点数。渲染同样使用这一输入的内核报告。输入也计入内容摘要，改变桥接数据会使旧审查失效。具体数据前提见[瀑布合同](waterfall-bridge.md)。
 
 ## 编译并填充叶节点
 
 ```sh
-node scripts/compile_blueprint.cjs /任务/deck-blueprint.json /任务/pages.json --snippets /任务/content-snippets.html
+node scripts/compile_blueprint.cjs /任务/deck-blueprint.json /任务/pages.json --task /任务/task.json --snippets /任务/content-snippets.html
 ```
 
 先通过蓝图 `ready` 校验，再生成 `pages.json`（`version: 4`）。编译器拒绝覆盖输入蓝图；再次运行可替换此前生成的 pages。snippets只写新文件或带编译器生成标头的旧文件，不覆盖作者片段；它只是可放入页面的绑定示例，不能当成已完成页面。
 
 目录布局的槽位和角色由目录派生：主区用 `visual.form`；支持区只有在允许文字时才默认 `html.text`。其他模块在 `visual.regions` 按目录顺序明确形式，不手填网格坐标。自定义布局写 `visual.layout: "custom"` 及自己的 `visual.regions`。自定义SVG另写 `visual.semanticType`：`comparison/trend/composition/flow/waterfall/scenario/table/qualitative/distribution/correlation/hierarchy/geographic/network`，使数据语义不因换实现而丢失。
+
+schema 3 还需 `visual.selection.relationship/reason`；存在已登记容量规则时填写 `visual.capacity`，计数是单个主展品的计划上界。形式与关系的允许组合由 `scripts/form_contract.cjs` 检查，形式专项容量维度与数值只在 `assets/form-capacity.js` 维护。已登记 SVG 渲染器输出 `data-form`；有结构化容量规则的同时输出 `data-capacity`，最终 QA 对照蓝图计划。作者自绘部分仍需人工看图核对。
 
 正文容器声明 `data-page-id`，值与蓝图 slide.id一致。标题使用 `.slide__title` 和 `data-content-key="title"`。把绑定放在**不含子元素的叶节点**；不要在包裹图表或整页的容器上绑定，以免填充文字时清掉展品。关键文字不得处于 clip/clip-path/mask 裁切层或使用透明文字；图形需要裁切时，把关键标签放在未裁切的文字层。
 
@@ -80,3 +82,13 @@ content.html(page, ['source:S1', 'source:S2']);
 ```
 
 浏览器取实际 `{key, text, visible}` 后由 `verifyBindings(page, facts)`核对；`key`既可为单键，也可为JSON数组字符串。未知键、遗漏、隐藏或偏离文本都会报错。完整 `verify({title, bindings}, page)`还核对实际 `.slide__title`。hash绑定只确认内容归属，不替代看图、计算前提与独立论证审查。
+
+## schema3 的计算闭包与显示选择
+
+公式依赖全部计算与核验，但不会把所有上游输入都强制塞进一页。页内显示 claimRefs、metricRefs 及标题/主张文本实际使用的 token；指标所属主张及其口径/来源也随之显示。编译结果中的 bindings 才是该页必须可见的集合。改一次全局数值后，所有引用页面一起重编。
+
+外部结果导入：`node scripts/import_analysis_results.cjs blueprint.json result-map.json new-blueprint.json task.json`。映射含实际 run `{id,command,executedAt}`、artifacts、claims；每个导入指标写 `external:{artifactRef,pointer}`，pointer 是输出 JSON 字段位置，如 `/margin`。输出必须追溯 input 与 code/model；不执行外部代码，不手填导入值。保留新蓝图供核对，原蓝图不覆盖。
+
+历史 schema2 的页内 sourcePlan/metrics 继续可读；需要新流程时用 `migrate_blueprint.cjs old.json new.json mapping.json`。迁移按页前缀改 ID，不自动去重同名主张，不自动认定旧判断已完成新审查。
+
+导入数值会在综合、生产和审查时重新读取原输出 JSON pointer，并核对未舍入 value。只改附件摘要不能绕过重导入。输出必须有实际 run、输入和代码/模型血缘，复用已登记 output 也一样。当前 CLI 导入结果应放在原蓝图目录；跨目录输出不会自动重定位附件相对路径，需要作者调整后再校验。

@@ -2,6 +2,7 @@
 /* 静态 SVG 的专业标注入口：数值只由数据派生，文字按交付字体测量。 */
 const fs=require('node:fs'),path=require('node:path');
 const WaterfallBridge=require('../assets/waterfall-bridge.js');
+const Capacity=require('../assets/form-capacity.js');
 const G=require('../assets/exhibit-geometry.js'),Typography=require('../assets/deck-typography.js'),Themes=require('../assets/deck-themes.js'),Metrics=require('./font_metrics.cjs');
 const esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const attrs=data=>Object.entries(data).filter(([,v])=>v!==undefined&&v!==null).map(([k,v])=>`${k}="${esc(v)}"`).join(' ');
@@ -14,7 +15,7 @@ function wrap(text,maxWidth,measure,font){
 /* 总数型节点用小计宽度与粗体，增量型节点用方向色；残差自成一色。 */
 const isTotal=type=>['total','subtotal','start','end'].includes(type);
 const isDelta=type=>['delta','residual'].includes(type);
-const WF_MAX_NODES=18,WF_TYPES=['start','delta','subtotal','end','residual'];
+const WF_MAX_NODES=Capacity.limit('precision.waterfall','nodes'),WF_TYPES=['start','delta','subtotal','end','residual'];
 function normalize(spec){
   if(!['columns','stacked','waterfall'].includes(spec.type))throw Error('type 须为 columns/stacked/waterfall');
   /* 零轴线上的对账标记只允许由真正的瀑布写出来。留着别的图型带一份瀑布报告（改 type 时漏删是常见路径），
@@ -39,7 +40,10 @@ function normalize(spec){
     }
   }
   if(!Array.isArray(spec.items)||!spec.items.length)throw Error('items 不可为空');
-  if(spec.type==='waterfall')return {items:G.waterfall(spec.items).map(v=>({...v,label:nonempty(v.label,'类别标签')})),series:[]};
+  if(spec.type==='waterfall'){
+    if(spec.items.length>WF_MAX_NODES)throw Error('瀑布节点 '+spec.items.length+' 个，超过 '+WF_MAX_NODES+'：请归并驱动项，不静默截断');
+    return {items:G.waterfall(spec.items).map(v=>({...v,label:nonempty(v.label,'类别标签')})),series:[]};
+  }
   const ids=new Set(),series=[];const items=spec.items.map((raw,i)=>{
     const id=String(raw.id===undefined?i:raw.id),label=nonempty(raw.label,'类别标签');if(ids.has(id))throw Error('item.id 不可重复');ids.add(id);
     if(spec.type==='columns'){
@@ -102,7 +106,8 @@ function auditLayout(model){
 function build(spec){
   if(!spec||typeof spec!=='object')throw Error('需要 spec 对象');
   const width=G.finite(spec.width===undefined?960:spec.width),height=G.finite(spec.height===undefined?500:spec.height),fontSize=G.finite(spec.fontSize===undefined?16:spec.fontSize);
-  if(width<400||height<260||fontSize<14)throw Error('本入口至少 400×260，fontSize 至少 14');
+  const form='precision.'+spec.type;
+  if(width<Capacity.limit(form,'width','hardMin')||height<Capacity.limit(form,'height','hardMin')||fontSize<14)throw Error('本入口至少 '+Capacity.limit(form,'width','hardMin')+'×'+Capacity.limit(form,'height','hardMin')+'，fontSize 至少 14');
   const profile=Typography.get(spec.typography_id);if(!profile.faces.length)throw Error('精度入口需要可测量的随包字体，不支持 legacy-system');
   const palette={...Themes.palette(spec.theme||'mckinsey'),...spec.palette};const measure=Metrics.measurer(profile.id),font=(weight=400,size=fontSize)=>`${weight} ${size}px ${profile.body}`;
   // Noto Sans SC 真实字体 ascent/descent 是当前正文中最高的度量；保守占位不强拉字形顶底。
@@ -127,7 +132,7 @@ function build(spec){
   let cursor=plotLeft;const barWidth=Math.min(spec.barWidth===undefined?76:G.finite(spec.barWidth),baseSlot*.52);if(barWidth<12)throw Error('柱宽不足');
   const slots=items.map(v=>{const width=baseSlot*(isTotal(v.type)&&spec.type!=='stacked'?1.15:1),slot={x:cursor,width,center:cursor+width/2};cursor+=width;return slot;});
   const categoryLines=items.map((v,i)=>wrap(v.label,slots[i].width-14,measure,font(isTotal(v.type)?600:400)));
-  const maxCategory=Math.max(...categoryLines.map(v=>v.length));if(maxCategory>4)throw Error('类别标签超过 4 行：增加宽度或分面');
+  const maxCategory=Math.max(...categoryLines.map(v=>v.length));if(maxCategory>Capacity.limit('precision.'+spec.type,'categoryLines'))throw Error('类别标签超过 '+Capacity.limit('precision.'+spec.type,'categoryLines')+' 行：增加宽度或分面');
   const legendRows=[];let legend=[];let used=0;
   for(const s of series){const needed=sizeOf(s.label).width+32;if(needed>width-32)throw Error('单个图例标签过宽');if(used+needed>width-32&&legend.length){legendRows.push(legend);legend=[];used=0;}legend.push({...s,x:16+used});used+=needed;}if(legend.length)legendRows.push(legend);
   const legendHeight=legendRows.length*(lineHeight+4),bottomReserve=18+maxCategory*lineHeight+legendHeight+10;
@@ -320,7 +325,8 @@ function build(spec){
   });
   labels.forEach(label=>out.push(`<text ${attrs({x:label.x,y:label.baseline,'text-anchor':label.anchor,fill:label.color,'font-size':label.fontSize,'font-weight':label.weight,'data-role':label.role,'data-label-id':label.id,'data-placement':label.placement,'data-mark-id':label.markId,'data-item':label.item,'data-series':label.series,'data-value':label.value,'data-axis-value':label.axisValue,'data-reference':label.reference,'data-baseline':label.baseline,'data-from-key':label.fromKey,'data-to-key':label.toKey,'data-delta':label.delta,'data-rate':label.rate,'data-rate-status':label.rateStatus})}>${esc(label.text)}</text>`));
   const metadata={version:model.version,type:spec.type,domain,breaks:scale.breaks,anchors,layerTracks,layoutAudit:audit,measurement:'fontkit-tnum',font:profile.id};
-  const svg=`<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${esc(spec.title||'数值分析展品')}" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" data-exhibit="precision" data-exhibit-type="${spec.type}" data-typography="${profile.id}" style="font-family:${esc(profile.body)};font-variant-numeric:lining-nums tabular-nums;font-synthesis:none;text-rendering:geometricPrecision"><title>${esc(spec.title||'数值分析展品')}</title><metadata>${esc(JSON.stringify(metadata))}</metadata><rect width="${width}" height="${height}" fill="white"/>${out.join('')}${annotationSvg}</svg>`;
+  const capacity=Capacity.encoded(form,{...spec,width,height,categoryLines:maxCategory});
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${esc(spec.title||'数值分析展品')}" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" data-exhibit="precision" data-exhibit-type="${spec.type}" data-form="${form}" data-capacity="${capacity}" data-typography="${profile.id}" style="font-family:${esc(profile.body)};font-variant-numeric:lining-nums tabular-nums;font-synthesis:none;text-rendering:geometricPrecision"><title>${esc(spec.title||'数值分析展品')}</title><metadata>${esc(JSON.stringify(metadata))}</metadata><rect width="${width}" height="${height}" fill="white"/>${out.join('')}${annotationSvg}</svg>`;
   return {svg,geometry:model,audit};
 }
 function render(spec){return build(spec).svg;}

@@ -28,7 +28,7 @@ node scripts/probe_capabilities.cjs /任务/probe --verify /任务/probe/respons
 
 ```json
 {
-  "version": 1,
+  "version": 2,
   "workMode": "analytical",
   "complexity": "complex",
   "majorConclusion": false,
@@ -50,11 +50,15 @@ node scripts/probe_capabilities.cjs /任务/probe --verify /任务/probe/respons
 - `blueprint` 与 `pages`：相对 task 路径，装配后自动换算为相对 HTML 路径并绑定文件摘要。改变蓝图后重新编译；不要手改 pages 或摘要蒙混通过。
 - `critical`：可额外登记未由内容绑定覆盖的关键限定，使用 `{id,text,target?}` 与 DOM `data-critical-id` 对应。
 
+新稿先按 [前置分析审查](analysis-review.md) 绑定 `task.analysisReview.record/sha256`；它相对 task 文件。研究阶段不需要生成 pages。完成审查后执行：
+
 ```sh
-node scripts/deck_blueprint.cjs /任务/deck-blueprint.json --ready
-node scripts/compile_blueprint.cjs /任务/deck-blueprint.json /任务/pages.json
-node scripts/verify_blueprint_pages.cjs /任务/deck-blueprint.json /任务/pages.json
+node scripts/deck_blueprint.cjs /任务/deck-blueprint.json --task /任务/task.json --ready
+node scripts/compile_blueprint.cjs /任务/deck-blueprint.json /任务/pages.json --task /任务/task.json
+node scripts/verify_blueprint_pages.cjs /任务/deck-blueprint.json /任务/pages.json --task /任务/task.json
 ```
+
+未完成前置审查时，蓝图 ready 校验和编译命令均加 `--preview`；生成的 HTML 明示分析预览，不能正式打包。编辑模式免前置分析审查，但保留最终风险审查。
 
 正文角色 analysis / decision / action / risk / appendix 按顺序映射 pages。封面、章节、参考、封底不计入正文编号。关键内容通过蓝图编译和可见绑定进入页面，不手工制作第二份页面数据模板。
 
@@ -86,13 +90,16 @@ node scripts/qa_deck.cjs /任务/deck.html /任务/smoke --tier smoke
 # 最终 HTML/PDF、截图、摘要与 audit
 node scripts/qa_deck.cjs /任务/deck.html /任务/renders --tier acceptance
 
-# 实际审查完成后合并；simple 且无重大结论可仅给 author.json
+# simple 且无重大结论：实际作者审查后合并
+node scripts/aggregate_reviews.cjs /任务/renders/audit.json /任务/renders/review.json \
+  /任务/renders/author.json
+# complex 或重大结论：实际独立实例审查后合并
 node scripts/aggregate_reviews.cjs /任务/renders/audit.json /任务/renders/review.json \
   /任务/renders/author.json /任务/renders/independent.json
 node scripts/package_delivery.cjs /任务/deck.html /任务/renders/deck.pdf /任务/delivery 报告名
 ```
 
-审查用 schemaVersion 3，绑定实际 audit、HTML/PDF 证据 id 与产物摘要。作者须覆盖每页；任务要求独立审查时，独立角色也须覆盖每页。多人分工按同一角色的覆盖并集核对，不要求每位成员重复看全册；analysis/evidence/visual 有具体依据，所有 warnings 经 accepted/fixed 处置，无未解决 major/blocking。独立审查来自实际不同实例，不能脚本生成通过结论。
+新稿 task2/schema3 的最终审查用 schemaVersion 4，并填写当前 analysisSha256；历史 task1 仍用 schemaVersion 3。两者均绑定实际 audit、HTML/PDF 证据 id 与产物摘要。作者须覆盖每页；任务要求独立审查时，独立角色也须覆盖每页。多人分工按同一角色的覆盖并集核对，不要求每位成员重复看全册；analysis/evidence/visual 有具体依据，所有 warnings 经 accepted/fixed 处置，无未解决 major/blocking。独立审查来自实际不同实例，不能脚本生成通过结论。
 
 完成审查后按 [审查快照与复用](review-reuse.md) 冻结证据。修订先保存快照，再覆盖工作稿；工具只准备继承草稿，变化页和全局判断仍须审查。未完成审查仅可用 `package_delivery.cjs --preview`，并明确称预览。
 

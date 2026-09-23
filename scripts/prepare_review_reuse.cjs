@@ -55,9 +55,10 @@ function prepareReuse({auditFile, snapshotDir, outputDir}) {
       const htmlCovered = new Set(coverage.flatMap(c => c.htmlPages)), pdfCovered = new Set(coverage.flatMap(c => c.pdfPages));
       const covered = new Set([...htmlCovered].filter(page => pdfCovered.has(page)));
       const pendingPages = pages.filter(p => !covered.has(p.page)).map(p => p.page);
-      const draft = {schemaVersion: 3, status: 'incomplete', reviewer, independence: role,
+      const draft = {schemaVersion: audit.taskContract?.version === 2 ? 4 : 3, status: 'incomplete', reviewer, independence: role,
         htmlSha256: audit.htmlArtifact.sha256, pdfSha256: audit.pdfArtifact.sha256, auditSha256: hash(stable(audit)),
         priorReview: clone(priorReview),
+        ...(audit.taskContract?.version===2?{analysisSha256: null}:{}),
         coverage, checks: Object.fromEntries(['analysis', 'evidence', 'visual'].map(k => [k, {status: 'not_reviewed', basis: ''}])),
         warningReview: [], issues: clone(previous.review.issues.filter(i => i.status === 'open')),
         pendingPages, preparationNote: '先实际审查待重审页的 HTML/PDF，并补入 coverage；重新判断全篇分析、证据与视觉及当前告警。旧问题保留原身份并明确标记 open/resolved，不能删除。此草稿不可交付。'};

@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "instructions": "均为合成业务。先给实际分析与边界；交互题描述每一步行动和状态。不要向真实用户发送测试询问。独立执行者不读取 reviewer-rubric.md。",
+  "cases": [
+    {"id":"profit","request":"收入增长但利润下降，诊断变化并给可支持的下一步。","inputs":{"q0":100,"p0":10,"variableUnit0":6,"fixed0":200,"q1":120,"p1":9,"variableUnit1":6.5,"fixed1":220,"scope":"同一单品、同币种、两个完整期间"}},
+    {"id":"market","request":"是否进入某软件细分？先给规模与条件。","inputs":{"allAccounts":10000,"eligibleAccounts":2000,"annualSpend":5000,"teamAnnualCapacity":80,"externalTAM":80000000,"externalTAMScope":"全部企业IT支出，含硬件","salesConversion":"未知","entryCost":"未提供"}},
+    {"id":"growth","request":"渠道 B 是否应该加码？","inputs":{"A":{"spend":10000,"new":100,"retained90d":60},"B":{"spend":10000,"new":200,"retained90d":40},"cohort":"同一90天完整观察窗口","margin":"未提供"}},
+    {"id":"operations","request":"自动化处理环节能否让总交付周期减半？","inputs":{"cycleDays":10,"processingDays":2,"waitingDays":7,"reworkDays":1,"automationProcessingReduction":0.5,"fixedSequentialStages":true,"queueImpact":"未知"}},
+    {"id":"portfolio","request":"预算100如何分配给 A 和 B？","inputs":{"budget":100,"A":{"need":80,"standaloneCash":20},"B":{"need":60,"standaloneCash":18},"sharedCapacity":"A与B均需同一唯一团队","partialInvestmentReturns":"未知","objectiveWeights":"未确认"}},
+    {"id":"organization","request":"审批慢是不是应该扁平化？","inputs":{"cases":8,"waitingForData":6,"waitingForManager":2,"sample":"运营负责人挑选的延误案例","formalApprovals":3,"staffing":"未提供"}},
+    {"id":"ai","request":"AI 每年能节约多少现金？","inputs":{"tasks":10000,"oldMinutes":12,"newMinutes":7,"newReviewMinutes":3,"hourlyCost":120,"annualToolCost":60000,"headcountReduction":0,"revenueCapacityUse":"未确认"}},
+    {"id":"diligence","request":"卖方收入增长20%，能否据此提高估值？","inputs":{"baseReportedRevenue":100,"currentReportedRevenue":120,"currentOneOff":30,"baseOneOff":0,"cashCollection":"未提供","netDebt":"未提供","sellerForecastNext":180}},
+    {"id":"qualitative","request":"根据6份便利访谈写结论，4人提到价格贵。","inputs":{"quotes":["太贵","比自建贵","价格高","预算不够","交付不稳定","不适合业务"],"sampling":"便利样本，无总体抽样框"}},
+    {"id":"editorial","request":"仅重排已确认文稿，不增加分析。","inputs":{"approvedText":"2025年收入120，2024年收入100。合成业务；不据此推断利润。"}},
+    {"id":"public-gap","request":"资料里只有一条未经核对的五力框架介绍，需准确解释其用途并标来源。","inputs":{"researchAllowed":true,"tools":"实际浏览工具可用","source":"https://www.isc.hbs.edu/strategy/business-strategy/Pages/the-five-forces.aspx"}},
+    {"id":"user-wait","request":"分析是否加大投放，需要内部贡献毛利；同时竞争结构资料已齐。","inputs":{"host":"Codex Default","availableTools":["request_user_input_async"],"answerSequence":[null,"毛利数据拿不到"],"privateMetric":"贡献毛利","publicBranch":"可独立完成"}},
+    {"id":"fallback","request":"评估项目投资回报，缺项目现金流文件。","inputs":{"availableTools":[],"cardSupportsUpload":false,"answerSequence":[null,"上传现金流.csv"],"uploadedContent":"t0=-100,t1=60,t2=60；折现率仍未指定"}},
+    {"id":"update","request":"已审查报告的输入收入从120改为120.01，页面保留整数。是否可以沿用审查？","inputs":{"sourceHashChanged":true,"renderedNumberChanged":false,"layoutChanged":false}}
+  ]
+}

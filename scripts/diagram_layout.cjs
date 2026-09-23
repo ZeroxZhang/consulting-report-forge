@@ -107,16 +107,17 @@ function layout(spec){
   const height=Math.max(requestedHeight,2*margin+headerTop+rowHeights.reduce((a,b)=>a+b,0)+(rows.length-1)*gapY);
   if(fit==='error'&&(width>requestedWidth+.1||height>requestedHeight+.1))throw Error(`当前文字/轨道需要 ${Math.ceil(width)}×${Math.ceil(height)}，超过 ${requestedWidth}×${requestedHeight}；请换方向、扩展或分面`);
   const nodes=[],groups=[],annotations=[];let y=margin+headerTop;
-  if(showHeaders)columns.forEach((col,i)=>annotations.push({text:col.title,x:margin+rowTitleWidth+i*(cellWidth+gapX)+cellWidth/2,y:margin+20,anchor:'middle',fontSize:16,weight:600}));
+  if(showHeaders)columns.forEach((col,i)=>annotations.push({text:col.title,x:margin+rowTitleWidth+i*(cellWidth+gapX)+cellWidth/2,y:margin+20,anchor:'middle',fontSize:16,weight:600,role:direction==='LR'?'stage-title':'lane-title'}));
   for(let r=0;r<rows.length;r++){
-    if(showHeaders)annotations.push({text:rows[r].title,x:margin,y:y+rowHeights[r]/2+6,fontSize:16,weight:600});
-    if(config.laneBands&&direction==='LR')groups.push({x:margin-8,y:y-10,w:width-2*margin+16,h:rowHeights[r]+20,fill:'surface',stroke:'grid'});
+    if(showHeaders)annotations.push({text:rows[r].title,x:margin,y:y+rowHeights[r]/2+6,fontSize:16,weight:600,role:direction==='LR'?'lane-title':'stage-title'});
+    if(config.laneBands&&direction==='LR')groups.push({x:margin-8,y:y-10,w:width-2*margin+16,h:rowHeights[r]+20,fill:'surface',stroke:'grid',role:'lane-band'});
     for(let c=0;c<columns.length;c++){
       const ns=cells[r][c],total=ns.reduce((sum,n)=>sum+Math.max(n.h??0,nodeHeight(n,cellWidth,type,measure)),0)+Math.max(0,ns.length-1)*gapY;
       let cy=y+(rowHeights[r]-total)/2;
       for(const n of ns){const h=Math.max(n.h??0,nodeHeight(n,cellWidth,type,measure));nodes.push({...n,x:margin+rowTitleWidth+c*(cellWidth+gapX),y:cy,w:cellWidth,h});cy+=h+gapY;}
     }y+=rowHeights[r]+gapY;
   }
+  if(config.laneBands&&direction==='TB')for(let c=0;c<columns.length;c++)groups.push({x:margin+rowTitleWidth+c*(cellWidth+gapX)-8,y:margin+headerTop-10,w:cellWidth+16,h:height-2*margin-headerTop+20,fill:'surface',stroke:'grid',role:'lane-band'});
   const actual=new Map(nodes.map(n=>[n.id,n])),obstacles=nodes.map(n=>({x:n.x-clearance,y:n.y-clearance,w:n.w+2*clearance,h:n.h+2*clearance})),labelBoxes=[];
   const vectors={left:[-1,0],right:[1,0],top:[0,-1],bottom:[0,1]};
   const routed=edges.map(e=>{

@@ -1,0 +1,21 @@
+'use strict';
+/* 文件级合同夹具，不代表真实读图审查。 */
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),os=require('node:os');
+const {fixture,task}=require('../tests/fixtures/analysis_fixture.cjs'),analysis=require('./analysis_contract.cjs'),content=require('./content_contract.cjs'),contract=require('./report_contract.cjs'),evidence=require('./audit_evidence.cjs'),review=require('./review_contract.cjs'),snap=require('./snapshot_review.cjs');
+const root=fs.mkdtempSync(path.join(os.tmpdir(),'analysis-snapshot-')),live=path.join(root,'live');fs.mkdirSync(live);const write=(name,data)=>fs.writeFileSync(path.join(live,name),typeof data==='string'?data:JSON.stringify(data));
+const d=fixture();write('input.csv','value\n120\n');d.artifacts=[{id:'input-file',path:'input.csv',kind:'input',sha256:contract.fileHash(path.join(live,'input.csv')),dependsOn:[]}];d.analysis.workItems[0].artifactRefs=['input-file'];
+const ar={schemaVersion:1,analysisSha256:analysis.digest(d),reviews:[{role:'author',reviewer:'fixture',instanceId:'fixture-instance',conclusion:'ready',basis:'校验器夹具',coverage:{claimRefs:d.claims.map(c=>c.id),issueRefs:['revenue-issue'],optionRefs:[]}}],issues:[]};write('analysis-review.json',ar);const t={...task,analysisReview:{record:'analysis-review.json',sha256:contract.fileHash(path.join(live,'analysis-review.json'))}};
+write('blueprint.json',d);const pp=content.compile(d,{task:t,baseDir:live});write('pages.json',pp);write('task.json',{...t,pages:{record:'pages.json'},blueprint:{record:'blueprint.json'}});const bound=contract.load(path.join(live,'task.json'),path.join(live,'deck.html'));
+const section='<section class="slide" data-page-id="revenue">fixture</section>';write('deck.html',contract.install('<html><head></head><body>'+section+'</body></html>',bound));write('deck.pdf','%PDF-1.4\nfile-level-fixture');write('html.png','file-level-image-fixture');write('pdf.png','file-level-image-fixture');
+const artifacts={html:{path:path.join(live,'deck.html'),sha256:contract.fileHash(path.join(live,'deck.html'))},pdf:{path:path.join(live,'deck.pdf'),sha256:contract.fileHash(path.join(live,'deck.pdf'))}};
+const snapshot={pages:[{page:1,pageId:'revenue',content:section,styles:['same']}],dependencies:{styles:'same'}};
+const manifest=evidence.manifest(snapshot,[{page:1,screenshot:'html.png'}],[{page:1,path:path.join(live,'pdf.png')}],artifacts,bound,live,{renderer:'file-fixture'});
+const audit={tier:'acceptance',acceptance:{complete:true},geometryStatus:'PASS',errors:[],warnings:[],pages:1,htmlArtifact:artifacts.html,pdfArtifact:artifacts.pdf,documentContract:{reliability:'2',kind:'fragment'},taskContract:bound,evidenceManifest:manifest};write('audit.json',audit);
+const r={schemaVersion:4,status:'complete',reviewer:'fixture',independence:'author',analysisSha256:analysis.digest(d),htmlSha256:artifacts.html.sha256,pdfSha256:artifacts.pdf.sha256,auditSha256:contract.hash(contract.stable(audit)),coverage:[{reviewer:'fixture',independence:'author',layers:review.layers,htmlPages:[1],pdfPages:[1],evidence:manifest.entries.map(e=>({id:e.id}))}],checks:{analysis:{status:'pass',basis:'夹具'},evidence:{status:'pass',basis:'夹具'},visual:{status:'pass',basis:'夹具'}},warningReview:[],issues:[]};write('review.json',r);
+assert.deepEqual(review.validate(r,audit,{baseDir:live}),[]);
+const target=path.join(root,'snapshot');snap.snapshotReview({auditFile:path.join(live,'audit.json'),reviewFile:path.join(live,'review.json'),outputDir:target});fs.rmSync(live,{recursive:true,force:true});assert.equal(snap.loadSnapshot(target).review.schemaVersion,4);
+const changed={...bound,analysisReview:{...bound.analysisReview,sha256:'a'.repeat(64)}};
+fs.writeFileSync(path.join(root,'html.png'),'file-level-image-fixture');fs.writeFileSync(path.join(root,'pdf.png'),'file-level-image-fixture');
+const m2=evidence.manifest(snapshot,[{page:1,screenshot:'html.png'}],[{page:1,path:path.join(root,'pdf.png')}],artifacts,changed,root,{renderer:'file-fixture'});
+assert.equal(manifest.dependenciesSha256,m2.dependenciesSha256,'分析审查版本变化不应自动使未变图像的视觉依赖失效');
+fs.rmSync(root,{recursive:true,force:true});console.log('PASS analysis snapshot: portable local dependencies, final review4, analysis/visual separation');

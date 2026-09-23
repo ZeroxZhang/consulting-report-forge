@@ -124,7 +124,7 @@ async function assemble(options={}){
    // 切片留在成稿上：文件本身要说得清自己是制作期产物，不能靠调用者记得。
    if(upto)doc.documentElement.dataset.assemblyPartial=String(upto);
    // 静态页不加载未使用图表库；主引擎及其导航、打印、PDF下载功能保持原样。
-   for(const script of doc.querySelectorAll('script[src]')){const src=script.getAttribute('src');if(src==='./deck-typography.js')continue;if(['./echarts-recipes.js','./chart-runtime.js'].includes(src)||/^https:\/\/cdn\.jsdelivr\.net\/npm\/echarts@[^/]+\/dist\/echarts\.min\.js$/.test(src))script.remove();else throw Error('未知引擎依赖，不能静默丢弃: '+src);}
+   for(const script of doc.querySelectorAll('script[src]')){const src=script.getAttribute('src');if(src==='./deck-typography.js')continue;if(['./form-capacity.js','./echarts-recipes.js','./chart-runtime.js'].includes(src)||/^https:\/\/cdn\.jsdelivr\.net\/npm\/echarts@[^/]+\/dist\/echarts\.min\.js$/.test(src))script.remove();else throw Error('未知引擎依赖，不能静默丢弃: '+src);}
    for(const script of doc.querySelectorAll('script[type="module"]')){if(script.textContent.includes('@icon-park/svg'))script.remove();else throw Error('未知引擎模块依赖');}
    const style=doc.createElement('style');style.id='deck-author';style.textContent=authorCSS.join('\n');doc.head.append(style);
    return {html:'<!DOCTYPE html>\n'+doc.documentElement.outerHTML,pages:slides.length,slideForms,partial:upto||null};
@@ -151,7 +151,7 @@ async function assemble(options={}){
      for(let i=0;i<count;i++){
       await slidesLoc.evaluateAll((es,index)=>es.forEach((s,j)=>s.classList.toggle('active',index===j)),i);
       const facts=await slidesLoc.nth(i).evaluate(probe.inspectDom,probe.WF_FORMS);
-      Object.assign(assembled.slideForms[i],{waterfall:facts.waterfall,bindings:facts.bindings,title:facts.title,contentHash:facts.contentHash,semanticType:facts.semanticType,pagePlanHash:facts.pagePlanHash,pageId:facts.pageId});
+      Object.assign(assembled.slideForms[i],{waterfall:facts.waterfall,bindings:facts.bindings,title:facts.title,contentHash:facts.contentHash,semanticType:facts.semanticType,pagePlanHash:facts.pagePlanHash,pageId:facts.pageId,exhibits:facts.exhibits,kpiCards:facts.kpiCards});
      }
     }finally{await probePage.close();}
    }

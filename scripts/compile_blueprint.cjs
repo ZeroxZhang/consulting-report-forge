@@ -15,18 +15,22 @@ function sameFile(left, right) {
 
 function run(args) {
   const [input, output, ...rest] = args;
-  let snippetFile;
-  if (rest.length) {
-    if (rest.length !== 2 || rest[0] !== '--snippets' || !rest[1]) throw Error('用法：node scripts/compile_blueprint.cjs blueprint.json pages.json [--snippets content-snippets.html]');
-    snippetFile = rest[1];
+  let snippetFile, taskFile, preview = false;
+  for(let i=0;i<rest.length;i++) {
+    const flag=rest[i];
+    if(flag==='--preview') preview=true;
+    else if(['--snippets','--task'].includes(flag)&&rest[i+1]&&!rest[i+1].startsWith('--')) {if(flag==='--snippets')snippetFile=rest[++i];else taskFile=rest[++i];}
+    else throw Error('未知或缺值的编译选项：'+flag);
   }
   if (!input || !output) throw Error('用法：node scripts/compile_blueprint.cjs blueprint.json pages.json [--snippets content-snippets.html]');
   for (const file of [output, snippetFile].filter(Boolean)) if (sameFile(input, file)) throw Error('拒绝覆盖输入蓝图：' + file);
   if (snippetFile && sameFile(output, snippetFile)) throw Error('pages 与 snippets 必须使用不同输出文件');
   const doc = JSON.parse(fs.readFileSync(input, 'utf8'));
-  const checked = blueprint.validate(doc, {ready: true});
+  const options = {ready: true, preview, baseDir:path.dirname(path.resolve(input)), ...(taskFile ? {task:require('./report_contract.cjs').readAnalysisTask(taskFile,input)} : {})};
+  if(preview&&doc.schemaVersion!==3)throw Error('--preview 分析编译只支持 schema3');
+  const checked = blueprint.validate(doc, options);
   if (checked.status !== 'PASS') throw Error('blueprint 未准备好：' + checked.errors.join('；'));
-  const pages = content.compile(doc);
+  const pages = content.compile(doc, options);
   // v4 接入后同样通过最终页面合同；历史检查器不应成为 schema 2 的绕过路径。
   const pageCheck = require('./check_pages.cjs').check(pages, {ratio: pages.ratio});
   if (pageCheck.status !== 'PASS') throw Error('派生 pages 无效：' + pageCheck.errors.join('；'));

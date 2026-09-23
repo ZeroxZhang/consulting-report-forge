@@ -252,7 +252,8 @@ function compileRegions(slide, ratio) {
   });
 }
 
-function compile(doc) {
+function compile(doc, options = {}) {
+  if (doc?.schemaVersion === 3) return require('./analysis_contract.cjs').compile(doc, options);
   if (doc?.schemaVersion !== 2) throw Error('内容编译只接受 blueprint.schemaVersion 2；历史蓝图使用原流程');
   const errors = validate(doc);
   if (errors.length) throw Error('内容合同无效：' + errors.join('；'));
@@ -264,6 +265,8 @@ function compile(doc) {
       form: formName(visual.form), visual: norm(visual.primary), layout: visual.layout,
       regions: compileRegions(slide, ratio), density: copy(slide.density), content, contentHash: contentHash(content)};
     if (visual.semanticType !== undefined) page.semanticType = visual.semanticType;
+    if (visual.selection !== undefined) page.selection = copy(visual.selection);
+    if (visual.capacity !== undefined) page.capacity = copy(visual.capacity);
     if (visual.sizing !== undefined) page.sizing = copy(visual.sizing);
     if (slide.waterfall !== undefined) page.waterfall = derivedWaterfall(slide);
     for (const key of ['annotations', 'repetitionReason', 'layoutReason']) if (visual[key] !== undefined) page[key] = copy(visual[key]);
@@ -356,4 +359,4 @@ function snippets(page) {
 }
 
 module.exports = {CONTENT_ROLES, SEMANTIC_TYPES, CLAIM_LABELS, OPS, norm, stable, hash, contentHash,
-  validate, compile, resolveText, bindings, bindingKeys, bindingText, verifyBindings, verify, html, snippets};
+  validate, compile, evaluateMetrics, interpolateText, resolveText, bindings, bindingKeys, bindingText, verifyBindings, verify, html, snippets};

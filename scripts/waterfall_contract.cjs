@@ -13,9 +13,8 @@ const themes = require('../assets/deck-themes.js');
 /* 与 layout_contract 的 MIN_REASON 同值同义：豁免与残差都要说人话，且短到一句话就挡回去。 */
 const MIN_REASON = 12;
 const STATUSES = ['verified', 'not_applicable'];
-/* 节点上限与 deck-forms 的 limits.maxNodes、两个渲染器的 WF_MAX_NODES 同一口径。
-   三处必须一起改；渲染器会在超限时直接拒绝，这里是提前一层把话说清楚。 */
-const MAX_NODES = 18;
+/* 与两种渲染器共用同一容量数字。 */
+const MAX_NODES = require('../assets/form-capacity.js').limit('kit.waterfall','nodes');
 const norm = value => String(value === undefined || value === null ? '' : value).replace(/\s+/g, ' ').trim();
 
 /* 精确到字符串的数值判读：内核把 reconciliation/tolerance/residual 都以未取整字符串给出，

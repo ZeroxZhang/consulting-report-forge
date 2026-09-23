@@ -1,6 +1,6 @@
 {
-  "version": 1,
-  "workMode": "editorial",
+  "version": 2,
+  "workMode": "analytical",
   "complexity": "simple",
   "majorConclusion": false,
   "mode": "reading",
@@ -8,7 +8,11 @@
   "typography": "serif-report-bold",
   "ratio": "16x9",
   "kind": "fragment",
-  "pages": {"record": "pages.json"},
-  "blueprint": {"record": "deck-blueprint.json"},
+  "pages": {
+    "record": "pages.json"
+  },
+  "blueprint": {
+    "record": "deck-blueprint.json"
+  },
   "critical": []
 }

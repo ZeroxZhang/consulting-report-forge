@@ -42,11 +42,18 @@ function loadPriorReview(old, {baseDir, trail, cache}) {
 /* pages/blueprint 的 record 相对 HTML，而不是 audit；快照保持内嵌合同不变并复制同位置的记录。 */
 function taskRecords(audit, {auditDir = process.cwd()} = {}) {
   const htmlDir = path.dirname(path.resolve(auditDir, audit.htmlArtifact?.path || ''));
-  return ['pages', 'blueprint'].filter(key => audit.taskContract?.[key] !== undefined).map(key => {
+  const records=['pages', 'blueprint', 'analysisReview'].filter(key => audit.taskContract?.[key] !== undefined).map(key => {
     const record = audit.taskContract[key];
     if (typeof record?.record !== 'string' || !record.record || !digest(record.sha256)) throw Error('task.' + key + ' 缺少记录路径或摘要');
     return {key, record: record.record, path: path.resolve(htmlDir, record.record), sha256: record.sha256};
   });
+  const blueprint=records.find(r=>r.key==='blueprint');
+  if(blueprint){const doc=JSON.parse(fs.readFileSync(blueprint.path,'utf8'));if(doc.schemaVersion===3)for(const a of doc.artifacts||[]){
+    if(path.isAbsolute(a.path))throw Error('分析附件须用相对蓝图路径，保证可迁移');
+    const file=path.resolve(path.dirname(blueprint.path),a.path);
+    records.push({key:'artifact:'+a.id,record:path.relative(htmlDir,file),path:file,sha256:a.sha256});
+  }}
+  return records;
 }
 
 /* 新旧两轮共用同一判据。缺少页级样式摘要属于不可判，不能让 undefined === undefined 变成可继承。 */
@@ -118,7 +125,16 @@ function auditErrors(audit, {auditDir = process.cwd()} = {}) {
 function validate(review, audit, {baseDir = process.cwd(), auditDir = baseDir, partial = false, trail = [], cache = new Map()} = {}) {
   baseDir = fs.realpathSync(baseDir); auditDir = fs.realpathSync(auditDir);
   const errors = [], fail = msg => errors.push(msg);
-  if (!review || review.schemaVersion !== 3) return ['新版交付必须使用review schemaVersion:3'];
+  const expectedVersion=audit?.taskContract?.version===2?4:3;
+  if (!review || review.schemaVersion !== expectedVersion) return ['新版交付必须使用review schemaVersion:'+expectedVersion];
+  if(expectedVersion===4){
+    if(audit.taskContract.analysisPreview)errors.push('分析预览不能作为正式审查');
+    try{const records=taskRecords(audit,{auditDir}),bp=records.find(r=>r.key==='blueprint'),pp=records.find(r=>r.key==='pages');
+      const doc=JSON.parse(fs.readFileSync(bp.path,'utf8'));
+      if(review.analysisSha256!==require('./analysis_contract.cjs').digest(doc))errors.push('最终审查未绑定当前分析版本');
+      errors.push(...require('./report_contract.cjs').verifyPlan(audit.taskContract,path.dirname(path.resolve(auditDir,audit.htmlArtifact.path)),JSON.parse(fs.readFileSync(pp.path,'utf8'))));
+    }catch(e){errors.push('最终分析绑定失败：'+e.message);}
+  }
   errors.push(...auditErrors(audit, {auditDir}));
   if (!audit || typeof audit !== 'object') return errors;
   if (review.status !== 'complete') fail('审查未完成');

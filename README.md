@@ -6,7 +6,7 @@
 
 深度调研 · 商业分析 · 专家协作 · 数据建模 · Storyline · 视觉报告
 
-[![Version](https://img.shields.io/badge/version-1.3.0-17324D?style=flat-square)](package.json) [![License](https://img.shields.io/badge/license-Apache--2.0-007C91?style=flat-square)](LICENSE) [![Output](https://img.shields.io/badge/output-HTML%20%2B%20PDF-17324D?style=flat-square)](#你会拿到什么) [![Node](https://img.shields.io/badge/Node.js-20%2B-007C91?style=flat-square&logo=nodedotjs&logoColor=white)](#快速开始) [![GitHub Stars](https://img.shields.io/github/stars/ZeroxZhang/consulting-report-forge?style=flat-square&logo=github&label=Stars)](https://github.com/ZeroxZhang/consulting-report-forge/stargazers)
+[![Version](https://img.shields.io/badge/version-1.4.0-17324D?style=flat-square)](package.json) [![License](https://img.shields.io/badge/license-Apache--2.0-007C91?style=flat-square)](LICENSE) [![Output](https://img.shields.io/badge/output-HTML%20%2B%20PDF-17324D?style=flat-square)](#你会拿到什么) [![Node](https://img.shields.io/badge/Node.js-20%2B-007C91?style=flat-square&logo=nodedotjs&logoColor=white)](#快速开始) [![GitHub Stars](https://img.shields.io/github/stars/ZeroxZhang/consulting-report-forge?style=flat-square&logo=github&label=Stars)](https://github.com/ZeroxZhang/consulting-report-forge/stargazers)
 
 **[看成稿](#报告样例) · [了解能力](#核心能力) · [开始使用](#快速开始) · [阅读文档](#文档与验证)**
 
@@ -23,6 +23,16 @@
 [![1.3.0最新成稿：MES地区规模与归一化强度，用两把尺子看同一组市场](docs/showcase/mes-regions.png)](docs/showcase/mes-regions.png)
 
 *实际成稿选页：同一组市场，用规模与归一化强度回答不同问题。分析方法决定比较方式，页面把判断依据展示出来。点击可查看原尺寸。*
+
+## 1.4.0：把分析过程接入制作流程
+
+新增八类业务分析手册：利润、市场进入、增长定价、运营成本、战略组合、组织模式、数字化/AI、投资尽调。每类明确输入、执行步骤、可支持的判断和反证；按问题加载，不要求每次套齐框架。
+
+公开信息缺口会触发范围内的外部调研；内部数据与业务取舍通过宿主可用的询问工具收集。等待答案时暂停相关分支，空回复不会被当作确认。已登记的关键缺口、未核实依赖和前置审查缺失都有生产门禁；真实检索、提问及专业判断仍由执行 agent 完成。
+
+新稿使用 **blueprint schema3 + task v2 + 最终 review4**：全局主张/指标只维护一次，研究阶段可以没有页面；前置分析审查与最终读图审查分别留证。历史稿继续使用原格式，迁移工具不覆盖原文件。
+
+[分析流程与询问协议](references/analysis-workflow.md) · [八类业务手册](references/analysis-methods.md) · [分析审查](references/analysis-review.md) · [本轮验证范围](docs/business-analysis-validation.md)
 
 ## 从一个业务问题开始
 
@@ -75,16 +85,16 @@
 
 **布局、密度与留白一起设计。**
 
-内置 **30 套正文布局原型**，并支持自定义阅读区域。主证据、解释、注释与来源有各自的位置；同类页面可以合理重复，也允许为阅读停顿保留空间。
+布局目录登记 **30 套正文布局**、8 条封面等其他页面布局和 6 种母版，并支持自定义阅读区域。主证据、解释、注释与来源有各自的位置；同类页面可以合理重复，也允许为阅读停顿保留空间。
 
 [![四种内置布局：中轴判断、逻辑拆解、议题证据双轨、路线图与风险门槛](docs/showcase/layout-featured.png)](docs/showcase/layout-featured.png)
 
 默认中文、16:9、白底深蓝与中文衬线粗体标题；支持 4:3、阅读／讲述模式，以及 `mckinsey`、`bcg`、`accenture` 视觉主题。这些是独立视觉适配，并非相关公司的官方模板或背书。
 
 <details>
-<summary><strong>展开布局图谱：30 套正文原型与选型界面</strong></summary>
+<summary><strong>展开布局图谱：30 套正文布局与选型界面</strong></summary>
 
-[![30套正文布局原型](docs/showcase/layout-overview.png)](docs/showcase/layout-overview.png)
+[![30套正文布局总览](docs/showcase/layout-overview.png)](docs/showcase/layout-overview.png)
 
 目录布局采用 12×6 网格，记录适用场景、阅读路径、容量与禁用条件。自定义布局声明区域职责，并接受相同的可读性和交付检查。
 
@@ -97,6 +107,8 @@
 **按证据关系选择图表。**
 
 按比较、趋势、构成、关系、流向和机制选择表达。支持条形、折线、散点、气泡、哑铃、瀑布、桑基、Mekko、热力矩阵，以及流程、泳道、决策树与精确表格；也可自绘 SVG。
+
+蓝图记录每页的证据关系、选型理由和计划容量；已登记图示的结构与实际容量在渲染和验收时核对。形式专项容量数字维护在一处，并生成[形式与容量目录](references/form-capacity.md)。这能拦截明显的声明错配与超限，图形是否最能帮助读者判断仍由审稿者看最终 HTML/PDF。
 
 瀑布核对增减闭合，桑基核对流量守恒，未知值保留未知。图型数量没有最低配额，关键数据直接可见。
 
@@ -178,8 +190,8 @@
 |---|---|
 | **独立 HTML 报告** | 离线阅读、翻页、全屏、整册总览、页码链接；字体与图表随文件交付，成品内置同版 PDF 下载 |
 | **同版 PDF** | 发送、打印与归档，关键图表和数据直接可见 |
-| **可编辑制作底稿** | 内容蓝图、页面源稿和任务配置，便于继续修订 |
-| **对应版本的检查记录** | 页面截图、自动审计及实际审查记录，用于复核和追溯 |
+| **任务目录中的可编辑底稿** | 内容蓝图、页面源稿和任务配置留在制稿目录；按需另行交接，不随默认交付包分发 |
+| **任务目录中的检查记录** | 页面截图、自动审计及实际审查记录用于内部复核；按需另行交接，不随默认交付包分发 |
 
 接收者只需要浏览器或 PDF 阅读器，无需安装制作工具。
 
@@ -261,15 +273,15 @@ npm ci
 
 ## 文档与验证
 
-**已经完成的验证：** 工程与浏览器回归、六页合成任务实际制作、20 页 MES 同材料完整报告，以及单页修订后的审查复用。验证证明这些任务和机制可执行，不代表所有题材与模型上的质量或速度保证。
+**已经完成的验证：** 1.3.0 制作链有六页合成任务、20 页 MES 同材料报告及单页修订复用；1.4.0 新分析链通过工程与浏览器回归、分析行为评估、两份简单一页案例，以及一份 9 页、6 页正文、需独立审查的复杂合成报告的 HTML/PDF 验收与正式打包。合成验收验证流程和门禁，不证明真实经营结论；既有结果不代表所有题材与模型上的质量或速度保证。
 
 | 想进一步了解 | 文档 |
 |---|---|
 | 整套制作流程 | [技能入口](SKILL.md) · [HTML/PDF制作与交付](references/static-html-pdf.md) |
 | 方法、故事线与专家协作 | [分析方法](references/analysis-methods.md) · [咨询叙事](references/consulting-storyline.md) · [协作协议](references/collaboration.md) |
 | 内容一致性与来源 | [内容制作](references/content-authoring.md) · [证据身份](references/evidence-ledger.md) |
-| 页面质量与后续修订 | [视觉验收](references/visual-qa.md) · [审查复用](references/review-reuse.md) |
-| 实际验证的范围与局限 | [升级验证](docs/upgrade-validation.md) · [MES案例分析](docs/mes-full-evaluation.md) |
+| 页面质量与后续修订 | [视觉验收](references/visual-qa.md) · [图示语义合同](references/diagram-semantics.md) · [审查复用](references/review-reuse.md) |
+| 实际验证的范围与局限 | [升级验证](docs/upgrade-validation.md) · [选型与容量合同验证](docs/form-contract-validation.md) · [MES案例分析](docs/mes-full-evaluation.md) |
 | 图片出处与复现 | [展示素材说明](docs/showcase/README.md) · [行为评估任务](evals/README.md) |
 
 <details>

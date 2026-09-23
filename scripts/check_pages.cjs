@@ -26,6 +26,7 @@ function densityErrors(page, at) {
 
 function check(doc, options = {}) {
   const errors = [];
+  const capacityWarnings = [];
   const bad = message => errors.push(message);
   if (!doc || typeof doc !== 'object' || Array.isArray(doc)) { bad('pages.json 须为对象'); return { status: 'FAIL', errors }; }
   if (![1, 2, 3, 4].includes(doc.version)) bad('pages.version 只接受 1/2/3（历史）或 4（统一内容与自由布局）');
@@ -47,6 +48,11 @@ function check(doc, options = {}) {
     let entry = null;
     try { entry = forms.get(page.form); }
     catch (error) { bad(at + '（page ' + page.page + '）' + error.message); }
+    if (doc.version === 4 && doc.blueprintSchemaVersion === 3 && entry) {
+      const result = require('./form_contract.cjs').validate(page);
+      errors.push(...result.errors.map(e=>at+' '+e));
+      capacityWarnings.push(...result.warnings.map(w=>at+' '+w));
+    }
     // v3：几何、槽位、角色、容量全部来自布局目录，作者只逐格声明这一格放什么。
     if (doc.version === 4 && page.layout === 'custom') errors.push(...layouts.customPageErrors(page, at, ratio));
     else if (doc.version >= 3) errors.push(...layouts.pageErrors(page, at + '（page ' + page.page + '）', ratio));
@@ -102,7 +108,7 @@ function check(doc, options = {}) {
   // 与 densityErrors 同一先例：声明质量类合同只对新版本生效，历史稿继续可读、重新打包不会因新规则突然失败。
   if (doc.version >= 2) errors.push(...richness.validate(doc));
   if (doc.version >= 3) errors.push(...layouts.validate(doc));
-  const warnings = doc.version === 4 ? [...layouts.diagnostics(doc), ...richness.diagnostics(doc)] : [];
+  const warnings = doc.version === 4 ? [...layouts.diagnostics(doc), ...richness.diagnostics(doc), ...capacityWarnings] : [];
   return { status: errors.length ? 'FAIL' : 'PASS', errors, warnings, inventory: inventory(doc) };
 }
 
@@ -211,8 +217,9 @@ function load(file, options = {}) {
 
 /* 与成稿对账：页数、顺序与每页声明的 form 必须一一对应；v2 同时把密度意图绑定到实际页面，
    v3 再把布局引用绑定到 section 上——布局是页面的骨架，骨架错了内容再对也不算同一页。 */
-function verifyDeck(doc, slides) {
+function verifyDeck(doc, slides, {warnings = []} = {}) {
   const errors = [];
+  const capacityPolicy = require('../assets/form-capacity.js');
   const content = slides.filter(slide => !BOOKEND_ROLES.includes(slide.role));
   const pages = (doc && doc.pages) || [];
   if (content.length !== pages.length) errors.push('pages.json 声明 ' + pages.length + ' 页正文，成稿有 ' + content.length + ' 页正文');
@@ -222,6 +229,34 @@ function verifyDeck(doc, slides) {
     if (!slide.form) { errors.push('第 ' + slide.page + ' 页缺少 data-form；逐页显式声明，没有静默默认值'); return; }
     try { forms.get(slide.form); } catch (error) { errors.push('第 ' + slide.page + ' 页 ' + error.message); return; }
     if (slide.form !== declared.form) errors.push('第 ' + slide.page + ' 页 data-form="' + slide.form + '" 与 pages.json 的 ' + declared.form + ' 不一致');
+    if(doc.blueprintSchemaVersion===3&&declared.form==='html.kpi'){
+      if(!Number.isInteger(slide.kpiCards)||slide.kpiCards<1)errors.push('第 '+slide.page+' 页声明 html.kpi，成稿须有可见 KPI 卡片');
+      else if(declared.capacity?.items!==undefined&&slide.kpiCards>declared.capacity.items)errors.push('第 '+slide.page+' 页实际 KPI 卡片 '+slide.kpiCards+' 张，超过蓝图计划 '+declared.capacity.items);
+    }
+    if(doc.blueprintSchemaVersion===3&&declared.form==='html.finding'){
+      const findings=Array.isArray(slide.finding)?slide.finding:[];
+      if(findings.length!==1)errors.push('第 '+slide.page+' 页声明 html.finding，成稿须有且仅有一个可见 .finding 组件');
+      for(const finding of findings){
+        const actual=finding.grounds?.length||0,result=capacityPolicy.inspect('html.finding',{items:actual},{requireAll:true});
+        errors.push(...result.errors.map(e=>'第 '+slide.page+' 页 '+e));
+        warnings.push(...result.warnings.map(w=>'第 '+slide.page+' 页 '+w));
+        if(declared.capacity?.items!==undefined&&actual>declared.capacity.items)errors.push('第 '+slide.page+' 页实际 finding 依据 '+actual+' 条，超过蓝图计划 '+declared.capacity.items);
+      }
+    }
+    if (doc.blueprintSchemaVersion === 3 && Array.isArray(slide.exhibits) && ['exhibit-kit','echarts-recipes','precision','diagram'].includes(forms.get(declared.form).module) && forms.get(declared.form).kind === 'svg') {
+      const matching=slide.exhibits.filter(e=>e.form===declared.form);
+      if(!matching.length)errors.push('第 '+slide.page+' 页缺少与主形式 '+declared.form+' 对应的带形式标记图示');
+      for(const exhibit of matching){
+        if(declared.form.startsWith('diagram.'))errors.push(...require('./diagram_contract.cjs').verifyRendered(declared.form,exhibit.diagram).map(e=>'第 '+slide.page+' 页图示 '+exhibit.id+' '+e));
+        if(!Object.keys(capacityPolicy.rules(declared.form)).length)continue;
+        let actual;
+        try{actual=JSON.parse(decodeURIComponent(exhibit.capacity||''));}catch(_){errors.push('第 '+slide.page+' 页图示 '+exhibit.id+' 容量标记不可解析');continue;}
+        const result=capacityPolicy.inspect(declared.form,actual,{requireAll:true});
+        errors.push(...result.errors.map(e=>'第 '+slide.page+' 页图示 '+exhibit.id+' '+e));
+        warnings.push(...result.warnings.map(w=>'第 '+slide.page+' 页图示 '+exhibit.id+' '+w));
+        for(const [key,value] of Object.entries(actual))if(declared.capacity?.[key]!==undefined&&value>declared.capacity[key])errors.push('第 '+slide.page+' 页图示 '+exhibit.id+' 实际 '+key+'='+value+' 超过蓝图计划 '+declared.capacity[key]);
+      }
+    }
     if (declared.visual !== undefined && norm(slide.visual) !== norm(declared.visual)) errors.push('第 ' + slide.page + ' 页 data-visual 缺失或与 pages.json 不一致');
     // 同一句话存在成稿与 pages.json 两处，逐字相同才认。报错要把两句都摊开——
     // 只说"不一致"等于让作者回去逐字比对，页数一多就是纯耗时。

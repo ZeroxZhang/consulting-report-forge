@@ -2,12 +2,13 @@
 (function (root, factory) {
   const isNode = typeof module === 'object' && module.exports;
   // 内核是第三个依赖，但只有声明了 waterfall 报告的图才用得上；浏览器少加载它不影响其余形式。
-  const api = factory(isNode ? require('./deck-typography.js') : root.DeckTypography, isNode ? require('./annotation-layer.js') : root.AnnotationLayer, isNode ? require('./waterfall-bridge.js') : root.WaterfallBridge);
+  const api = factory(isNode ? require('./deck-typography.js') : root.DeckTypography, isNode ? require('./annotation-layer.js') : root.AnnotationLayer, isNode ? require('./waterfall-bridge.js') : root.WaterfallBridge, isNode ? require('./form-capacity.js') : root.FormCapacity);
   if (isNode) module.exports = api;
   if (root) root.ExhibitKit = api;
-})(typeof window !== 'undefined' ? window : null, function (typography, AnnotationLayer, WaterfallBridge) {
+})(typeof window !== 'undefined' ? window : null, function (typography, AnnotationLayer, WaterfallBridge, Capacity) {
   'use strict';
   if (!AnnotationLayer) throw new Error('ExhibitKit 需要 annotation-layer.js（浏览器加载时须先于本文件）');
+  if (!Capacity) throw new Error('ExhibitKit 需要 form-capacity.js（浏览器加载时须先于本文件）');
   const esc = v => String(v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const num = (v, name) => { if (typeof v !== 'number' || !Number.isFinite(v)) throw new Error(name + ' 必须为有限数值'); return v; };
   const list = (v, name) => { if (!Array.isArray(v) || !v.length) throw new Error(name + ' 不可为空'); return v; };
@@ -139,7 +140,7 @@
     c.line(a.x,40,b.x,40,c.p.ink);
     c.line(a.x,40,a.x,49,c.p.ink);c.line(b.x,40,b.x,49,c.p.ink);
   }
-  const WF_MAX_NODES=18;
+  const WF_MAX_NODES=Capacity.limit('kit.waterfall','nodes');
   /* 内核报告的节点已带 from/to/value 与预格式化文本：渲染器只画，不重算累计、不重排数字。
      体检未通过的报没有图可画——画一张对不上账的图比拒绝出图更糟。 */
   function kernelBars(report){
@@ -370,7 +371,7 @@
      正因为段内能直接标，它不需要图例：图例占的那一行在窄模块里就是纯损失。 */
   function shareBar(s) {
     const c = canvas(s), data = list(s.items, 'items');
-    if (data.length > 2) throw new Error('横向构成条一次最多 2 条；三期以上请改用 kit.stacked 逐列比较');
+    if (data.length > Capacity.limit('kit.shareBar','items')) throw new Error('横向构成条一次最多 '+Capacity.limit('kit.shareBar','items')+' 条；更多期数请改用 kit.stacked 逐列比较');
     if (s.mode !== undefined) throw new Error('构成条只做 100% 构成；要按绝对值跨期比较请用 kit.stacked');
     if (s.labels !== undefined) throw new Error('构成条不提供改表开关：段内放不下的标注改走条上方引线通道');
     const content = s.labelContent || 'share';
@@ -392,7 +393,7 @@
       });
       if (segs.length !== names.length) throw new Error('每条须显式列出全部系列；零值填 0，未知值不能当作 0');
     });
-    if (names.length > 6) throw new Error('系列 ≤ 6；更多请把次要项并为"其他"或改用表格');
+    if (names.length > Capacity.limit('kit.shareBar','series')) throw new Error('系列 ≤ '+Capacity.limit('kit.shareBar','series')+'；更多请把次要项并为"其他"或改用表格');
     const totals = data.map(v => v.segments.reduce((a, g) => a + g.value, 0));
     totals.forEach((v, i) => { if (!(v > 0)) throw new Error('items[' + i + '] 总量须大于 0，构成比才有定义'); });
     const shareOf = (g, i) => g.value / totals[i];
@@ -480,12 +481,12 @@
   function minimumSize(kind, sizing={}) {
     if(kind!=='processFlow')return null;
     const stages=sizing.stages===undefined?2:sizing.stages;
-    if(!Number.isInteger(stages)||stages<2)throw new Error('processFlow sizing.stages 须为至少2的整数');
+    if(!Number.isInteger(stages)||stages<Capacity.limit('kit.processFlow','stages','hardMin'))throw new Error('processFlow sizing.stages 须为至少'+Capacity.limit('kit.processFlow','stages','hardMin')+'的整数');
     return {width:FLOW.left+FLOW.right+FLOW.gap*(stages-1)+FLOW.column*stages,height:FLOW.header+FLOW.rows*FLOW.row};
   }
   function processFlow(s) {
     const c=canvas(s),stages=list(s.stages,'stages'),transitions=list(s.transitions,'transitions');
-    if(stages.length<2||transitions.length!==stages.length-1)throw new Error('线性流程需至少2阶段和逐段转换条件');
+    if(stages.length<Capacity.limit('kit.processFlow','stages','hardMin')||transitions.length!==stages.length-1)throw new Error('线性流程需至少'+Capacity.limit('kit.processFlow','stages','hardMin')+'阶段和逐段转换条件');
     const min=minimumSize('processFlow',{stages:stages.length});
     if(c.w<min.width||c.h<min.height)throw new Error('流程画布不足：至少 '+min.width+'×'+min.height+'px，当前 '+c.w+'×'+c.h+'px；请换布局或拆页');
     const left=FLOW.left,gap=FLOW.gap,cw=(c.w-left-FLOW.right-gap*(stages.length-1))/stages.length;
@@ -500,5 +501,6 @@
     });
     return c.end();
   }
-  return {shareBar,waterfall,dumbbell,slope,bullet,heatmap,mekko,tree,swimlane,stacked,comparisonTable,processFlow,minimumSize,formatNumber,difference};
+  const bounded=(form,draw)=>spec=>{const result=Capacity.check(form,spec);if(result.errors.length)throw new Error(result.errors.join('；'));return draw(spec).replace(/^<svg\b/,`<svg data-form="${form}" data-capacity="${Capacity.encoded(form,spec)}"`);};
+  return {shareBar:bounded('kit.shareBar',shareBar),waterfall:bounded('kit.waterfall',waterfall),dumbbell:bounded('kit.dumbbell',dumbbell),slope:bounded('kit.slope',slope),bullet:bounded('kit.bullet',bullet),heatmap:bounded('kit.heatmap',heatmap),mekko:bounded('kit.mekko',mekko),tree:bounded('kit.tree',tree),swimlane:bounded('kit.swimlane',swimlane),stacked:bounded('kit.stacked',stacked),comparisonTable,processFlow:bounded('kit.processFlow',processFlow),minimumSize,formatNumber,difference};
 });

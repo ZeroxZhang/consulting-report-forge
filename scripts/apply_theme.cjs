@@ -25,7 +25,7 @@ for(const [tag,name] of [['deck-layouts','consulting-layouts.css'],['deck-geomet
   html=html.replace('</head>',`<style id="${tag}">${fs.readFileSync(path.resolve(__dirname,'../assets',name),'utf8')}</style>\n</head>`);
 }
 html=contracts.install(html,task);
-for(const name of ['echarts-recipes.js','chart-runtime.js']){
+for(const name of ['form-capacity.js','echarts-recipes.js','chart-runtime.js']){
   const source=fs.readFileSync(path.resolve(__dirname,'../assets',name),'utf8');
   html=html.replace('<script src="./'+name+'"></script>',()=>`<script>\n${source}\n</script>`);
 }

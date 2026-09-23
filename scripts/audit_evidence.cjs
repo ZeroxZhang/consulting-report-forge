@@ -53,7 +53,7 @@ function captureDocument() {
 function manifest(snapshot, rows, pdfRows, artifacts, task, directory, environment) {
   // pages/blueprint 绑定输入记录；v4 的逐页 contentHash 已在 section 中，由 pageSha256 捕捉。
   // 改一页不连带作废其他页。全局分析/证据/视觉结论从不由继承准备工具代填。
-  const deckTask = task ? Object.fromEntries(Object.entries(task).filter(([key]) => !['pages', 'blueprint'].includes(key))) : null;
+  const deckTask = task ? Object.fromEntries(Object.entries(task).filter(([key]) => !['pages', 'blueprint', 'analysisReview'].includes(key))) : null;
   const dependenciesSha256 = hash(stable({dependencies: snapshot.dependencies, task: deckTask, environment}));
   if (new Set(snapshot.pages.map(p => p.pageId)).size !== snapshot.pages.length) throw Error('data-page-id重复，无法绑定页身份');
   const entries = [];

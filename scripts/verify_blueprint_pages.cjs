@@ -11,14 +11,14 @@ function contentSlides(doc) {
   return doc.slides.filter(slide => blueprintApi.CONTENT_ROLES.has(slide.pageRole));
 }
 
-function verify(blueprint, pagesDoc) {
+function verify(blueprint, pagesDoc, options = {}) {
   const errors = [];
-  const blueprintCheck = blueprintApi.validate(blueprint, {ready: true});
+  const blueprintCheck = blueprintApi.validate(blueprint, {...options, ready: true});
   if (blueprintCheck.status !== 'PASS') return ['blueprint 未准备好：' + blueprintCheck.errors.join('；')];
   const pagesCheck = pagesApi.check(pagesDoc, {ratio:blueprint.deck.ratio || '16x9'});
   if (pagesCheck.status !== 'PASS') return ['pages.json 无效：' + pagesCheck.errors.join('；')];
-  if (blueprint.schemaVersion === 2) {
-    const expected = require('./content_contract.cjs').compile(blueprint);
+  if ([2, 3].includes(blueprint.schemaVersion)) {
+    const expected = require('./content_contract.cjs').compile(blueprint, options);
     return stable(expected) === stable(pagesDoc) ? [] : ['pages.json 与权威 blueprint 的编译结果不同：请重新编译，不要手改派生记录'];
   }
   const slides = contentSlides(blueprint), pages = pagesDoc.pages;
@@ -45,8 +45,8 @@ function verify(blueprint, pagesDoc) {
 if (require.main === module) {
   try {
     const [blueprintFile, pagesFile, ...rest] = process.argv.slice(2);
-    if (!blueprintFile || !pagesFile || rest.length) throw Error('用法: node scripts/verify_blueprint_pages.cjs deck-blueprint.json pages.json');
-    const errors = verify(JSON.parse(fs.readFileSync(blueprintFile, 'utf8')), JSON.parse(fs.readFileSync(pagesFile, 'utf8')));
+    if (!blueprintFile || !pagesFile || (rest.length && (rest.length !== 2 || rest[0] !== '--task'))) throw Error('用法: node scripts/verify_blueprint_pages.cjs deck-blueprint.json pages.json [--task task.json]（schema 3 必须提供 --task）');
+    const errors = verify(JSON.parse(fs.readFileSync(blueprintFile, 'utf8')), JSON.parse(fs.readFileSync(pagesFile, 'utf8')), {baseDir:require('node:path').dirname(require('node:path').resolve(blueprintFile)), preview:JSON.parse(fs.readFileSync(pagesFile,'utf8')).preview===true, ...(rest.length?{task:require('./report_contract.cjs').readAnalysisTask(rest[1],blueprintFile)}:{})});
     console.log(JSON.stringify({status: errors.length ? 'FAIL' : 'PASS', errors}, null, 2));
     if (errors.length) process.exitCode = 1;
   } catch (error) { console.error(error.message); process.exitCode = 1; }

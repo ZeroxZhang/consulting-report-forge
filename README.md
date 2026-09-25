@@ -2,11 +2,15 @@
 
 # Consulting Report Forge
 
-### 让你的 AI Agent，完成从深度研究到决策报告的咨询工作。
+### 从业务问题出发，交付有依据的决策报告。
 
 深度调研 · 商业分析 · 专家协作 · 数据建模 · Storyline · 视觉报告
 
 [![Version](https://img.shields.io/badge/version-1.4.0-17324D?style=flat-square)](package.json) [![License](https://img.shields.io/badge/license-Apache--2.0-007C91?style=flat-square)](LICENSE) [![Output](https://img.shields.io/badge/output-HTML%20%2B%20PDF-17324D?style=flat-square)](#你会拿到什么) [![Node](https://img.shields.io/badge/Node.js-20%2B-007C91?style=flat-square&logo=nodedotjs&logoColor=white)](#快速开始) [![GitHub Stars](https://img.shields.io/github/stars/ZeroxZhang/consulting-report-forge?style=flat-square&logo=github&label=Stars)](https://github.com/ZeroxZhang/consulting-report-forge/stargazers)
+
+<a href="docs/showcase/skill-poster.png"><img src="docs/showcase/skill-poster.png" width="600" alt="Consulting Report Forge 技能介绍海报：研究有来源、分析有方法、表达有主线、交付有复核；真实 AI 生物制药报告选览"></a>
+
+[下载 3:4 高清海报](docs/showcase/skill-poster.png) · [可编辑海报源](docs/showcase/skill-poster.html)
 
 **[看成稿](#报告样例) · [了解能力](#核心能力) · [开始使用](#快速开始) · [阅读文档](#文档与验证)**
 
@@ -20,19 +24,20 @@
 
 **你希望得到的，是一次有依据的讨论：机会在哪里，判断为什么成立，有哪些选择，下一步怎么验证。**
 
-[![1.3.0最新成稿：MES地区规模与归一化强度，用两把尺子看同一组市场](docs/showcase/mes-regions.png)](docs/showcase/mes-regions.png)
+## 1.4.0：从研究与分析，一直推进到可复核的报告
 
-*实际成稿选页：同一组市场，用规模与归一化强度回答不同问题。分析方法决定比较方式，页面把判断依据展示出来。点击可查看原尺寸。*
+当前版本把研究阶段接入统一蓝图：先定义问题、登记证据缺口、完成计算与综合判断，再组织页面。研究可以从零页面开始，关键主张与指标统一维护。
 
-## 1.4.0：把分析过程接入制作流程
+| 最新能力 | 对报告工作的帮助 |
+|---|---|
+| **八类业务分析手册** | 覆盖利润、市场进入、增长定价、运营成本、战略组合、组织模式、数字化/AI、投资尽调；按问题选择方法和反证 |
+| **贯穿全程的缺口处理** | 公开信息缺口触发范围内调研，内部数据与业务取舍向用户询问；等待答案时推进不依赖该答案的工作 |
+| **分析审查前置** | 正式制稿前核对方法、口径与推理；复杂或重大材料需要真实独立实例，最终成稿另做读图审查 |
+| **计算与表达可追溯** | 外部计算结果可导入并追踪输入、模型与版本；图表选型、语义和容量在制作与验收时核对 |
 
-新增八类业务分析手册：利润、市场进入、增长定价、运营成本、战略组合、组织模式、数字化/AI、投资尽调。每类明确输入、执行步骤、可支持的判断和反证；按问题加载，不要求每次套齐框架。
+最新真实案例是一份 **29 页、26 页正文的 AI 生物制药研究报告**，涵盖市场口径、技术与临床证据、交易结构、财务比较和情景估值。下方提供最终验收截图；机器检查、审查记录与业务事实核验各有边界。
 
-公开信息缺口会触发范围内的外部调研；内部数据与业务取舍通过宿主可用的询问工具收集。等待答案时暂停相关分支，空回复不会被当作确认。已登记的关键缺口、未核实依赖和前置审查缺失都有生产门禁；真实检索、提问及专业判断仍由执行 agent 完成。
-
-新稿使用 **blueprint schema3 + task v2 + 最终 review4**：全局主张/指标只维护一次，研究阶段可以没有页面；前置分析审查与最终读图审查分别留证。历史稿继续使用原格式，迁移工具不覆盖原文件。
-
-[分析流程与询问协议](references/analysis-workflow.md) · [八类业务手册](references/analysis-methods.md) · [分析审查](references/analysis-review.md) · [本轮验证范围](docs/business-analysis-validation.md)
+[分析流程](references/analysis-workflow.md) · [八类业务手册](references/analysis-methods.md) · [分析审查](references/analysis-review.md) · [版本验证范围](docs/business-analysis-validation.md)
 
 ## 从一个业务问题开始
 
@@ -141,11 +146,42 @@
 
 ## 报告样例
 
-### 最新案例：中国 MES 市场——增长结构与交付约束
+### 最新案例：全球 AI 生物制药前沿研究
+
+**29 页完整报告 · 26 页正文 · 2026-09-25 成稿 · HTML/PDF 双媒介审查记录齐全**
+
+从公开资料与财务数据出发，围绕投资研究组织一条完整主线：**市场如何定义 → 技术与临床证据到了哪一步 → 商业模式如何兑现 → 交易与现金如何解读 → 哪些条件需要继续验证**。
+
+以下图片直接取自最终 HTML 验收截图，保留整页内容、来源、统计期间与限定。点击图片可查看原尺寸。
+
+| 市场口径 · 保留估计之间的差异 | 证据矩阵 · 区分参与者的验证环节 |
+|---|---|
+| [![AI生物制药报告第4页：三家公开市场估计与统计边界](docs/showcase/ai-biopharma-market.png)](docs/showcase/ai-biopharma-market.png) | [![AI生物制药报告第7页：参与者证据矩阵](docs/showcase/ai-biopharma-landscape.png)](docs/showcase/ai-biopharma-landscape.png) |
+| 展示多个估计，说明为何不能合并为统一统计。 | 将能力与证据阶段分开，避免把不同公司简单排成一列。 |
+
+**交易分析：把现金首付与有条件的里程碑付款分开。** 散点图、样本标记和解释共同支撑同一页判断。
+
+[![AI生物制药报告第14页：现金首付与潜在里程碑的关系及合同限制](docs/showcase/ai-biopharma-deals.png)](docs/showcase/ai-biopharma-deals.png)
+
+| 财务比较 · 收入、亏损与现金 | 现金桥 · 解释期初到期末的变化 |
+|---|---|
+| [![AI生物制药报告第16页：三家上市样本财务气泡图](docs/showcase/ai-biopharma-finance.png)](docs/showcase/ai-biopharma-finance.png) | [![AI生物制药报告第17页：Recursion半年现金变动瀑布图](docs/showcase/ai-biopharma-cash.png)](docs/showcase/ai-biopharma-cash.png) |
+| 同时呈现多个维度，保留样本与期间边界。 | 让每项现金变化对应增减，核对起点与终点。 |
+
+| 情景估值 · 显示假设如何改变结果 | 尽调门槛 · 把判断变成核查问题 |
+|---|---|
+| [![AI生物制药报告第22页：里程碑条件估值敏感性矩阵](docs/showcase/ai-biopharma-valuation.png)](docs/showcase/ai-biopharma-valuation.png) | [![AI生物制药报告第25页：六项投资尽调门槛](docs/showcase/ai-biopharma-diligence.png)](docs/showcase/ai-biopharma-diligence.png) |
+| 明示概率与折现假设，避免把名义金额当作现值。 | 逐项列出需要的证据、风险信号与验证方式。 |
+
+> 本例展示实际研究与制稿过程，报告中的金融与临床判断以原页来源、期间和限制为准，不作为当前投资或医疗建议。本次 README 更新核对了截图与既有验收记录，未重新开展全报告事实审计。逐图页码与校验值见[截图清单](docs/showcase/ai-biopharma-screenshots.json)，记录范围见[样例说明](docs/showcase/README.md)。
+
+### 中国 MES 市场——增长结构与交付约束
 
 **20 页完整报告 · 17 页正文 · HTML/PDF 双媒介逐页检查 · 作者与独立实例复核**
 
 这份报告从市场数据与访谈整理稿出发，将规模、增速、渗透率、厂商与交付材料组织成一条分析主线：**增长来自哪里 → 机会如何比较 → 交付受什么约束 → 下一步验证什么**。
+
+[![MES第6页：地区规模与归一化强度](docs/showcase/mes-regions.png)](docs/showcase/mes-regions.png)
 
 其中，增长拆解解释增量来源，归一化比较区分规模与强度，敏感性分析检验假设，行动页连接研究与执行。以下均为最终验收版原页截图，展示分析如何进入实际成稿。
 
@@ -273,7 +309,7 @@ npm ci
 
 ## 文档与验证
 
-**已经完成的验证：** 1.3.0 制作链有六页合成任务、20 页 MES 同材料报告及单页修订复用；1.4.0 新分析链通过工程与浏览器回归、分析行为评估、两份简单一页案例，以及一份 9 页、6 页正文、需独立审查的复杂合成报告的 HTML/PDF 验收与正式打包。合成验收验证流程和门禁，不证明真实经营结论；既有结果不代表所有题材与模型上的质量或速度保证。
+**已经完成的验证：** 1.3.0 制作链有六页合成任务、20 页 MES 同材料报告及单页修订复用；1.4.0 新分析链通过工程与浏览器回归、分析行为评估、两份简单一页案例，以及一份 9 页、6 页正文、需独立审查的复杂合成报告的 HTML/PDF 验收与正式打包。合成验收验证流程和门禁，不证明真实经营结论；新增展示的 AI 生物制药案例已有 29 页 HTML/PDF acceptance 与作者、独立实例审查记录，本次已核对选页截图校验值；这是单个实际案例，不代表所有题材与模型上的质量或速度保证。
 
 | 想进一步了解 | 文档 |
 |---|---|
@@ -281,7 +317,7 @@ npm ci
 | 方法、故事线与专家协作 | [分析方法](references/analysis-methods.md) · [咨询叙事](references/consulting-storyline.md) · [协作协议](references/collaboration.md) |
 | 内容一致性与来源 | [内容制作](references/content-authoring.md) · [证据身份](references/evidence-ledger.md) |
 | 页面质量与后续修订 | [视觉验收](references/visual-qa.md) · [图示语义合同](references/diagram-semantics.md) · [审查复用](references/review-reuse.md) |
-| 实际验证的范围与局限 | [升级验证](docs/upgrade-validation.md) · [选型与容量合同验证](docs/form-contract-validation.md) · [MES案例分析](docs/mes-full-evaluation.md) |
+| 实际验证的范围与局限 | [1.4.0 分析链验证](docs/business-analysis-validation.md) · [升级验证](docs/upgrade-validation.md) · [选型与容量合同验证](docs/form-contract-validation.md) · [MES案例分析](docs/mes-full-evaluation.md) |
 | 图片出处与复现 | [展示素材说明](docs/showcase/README.md) · [行为评估任务](evals/README.md) |
 
 <details>

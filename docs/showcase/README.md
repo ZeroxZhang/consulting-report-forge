@@ -2,6 +2,36 @@
 
 本目录只收录公开展示需要的精选图片和可复现演示源。完整本地测试目录与审计底稿未纳入仓库。
 
+## Skill 介绍海报（README 头图）
+
+[skill-poster.png](skill-poster.png) 是独立的 **3:4 海报，2160 × 2880 像素**。采用中文介绍、四项能力和真实报告原页缩略图；原页用于展示，不应在缩略尺寸下读取具体数据。
+
+可编辑源为 [skill-poster.html](skill-poster.html)，复用仓库随包字体及下方三张案例图。安装项目依赖并准备 Chrome 后，在仓库根目录运行：
+
+```sh
+node docs/showcase/build-poster.cjs
+```
+
+已安装 Playwright Chromium 时可设置 `CHROME_CHANNEL=chromium`。脚本检查画布尺寸、元素越界、图片和字体加载，再导出双倍像素 PNG。HTML 需与仓库相对目录一起使用，PNG 可单独分享。
+
+## 1.4.0 实际报告选页：全球 AI 生物制药前沿研究
+
+来自用户指定的 `0924_mimo_forge_test/codex_retest/report` 执行项目，报告记录的成稿日期为 **2026-09-25**。整册 29 页、26 页正文；目录名称不作为成稿日期。公开图片直接复制 `renders/pNN.png` 最终 HTML 验收截图，未裁切、重绘或修改原文。
+
+| 文件 | 原报告物理页码 | 展示重点 |
+|---|---|---|
+| [ai-biopharma-market.png](ai-biopharma-market.png) | 4 | 市场规模估计与统计边界 |
+| [ai-biopharma-landscape.png](ai-biopharma-landscape.png) | 7 | 参与者证据矩阵 |
+| [ai-biopharma-deals.png](ai-biopharma-deals.png) | 14 | 首付与条件里程碑散点；海报主图 |
+| [ai-biopharma-finance.png](ai-biopharma-finance.png) | 16 | 收入、亏损与现金的财务比较 |
+| [ai-biopharma-cash.png](ai-biopharma-cash.png) | 17 | 现金变动桥 |
+| [ai-biopharma-valuation.png](ai-biopharma-valuation.png) | 22 | 条件估值敏感性 |
+| [ai-biopharma-diligence.png](ai-biopharma-diligence.png) | 25 | 六项投资尽调门槛 |
+
+本次已核对原目录 `audit.json` 的 acceptance 完成状态与空错误列表，以及 `review.json` 的 complete 状态、作者与独立实例对 29 页 HTML/PDF 的覆盖记录。七张公开图片的 SHA-256 均与审查 evidence 中的 HTML 截图一致；[截图清单](ai-biopharma-screenshots.json) 保留原页映射、图片校验值和审查文件校验值。
+
+这些核对说明图片来自既有验收版本，不替代本次重新审查报告推理或核验所有外部事实。完整报告、数据附件与内部审查底稿未复制入仓库；截图保留原始来源、期间与限制，不代表有关公司背书，不作为当前投资或医疗建议。海报只缩放展示原页，不修改其内容。
+
 ## 1.3.0 最新报告选页：MES
 
 来自2026-09-22完成的《中国MES市场：增长结构与交付约束》，整册20页（17页正文），完成HTML/PDF逐页检查、作者与实际独立实例审查。以下PNG直接复制最终acceptance的HTML截图，未裁切、重绘或更改文字。原页中的来源、期间与限制全部保留。
@@ -9,7 +39,7 @@
 | 文件 | 原报告物理页码 | 展示重点 |
 |---|---|---|
 | [mes-growth.png](mes-growth.png) | 4 | 行业增长贡献瀑布 |
-| [mes-regions.png](mes-regions.png) | 6 | 地区规模与归一化强度；README首屏 |
+| [mes-regions.png](mes-regions.png) | 6 | 地区规模与归一化强度 |
 | [mes-competition.png](mes-competition.png) | 9 | 厂商规模与增速散点及明细 |
 | [mes-penetration.png](mes-penetration.png) | 10 | 两期渗透率哑铃与百分点变化 |
 | [mes-scenarios.png](mes-scenarios.png) | 15 | 等待改善的假设敏感性矩阵 |

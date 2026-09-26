@@ -84,10 +84,36 @@ function references({sources,selectedIds,columns=1,splitAt,note='',page}={}){
   ${page!==undefined?`<div class="slide__page">${escape(page)}</div>`:''}
 </section>`;
 }
+// 页容量由作者显式指定；生成器只分组，实际容量与 PDF 完整性仍由 QA 验证。
+function referencesBlock({sources,selectedIds,pageSize=12,columns=1,note='',page}={}){
+  const all=normalizeSources(sources);
+  if(!Number.isInteger(pageSize)||pageSize<1)throw Error('pageSize 须为正整数');
+  // 复用单页入口的来源与节选参数验证。
+  references({sources:all,selectedIds,columns:1});
+  const selected=selectedIds?all.filter(s=>selectedIds.includes(s.id)):all;
+  const excerpt=selected.length<all.length,count=Math.ceil(selected.length/pageSize);
+  const title=excerpt?'主要参考资料（节选）':'参考资料';
+  const pages=[];
+  for(let i=0;i<count;i++){
+    const entries=selected.slice(i*pageSize,(i+1)*pageSize);
+    let html=references({sources:entries,columns:entries.length===1?1:columns,page:page===undefined?undefined:page+i});
+    html=html.replace('data-reference-scope="all"','data-reference-scope="'+(excerpt?'selected':'all')+'"')
+      .replace(/data-reference-total="\d+"/,'data-reference-total="'+all.length+'"')
+      .replace('<h1 class="slide__title">参考资料</h1>','<h1 class="slide__title">'+title+(count>1?'（'+(i+1)+' / '+count+'）':'')+'</h1>');
+    const selection=[excerpt?'本资料块列示 '+selected.length+' 项主要来源（共 '+all.length+' 项）。':'',clean(note)].filter(Boolean).join(' ');
+    if(selection)html=html.replace('</div></div>','</div><p class="reference-selection">'+escape(selection)+'</p></div>');
+    pages.push(html);
+  }
+  return pages.join('\n');
+}
+function referenceBundle(options={}){
+  const sources=normalizeSources(options.sources);
+  return {html:referencesBlock({...options,sources}),referenceIds:sources.map(s=>s.id),policy:'reference-block-1'};
+}
 if(require.main===module){
   const [input,output,kind]=process.argv.slice(2);
   if(!input||!output)throw Error('用法: node scripts/bookends.cjs input.html output.html [report|collection|fragment]');
   if(path.resolve(input)===path.resolve(output))throw Error('请使用新的输出路径，保留输入');
   fs.writeFileSync(output,applyStyles(fs.readFileSync(input,'utf8'),{kind}));
 }
-module.exports={version,applyStyles,cover:meta=>bookend(meta),backCover:meta=>bookend(meta,{back:true}),references,normalizeSources,escape};
+module.exports={version,applyStyles,cover:meta=>bookend(meta),backCover:meta=>bookend(meta,{back:true}),references,referencesBlock,referenceBundle,normalizeSources,escape};

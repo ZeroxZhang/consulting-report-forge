@@ -15,6 +15,10 @@ function adopted(doc){
   const metrics=new Map(claimsOf(doc).flatMap(c=>list(c.metrics).map(m=>[m.id,m])));
   const result={claimRefs:new Set(list(a.synthesis?.answerClaimRefs)),metricRefs:new Set(),workItemRefs:new Set(),issueRefs:new Set([...list(a.synthesis?.openIssueRefs),...list(a.issues).filter(i=>i.priority==='high').map(i=>i.id)]),optionRefs:new Set(list(a.synthesis?.optionRefs)),artifactRefs:new Set()};
   for(const s of list(doc.slides)){list(s.claimRefs).forEach(r=>result.claimRefs.add(r));list(s.metricRefs).forEach(r=>result.metricRefs.add(r));[s.title,s.proves].flatMap(tokens).forEach(r=>result.metricRefs.add(r));}
+  if(doc.analysisAlgorithm==='semantic-v2')for(const s of list(doc.slides)){
+    require('./analysis_projection.cjs').metricRefs(s).forEach(r=>result.metricRefs.add(r));
+    list(s.exhibitBindings).forEach(b=>result.artifactRefs.add(b.artifactRef));
+  }
   let before;
   do{
     before=Object.values(result).reduce((n,s)=>n+s.size,0);
@@ -30,7 +34,10 @@ function adopted(doc){
   }while(before!==Object.values(result).reduce((n,s)=>n+s.size,0));
   return Object.fromEntries(Object.entries(result).map(([k,v])=>[k,[...v].sort()]));
 }
-function digest(doc){
+function digest(doc,task){
+  const caps=require('./contract_capabilities.cjs').capabilities(task||{version:2});
+  if(caps.strict){if(doc.analysisAlgorithm!==caps.algorithm)throw Error('蓝图缺少 semantic-v2 算法身份');return require('./analysis_projection.cjs').digest(doc);}
+  if(doc.analysisAlgorithm!==undefined)throw Error('严格蓝图不能按旧摘要验证');
   // 页面布局不参与分析摘要；所有分析登记参与，以免未采用反证变化被隐去。
   return content.hash({analysis:doc.analysis,claims:doc.claims,sources:doc.sources,artifacts:list(doc.artifacts).map(({path:ignored,...a})=>a)});
 }
@@ -41,14 +48,18 @@ function materialize(doc){
   const answers=new Set(list(d.analysis?.synthesis?.answerClaimRefs));
   d.schemaVersion=2;d.deck={...d.deck,governingThought:cs.filter(c=>answers.has(c.id)).map(c=>content.interpolateText(c.statement,allMetrics)).join(' ')};
   d.slides=list(d.slides).map(s=>content.CONTENT_ROLES.has(s.pageRole)?{...s,sourcePlan:{status:Object.keys(sources).length?'verified':'not_applicable',reason:'全部为已声明假设或建议',keys:Object.keys(sources),claims:copy(cs)}}:s);
-  delete d.analysis;delete d.claims;delete d.artifacts;
+  delete d.analysisAlgorithm;delete d.analysis;delete d.claims;delete d.artifacts;
   return d;
 }
 function validate(doc,{task,stage='research',baseDir,preview=false}={}){
   const errors=[],bad=m=>errors.push(m),a=doc.analysis;
   if(!['research','synthesis','ready'].includes(stage))bad('analysis stage 须为 research/synthesis/ready');
-  if(!task||task.version!==2)bad('schema 3 须提供 task version 2');
+  if(!task||!require('./contract_capabilities.cjs').capabilities(task).analysis)bad('schema 3 须提供 task version 2 或 3');
   else{try{require('./report_contract.cjs').normalize(task);}catch(e){bad(e.message);}}
+  const strict=task?.version===3;
+  if(strict&&doc.analysisAlgorithm!=='semantic-v2')bad('task3 蓝图须声明 analysisAlgorithm: semantic-v2');
+  if(!strict&&doc.analysisAlgorithm!==undefined)bad('严格蓝图不能降级到旧任务合同');
+  if(strict)errors.push(...require('./analysis_projection.cjs').validate(doc));
   if(!object(doc.deck)||!text(doc.deck.title)||!text(doc.deck.audience))bad('deck 须有 title/audience');
   if(doc.deck?.governingThought!==undefined)bad('schema 3 governingThought 由 synthesis.answerClaimRefs 派生，不得双写');
   if(!object(a)||!object(a.brief))return [...errors,'analysis.brief 缺失'];
@@ -121,11 +132,13 @@ function compile(doc,options={}){
   const slides=list(doc.slides).filter(s=>content.CONTENT_ROLES.has(s.pageRole));
   result.pages.forEach((p,i)=>{
     const s=slides[i],selected=new Set(s.claimRefs),metricIds=new Set(s.metricRefs);
+    if(options.task?.version===3)require('./analysis_projection.cjs').metricRefs(s).forEach(r=>metricIds.add(r));
     [s.title,s.proves].flatMap(tokens).forEach(r=>metricIds.add(r));
     let n;do{n=selected.size;for(const c of claimsOf(doc))if(selected.has(c.id))fields.flatMap(k=>tokens(c[k])).forEach(r=>metricIds.add(r));for(const r of metricIds)if(owners.has(r))selected.add(owners.get(r));}while(selected.size!==n);
+    if(options.task?.version===3&&s.exhibit!==undefined)p.exhibit=require('./analysis_projection.cjs').resolve(s.exhibit,require('./analysis_projection.cjs').metrics(doc));
     p.content.claims=p.content.claims.filter(c=>selected.has(c.id));p.content.metrics=p.content.metrics.filter(m=>metricIds.has(m.id));
     const keys=new Set(p.content.claims.flatMap(c=>c.sourceKeys));p.content.sources=p.content.sources.filter(s=>keys.has(s.key));p.contentHash=content.contentHash(p.content);
   });
-  result.blueprintSha256=content.hash(doc);result.blueprintSchemaVersion=3;result.analysisSha256=digest(doc);result.preview=options.preview===true;return result;
+  result.blueprintSha256=content.hash(doc);result.blueprintSchemaVersion=3;result.analysisSha256=digest(doc,options.task);if(options.task?.version===3)result.analysisAlgorithm='semantic-v2';result.preview=options.preview===true;return result;
 }
 module.exports={validate,adopted,digest,artifactErrors,materialize,compile};

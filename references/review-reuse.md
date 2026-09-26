@@ -69,4 +69,4 @@ node scripts/snapshot_review.cjs /任务/renders/audit.json /任务/renders/revi
 
 `node scripts/test_review_reuse.cjs` 使用文件级两轮验收夹具，覆盖原位置覆写、单页复用、样式/图像失效、身份与双媒介范围、历史 partial、目录迁移、来源合同不一致与篡改拒绝。它测试复用机制，不替代实际报告的视觉和分析验收。
 
-新分析使用最终 review4；复用草稿的 analysisSha256 初始为空，须实际确认本轮分析后填写。分析审查摘要不直接进入视觉公共依赖，但其真实性和当前分析适用性仍由前置及最终合同核对。快照可能含内部数据，不能默认当对外材料发送。
+新 task3 分析使用最终 review5（semantic-v2），历史 task2 继续 review4；复用草稿的 analysisSha256 初始为空，须实际确认本轮分析后填写。分析审查摘要不直接进入视觉公共依赖，但其真实性和当前分析适用性仍由前置及最终合同核对。快照可能含内部数据，不能默认当对外材料发送。

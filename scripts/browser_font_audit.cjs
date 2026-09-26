@@ -21,7 +21,22 @@ function describe(fonts){
   const rules=(all.length>3?['…'].concat(all.slice(-3)):all).join('、');
   return (node.role==='title'?'标题':'正文')+'「'+String(node.text||'').trim().slice(0,18)+'」'+((node.reasons||[]).join('；')||'字体未就绪')+(rules?'；命中（层叠顺序，末条生效）：'+rules:'');
  });
- return '字体未就绪或出现系统回退'+(list.length?'——'+list.join(' ／ '):'');
+ const load=(fonts?.diagnostics||[]).map(d=>d.message);
+ return '字体检查未通过'+(list.length||load.length?'——'+[...load,...list].join(' ／ '):'');
+}
+/* 分类不改变原有失败条件。CDP 不能证明具体缺字，不能把角色错误说成缺字。 */
+function classify(node,fonts,{expected,allowed=[],weightOK,titleWeight}={}){
+ const chain=s=>s.split(',').map(s=>s.trim().replace(/^['"]|['"]$/g,'')).join(',');
+ const diagnostics=[],add=(code,message)=>diagnostics.push({code,message});
+ if(chain(node.family)!==expected)add('F-ROLE-FAMILY','字体角色不符：实际 '+node.family+'，期望 '+expected);
+ if(!weightOK)add('F-WEIGHT',node.role==='title'?'标题字重应为 '+titleWeight+'，实际 '+node.weight:'正文字重只能用 400/500/600，实际 '+node.weight);
+ if(node.style!=='normal')add('F-STYLE','字形须为 normal，实际 '+node.style);
+ if(!fonts.length)add('F-NO-GLYPH-EVIDENCE','浏览器没有返回实际字体证据；缺字与加载原因待核对');
+ const system=fonts.filter(f=>!f.isCustomFont);
+ const custom=fonts.filter(f=>f.isCustomFont&&allowed.length&&!allowed.includes(f.familyName));
+ if(system.length)add('F-SYSTEM-FALLBACK','出现系统回退字体：'+system.map(f=>f.familyName).join('/')+'；是否由缺字引起待核对');
+ if(custom.length)add('F-CUSTOM-ROLE','已加载自定义字体不符合当前角色：'+custom.map(f=>f.familyName).join('/'));
+ return diagnostics;
 }
 async function inspect(page){
  const state=await page.evaluate(()=>({profile:document.documentElement.dataset.typography||'unrecorded',status:document.documentElement.dataset.fontStatus||'unrecorded',faces:window.__deckFontState?.faces||[],manifest:JSON.parse(document.getElementById('deck-font-manifest')?.textContent||'null')}));
@@ -36,17 +51,13 @@ async function inspect(page){
    const node=nodes[i],expected=chain(node.role==='title'?p.title:p.body),aliases=expected.split(',');
    const allowed=(state.manifest?.faces||[]).filter(f=>aliases.includes(f.family)).flatMap(f=>f.platform_families||[]);
    const weightOK=node.role==='title'?node.weight===(node.latin?p.weights.titleLatin:p.weights.title):[400,500,600].includes(node.weight);
-   const reasons=[];
-   if(chain(node.family)!==expected)reasons.push('字族回退：实际 '+node.family+'，期望 '+expected);
-   if(!weightOK)reasons.push(node.role==='title'?'标题字重应为 '+(node.latin?p.weights.titleLatin:p.weights.title)+'，实际 '+node.weight:'正文字重只能用 400/500/600，实际 '+node.weight);
-   if(node.style!=='normal')reasons.push('字形须为 normal，实际 '+node.style);
-   if(!fonts.length)reasons.push('浏览器没有为这个元素匹配到任何字体');
-   else{const fallback=fonts.filter(f=>!f.isCustomFont||(allowed.length&&!allowed.includes(f.familyName)));if(fallback.length)reasons.push('出现系统回退字体：'+fallback.map(f=>f.familyName).join('/'));}
-   if(reasons.length){const entry={index:i,...node,expected,fonts,reasons};if(!weightOK)entry.weightRules=await weightRulesFor(client,nodeId);unexpected.push(entry);}
+   const diagnostics=classify(node,fonts,{expected,allowed,weightOK,titleWeight:node.latin?p.weights.titleLatin:p.weights.title});
+   const reasons=diagnostics.map(d=>d.message);
+   if(reasons.length){const entry={index:i,...node,expected,fonts,reasons,diagnostics};if(!weightOK)entry.weightRules=await weightRulesFor(client,nodeId);unexpected.push(entry);}
   }
   delete state.manifest;
-  return {...state,identity:state.status==='ready'&&!unexpected.length?'PASS':'FAIL',families:[...families],unexpected};
+  return {...state,diagnostics:state.status==='ready'?[]:[{code:'F-LOAD-STATE',message:'字体加载状态未就绪：'+state.status}],glyphCoverage:await require('./font_glyph_coverage.cjs').inspect(page),identity:state.status==='ready'&&!unexpected.length?'PASS':'FAIL',families:[...families],unexpected};
  }finally{await page.evaluate(()=>document.querySelectorAll('[data-font-audit]').forEach(e=>e.removeAttribute('data-font-audit')));}
 }
 async function signature(page){return page.locator('.slide.active').evaluate(s=>{const box=s.getBoundingClientRect(),scale=box.width/s.offsetWidth;return [...s.querySelectorAll('*')].filter(e=>e.children.length===0&&e.textContent.trim()&&e.getClientRects().length).map(e=>{const r=e.getBoundingClientRect(),cs=getComputedStyle(e);return [e.textContent,cs.fontFamily,cs.fontWeight,...[r.x-box.x,r.y-box.y,r.width,r.height].map(v=>Math.round(v/scale*10)/10)];});});}
-module.exports={attach,inspect,signature,describe};
+module.exports={attach,inspect,signature,describe,classify};

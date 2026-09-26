@@ -66,7 +66,7 @@ function parseArgs(argv){
  const targets=partial?requested.filter(n=>n<=total).sort((a,b)=>a-b):Array.from({length:total},(_,i)=>i+1);
  if(!targets.length)throw Error('没有可检查的页码；本稿共 '+total+' 页');
  for(const pageNumber of targets){
-  const result=await pageProbe.collect(p,pageNumber-1,{modern});
+  const result=await pageProbe.collect(p,pageNumber-1,{modern,readingShadow:taskContract?.version===3});
   result.page=pageNumber;result.screenshot=pageProbe.screenshotName(pageNumber);
   if(modern){
    errors.push(...result.visualPolicy.errors.map(e=>'第'+pageNumber+'页视觉禁令：'+JSON.stringify(e)));
@@ -92,7 +92,7 @@ function parseArgs(argv){
  if(modern&&!partial)errors.push(...criticalContent.verifyDeclared(taskContract,rows));
  let bookendsCheck={status:'NOT_CHECKED',reason:partial?'只检查了部分页面，不能给出整稿首尾结论':'未执行'};
  if(!partial){
-  const bookendResult=bookends.checkDocument(rows,documentContract);bookendsCheck=bookendResult;errors.push(...bookendResult.errors);warnings.push(...bookendResult.warnings);
+  const bookendResult=bookends.checkDocument(rows,{...documentContract,referencePolicy:taskContract?.policyVersions?.references,expectedIds:taskContract?.referenceIds});bookendsCheck=bookendResult;errors.push(...bookendResult.errors);warnings.push(...bookendResult.warnings);
   await p.keyboard.press('g');await p.screenshot({path:path.join(out,'overview.png'),fullPage:true});await p.keyboard.press('Escape');
  }
  // 逐页形式声明：独立于装配器重新对账一次，并给出全篇形式清单供审查者判断节奏。
@@ -174,7 +174,7 @@ function parseArgs(argv){
    for(const row of rows)printed.push({...await p.locator('.slide').nth(row.page-1).evaluate(pageProbe.inspectDom,pageProbe.WF_FORMS),page:row.page,role:row.bookends?.role});
    errors.push(...pagesApi.verifyDeck(boundPages,printed).map(e=>'打印内容：'+e));
   }
-  if(modern){await geometry.settle(p);for(const row of rows){const slide=p.locator('.slide').nth(row.page-1);row.printCritical=await slide.evaluate(criticalContent.inspectSlide);errors.push(...criticalContent.verifyPrint(row.critical,row.printCritical).map(e=>'第'+row.page+'页：'+e));row.printVisualPolicy=await slide.evaluate(visualPolicy.inspectSlide);errors.push(...row.printVisualPolicy.errors.map(e=>'第'+row.page+'页打印视觉禁令：'+JSON.stringify(e)));warnings.push(...row.printVisualPolicy.warnings.map(e=>'第'+row.page+'页打印视觉诊断：'+JSON.stringify(e)));}}
+  if(modern){await geometry.settle(p);for(const row of rows){const slide=p.locator('.slide').nth(row.page-1);if(taskContract?.version===3)row.printReadingShadow=await slide.evaluate(require('./browser_reading_audit.cjs').inspectSlide);row.printCritical=await slide.evaluate(criticalContent.inspectSlide);errors.push(...criticalContent.verifyPrint(row.critical,row.printCritical).map(e=>'第'+row.page+'页：'+e));row.printVisualPolicy=await visualPolicy.inspect(slide,taskContract?.policyVersions?.visual);errors.push(...row.printVisualPolicy.errors.map(e=>'第'+row.page+'页打印视觉禁令：'+JSON.stringify(e)));warnings.push(...row.printVisualPolicy.warnings.map(e=>'第'+row.page+'页打印视觉诊断：'+JSON.stringify(e)));}}
   if(!acceptance)await p.emulateMedia({media:'screen'});
  }
  if(acceptance){

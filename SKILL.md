@@ -34,7 +34,9 @@ description: >-
 
 先把有条件的核心答案写在全局 claims，并以 `analysis.synthesis.answerClaimRefs` 引用；schema3 的 `governingThought` 由它派生。再按 [叙事方法](references/consulting-storyline.md) 形成“问题—证据—判断—边界”的推进。标题连读应有完整论证；每页 `proves` 对应画面能证明的关系。证据不够就缩小结论，不用强词弥补。
 
-新任务用 schema3 与 task v2；研究可从无页面的 [研究模板](templates/research-blueprint.json) 起步。使用[蓝图模板](templates/deck-blueprint.json)与[内容制作合同](references/content-authoring.md)。蓝图是标题、关键主张、来源、计算、密度和页面意图的权威源；`pages.json` 由编译器生成，不手工维护第二套内容。
+新任务统一用 `node scripts/report.cjs init /任务/新报告` 创建，采用 schema3 / task3 / semantic-v2；研究可从无页面的 [研究模板](templates/research-blueprint.json) 起步。使用[蓝图模板](templates/deck-blueprint.json)与[内容制作合同](references/content-authoring.md)。蓝图是标题、关键主张、来源、计算、密度和页面意图的权威源；`pages.json` 由编译器生成，不手工维护第二套内容。
+
+新稿按[严格合同](docs/strict-analysis-contract.md)执行，前置审查 v2、最终审查 v5。旧稿继续原合同，不自动改算法、补签或转换版本。统一入口、任务锁、多页参考资料和审查包见[生产入口](docs/upgrade-production-entry.md)。
 
 先校验综合，再按[签署步骤](references/analysis-review.md)完成前置审查并绑定 task，最后运行正式生产门：
 

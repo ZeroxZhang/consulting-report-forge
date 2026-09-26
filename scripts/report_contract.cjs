@@ -3,6 +3,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
+const {capabilities}=require('./contract_capabilities.cjs');
 const hash = value => crypto.createHash('sha256').update(value).digest('hex');
 const fileHash = file => hash(fs.readFileSync(file));
 const stable = value => JSON.stringify(value, (_, v) => v && typeof v === 'object' && !Array.isArray(v) ? Object.fromEntries(Object.keys(v).sort().map(k => [k, v[k]])) : v);
@@ -10,9 +11,19 @@ function normalize(value = {}, defaults = {}) {
   const c = {version: 1, workMode: 'editorial', complexity: 'complex', majorConclusion: false,
     mode: 'reading', theme: 'mckinsey', typography: 'serif-report-bold', ratio: '16x9', kind: 'fragment',
     critical: [], ...defaults, ...value};
-  if (![1, 2].includes(c.version)) throw Error('不支持的任务合同版本');
+  const caps=capabilities(c);
+  if(caps.strict&&c.analysisAlgorithm!==caps.algorithm)throw Error('task3 须显式声明 analysisAlgorithm: semantic-v2');
+  if(caps.strict){
+    const policies={analysis:'semantic-v2',reading:'reading-shadow-1',visual:'legacy-1',references:'single-page-1'};
+    const selected=c.policyVersions??policies;
+    if(!selected||Object.keys(selected).length!==4||Object.entries(policies).some(([k,v])=>k==='references'?!['single-page-1','reference-block-1'].includes(selected[k]):k==='visual'?!['legacy-1','structural-lines-1'].includes(selected[k]):selected[k]!==v))throw Error('不支持的严格合同 policyVersions');
+    c.policyVersions={...selected};
+    if(selected.references==='reference-block-1'&&(!Array.isArray(c.referenceIds)||!c.referenceIds.length||c.referenceIds.some(id=>typeof id!=='string'||!id.trim())||new Set(c.referenceIds).size!==c.referenceIds.length))throw Error('reference-block-1 须登记有序且唯一的 referenceIds');
+  }else if(c.policyVersions!==undefined)throw Error('新版策略身份不能降级到旧任务合同');
+  if(c.referenceIds!==undefined&&c.policyVersions?.references!=='reference-block-1')throw Error('referenceIds 只能配套 reference-block-1');
+  if(!caps.strict&&c.analysisAlgorithm!==undefined)throw Error('严格分析算法不能降级到旧任务合同');
   if(c.version===1&&(c.analysisReview!==undefined||c.analysisPreview!==undefined))throw Error('分析合同不能降级至 task version 1');
-  if(c.version===2)for(const key of ['workMode','complexity','majorConclusion'])if(value[key]===undefined)throw Error('task2 须显式声明 '+key);
+  if(caps.analysis)for(const key of ['workMode','complexity','majorConclusion'])if(value[key]===undefined)throw Error('task'+c.version+' 须显式声明 '+key);
   if(c.analysisPreview!==undefined&&typeof c.analysisPreview!=='boolean')throw Error('analysisPreview 须为布尔');
   for (const [key, allowed] of Object.entries({workMode: ['editorial', 'analytical', 'exploratory'], complexity: ['simple', 'complex'], mode: ['reading', 'presentation'], ratio: ['16x9', '4x3'], kind: ['report', 'fragment', 'collection']})) {
     if (!allowed.includes(c[key])) throw Error('任务合同 ' + key + ' 无效');
@@ -87,8 +98,8 @@ function verifyPlan(contract, baseDir, pagesDoc) {
     const doc=JSON.parse(fs.readFileSync(file, 'utf8'));
     if (([2,3].includes(doc.schemaVersion))!==(pagesDoc.version===4)) return ['blueprint schemaVersion 2 与 pages version 4 必须配套，不能退回历史合同跳过内容绑定'];
     const options={task:rebaseAnalysisTask(contract,baseDir,path.dirname(file)),baseDir:path.dirname(file),preview:pagesDoc.preview===true};
-    if(doc.schemaVersion===3&&(contract.version!==2||pagesDoc.blueprintSchemaVersion!==3||contract.analysisPreview!==pagesDoc.preview))return ['schema3 须搭配 task2 与真实 preview 状态，不得降级'];
-    if(doc.schemaVersion!==3&&contract.version===2)return ['task2 须搭配 schema3'];
+    if(doc.schemaVersion===3&&(!capabilities(contract).analysis||pagesDoc.blueprintSchemaVersion!==3||contract.analysisPreview!==pagesDoc.preview))return ['schema3 须搭配 task2 与真实 preview 状态，不得降级'];
+    if(doc.schemaVersion!==3&&capabilities(contract).analysis)return ['task2 须搭配 schema3'];
     const errors=require('./verify_blueprint_pages.cjs').verify(doc, pagesDoc,options);
     if(doc.deck?.mode!==contract.mode || (doc.deck?.ratio||'16x9')!==contract.ratio) errors.push('task 的 mode/ratio 与权威 blueprint 不一致');
     return errors;

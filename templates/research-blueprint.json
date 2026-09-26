@@ -1,5 +1,6 @@
 {
   "schemaVersion": 3,
+  "analysisAlgorithm": "semantic-v2",
   "deck": {
     "title": "合成示例：同口径收入比较",
     "audience": "经营研究读者",

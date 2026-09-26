@@ -179,15 +179,16 @@ async function activate(page, index) {
 }
 
 /* 逐页测量。modern 时附带关键内容与视觉禁令检查，与正式审计保持同一判据。 */
-async function collect(page, index, {modern = false} = {}) {
+async function collect(page, index, {modern = false, readingShadow = false} = {}) {
   await activate(page, index);
   const slide = page.locator('.slide.active');
   const result = await slide.evaluate(inspectDom, WF_FORMS);
   result.page = index + 1;
   result.bookends = await slide.evaluate(bookends.inspectPage);
+  if(readingShadow)result.readingShadow=await slide.evaluate(require('./browser_reading_audit.cjs').inspectSlide);
   if (modern) {
     result.critical = await slide.evaluate(criticalContent.inspectSlide);
-    result.visualPolicy = await slide.evaluate(visualPolicy.inspectSlide);
+    result.visualPolicy = await visualPolicy.inspect(slide,await slide.evaluate(()=>JSON.parse(document.getElementById('deck-task-contract')?.textContent||'null')?.policyVersions?.visual||'legacy-1'));
   }
   result.relations = await slide.evaluate(geometry.inspectSlide);
   result.fonts = await fontAudit.inspect(page);

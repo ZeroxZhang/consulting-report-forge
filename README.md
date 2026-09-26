@@ -6,7 +6,7 @@
 
 深度调研 · 商业分析 · 专家协作 · 数据建模 · Storyline · 视觉报告
 
-[![Version](https://img.shields.io/badge/version-1.4.0-17324D?style=flat-square)](package.json) [![License](https://img.shields.io/badge/license-Apache--2.0-007C91?style=flat-square)](LICENSE) [![Output](https://img.shields.io/badge/output-HTML%20%2B%20PDF-17324D?style=flat-square)](#你会拿到什么) [![Node](https://img.shields.io/badge/Node.js-20%2B-007C91?style=flat-square&logo=nodedotjs&logoColor=white)](#快速开始) [![GitHub Stars](https://img.shields.io/github/stars/ZeroxZhang/consulting-report-forge?style=flat-square&logo=github&label=Stars)](https://github.com/ZeroxZhang/consulting-report-forge/stargazers)
+[![Version](https://img.shields.io/badge/version-1.5.0-17324D?style=flat-square)](package.json) [![License](https://img.shields.io/badge/license-Apache--2.0-007C91?style=flat-square)](LICENSE) [![Output](https://img.shields.io/badge/output-HTML%20%2B%20PDF-17324D?style=flat-square)](#你会拿到什么) [![Node](https://img.shields.io/badge/Node.js-20%2B-007C91?style=flat-square&logo=nodedotjs&logoColor=white)](#快速开始) [![GitHub Stars](https://img.shields.io/github/stars/ZeroxZhang/consulting-report-forge?style=flat-square&logo=github&label=Stars)](https://github.com/ZeroxZhang/consulting-report-forge/stargazers)
 
 <a href="docs/showcase/skill-poster.png"><img src="docs/showcase/skill-poster.png" width="600" alt="Consulting Report Forge 技能介绍海报：研究有来源、分析有方法、表达有主线、交付有复核；真实 AI 生物制药报告选览"></a>
 
@@ -24,20 +24,24 @@
 
 **你希望得到的，是一次有依据的讨论：机会在哪里，判断为什么成立，有哪些选择，下一步怎么验证。**
 
-## 1.4.0：从研究与分析，一直推进到可复核的报告
+## 1.5.0：内容改动可追踪，报告修订更可靠
 
-当前版本把研究阶段接入统一蓝图：先定义问题、登记证据缺口、完成计算与综合判断，再组织页面。研究可以从零页面开始，关键主张与指标统一维护。
+在研究、分析与视觉报告的完整流程上，本版加强了内容校验、阅读检查与后续修订。
 
-| 最新能力 | 对报告工作的帮助 |
+| 本次升级 | 与 1.4.0 相比的变化 |
 |---|---|
-| **八类业务分析手册** | 覆盖利润、市场进入、增长定价、运营成本、战略组合、组织模式、数字化/AI、投资尽调；按问题选择方法和反证 |
-| **贯穿全程的缺口处理** | 公开信息缺口触发范围内调研，内部数据与业务取舍向用户询问；等待答案时推进不依赖该答案的工作 |
-| **分析审查前置** | 正式制稿前核对方法、口径与推理；复杂或重大材料需要真实独立实例，最终成稿另做读图审查 |
-| **计算与表达可追溯** | 外部计算结果可导入并追踪输入、模型与版本；图表选型、语义和容量在制作与验收时核对 |
+| **审查覆盖到实际表达** | 标题、图表内容与侧栏结论纳入分析摘要；实质改动会使旧分析审查失效，已登记展示值与附件精确对账 |
+| **阅读问题更早暴露** | 增加文字重叠、裁切与遮挡观测；细分字体问题，减少浅色水平分隔线的误报，仍需实际读图 |
+| **长报告容纳完整来源** | 参考资料支持连续多页，核对来源 ID、顺序、总数和 PDF 条目，不靠缩字挤在一页 |
+| **统一制作与修订入口** | 统一创建、编译、验收、审查包、快照和打包；任务锁与中断恢复保护有效结果，重复告警可归并处置 |
 
-最新真实案例是一份 **29 页、26 页正文的 AI 生物制药研究报告**，涵盖市场口径、技术与临床证据、交易结构、财务比较和情景估值。下方提供最终验收截图；机器检查、审查记录与业务事实核验各有边界。
+**新报告默认采用新版严格校验；旧报告、旧审查与旧快照保持原合同。** 局部排版修改按实际证据识别重审页，未变化页面仅由同一审查者复用，全篇判断仍须重新确认。
 
-[分析流程](references/analysis-workflow.md) · [八类业务手册](references/analysis-methods.md) · [分析审查](references/analysis-review.md) · [版本验证范围](docs/business-analysis-validation.md)
+实际验证覆盖 **31 页定量研究、6 页定性策略节选、5 页已确认内容重排**，均完成作者与独立实例的 HTML/PDF 审查；另完成一次单页排版修订与其余五页继承。它们是明确范围内的案例验证，不代表任意题材的质量保证或未经测量的提速。
+
+[完成记录与范围](docs/upgrade-r4-completion.md) · [统一操作入口](docs/upgrade-production-entry.md) · [严格分析合同](docs/strict-analysis-contract.md)
+
+八类业务分析手册、贯穿全程的缺口处理、前置分析审查与真实独立复核继续保留：[分析流程](references/analysis-workflow.md) · [业务手册](references/analysis-methods.md) · [分析审查](references/analysis-review.md)。
 
 ## 从一个业务问题开始
 
@@ -148,7 +152,7 @@
 
 ### 最新案例：全球 AI 生物制药前沿研究
 
-**29 页完整报告 · 26 页正文 · 2026-09-25 成稿 · HTML/PDF 双媒介审查记录齐全**
+**31 页完整报告 · 26 页正文 · 42 项来源分 3 页 · 2026-09-26 升级验收 · HTML/PDF 双媒介审查记录齐全**
 
 从公开资料与财务数据出发，围绕投资研究组织一条完整主线：**市场如何定义 → 技术与临床证据到了哪一步 → 商业模式如何兑现 → 交易与现金如何解读 → 哪些条件需要继续验证**。
 
@@ -173,7 +177,7 @@
 | [![AI生物制药报告第22页：里程碑条件估值敏感性矩阵](docs/showcase/ai-biopharma-valuation.png)](docs/showcase/ai-biopharma-valuation.png) | [![AI生物制药报告第25页：六项投资尽调门槛](docs/showcase/ai-biopharma-diligence.png)](docs/showcase/ai-biopharma-diligence.png) |
 | 明示概率与折现假设，避免把名义金额当作现值。 | 逐项列出需要的证据、风险信号与验证方式。 |
 
-> 本例展示实际研究与制稿过程，报告中的金融与临床判断以原页来源、期间和限制为准，不作为当前投资或医疗建议。本次 README 更新核对了截图与既有验收记录，未重新开展全报告事实审计。逐图页码与校验值见[截图清单](docs/showcase/ai-biopharma-screenshots.json)，记录范围见[样例说明](docs/showcase/README.md)。
+> 本例展示实际研究与制稿过程，报告中的金融与临床判断以原页来源、期间和限制为准，不作为当前投资或医疗建议。本次选页来自 1.5.0 严格合同验收版本，已完成逐页双媒介复核；研究事实时点仍为 2026-09-25，本次未刷新外部来源。逐图页码与校验值见[截图清单](docs/showcase/ai-biopharma-screenshots.json)，记录范围见[样例说明](docs/showcase/README.md)。
 
 ### 中国 MES 市场——增长结构与交付约束
 
@@ -303,13 +307,23 @@ git pull --ff-only
 npm ci
 ```
 
-任务统一从蓝图模板开始，由编译器生成页面记录。多个 Agent 若通过软链接使用同一目录，只需更新该目录。
+新任务统一由 `report.cjs init` 创建，完成分析与审查后由编译器生成页面记录。多个 Agent 若通过软链接使用同一目录，只需更新该目录。
 
 </details>
 
 ## 文档与验证
 
-**已经完成的验证：** 1.3.0 制作链有六页合成任务、20 页 MES 同材料报告及单页修订复用；1.4.0 新分析链通过工程与浏览器回归、分析行为评估、两份简单一页案例，以及一份 9 页、6 页正文、需独立审查的复杂合成报告的 HTML/PDF 验收与正式打包。合成验收验证流程和门禁，不证明真实经营结论；新增展示的 AI 生物制药案例已有 29 页 HTML/PDF acceptance 与作者、独立实例审查记录，本次已核对选页截图校验值；这是单个实际案例，不代表所有题材与模型上的质量或速度保证。
+统一入口支持任务创建、只读诊断、编译、装配、验收、审查材料准备与交付。它不会代写业务结论或自动签署审查：
+
+```sh
+node scripts/report.cjs init /任务/新报告
+node scripts/report.cjs status /任务/新报告/task.json
+node scripts/report.cjs next /任务/新报告/task.json
+```
+
+完整命令见[生产入口](docs/upgrade-production-entry.md)。新任务自动使用严格合同，无需选择版本；旧任务不会自动迁移。
+
+**已经完成的验证：** 1.5.0 通过内容变异、精确对账、旧新兼容、参考资料、浏览器排版、任务锁和中断恢复等回归；三类实际案例完成双媒介及双角色审查，局部修订准确识别单页重审。阅读检测仍有明确未覆盖范围，未进行同题同模型的提速对照。此前的 MES、分析行为评估及合成生产链验证保留，详见下方记录。
 
 | 想进一步了解 | 文档 |
 |---|---|
@@ -317,7 +331,7 @@ npm ci
 | 方法、故事线与专家协作 | [分析方法](references/analysis-methods.md) · [咨询叙事](references/consulting-storyline.md) · [协作协议](references/collaboration.md) |
 | 内容一致性与来源 | [内容制作](references/content-authoring.md) · [证据身份](references/evidence-ledger.md) |
 | 页面质量与后续修订 | [视觉验收](references/visual-qa.md) · [图示语义合同](references/diagram-semantics.md) · [审查复用](references/review-reuse.md) |
-| 实际验证的范围与局限 | [1.4.0 分析链验证](docs/business-analysis-validation.md) · [升级验证](docs/upgrade-validation.md) · [选型与容量合同验证](docs/form-contract-validation.md) · [MES案例分析](docs/mes-full-evaluation.md) |
+| 实际验证的范围与局限 | [1.5.0 完成记录](docs/upgrade-r4-completion.md) · [1.4.0 分析链验证](docs/business-analysis-validation.md) · [升级验证](docs/upgrade-validation.md) · [选型与容量合同验证](docs/form-contract-validation.md) · [MES案例分析](docs/mes-full-evaluation.md) |
 | 图片出处与复现 | [展示素材说明](docs/showcase/README.md) · [行为评估任务](evals/README.md) |
 
 <details>
@@ -328,6 +342,9 @@ npm ci
 ```sh
 npm test                     # 计算、合同、兼容性与审查复用
 npm run test:render          # 浏览器布局及瀑布绑定回归
+npm run test:upgrade-r1      # 只读状态、字体分类、旧缺口复现与候选规则
+npm run test:upgrade-r2      # 严格签名、迁移、影子测量与合成生产链
+npm run test:upgrade-r3      # 多页来源、阅读反例、任务锁与中断恢复
 npm run test:upgrade-render  # HTML/PDF内容绑定集成与反例
 ```
 

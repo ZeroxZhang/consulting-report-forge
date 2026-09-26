@@ -28,7 +28,8 @@ node scripts/probe_capabilities.cjs /任务/probe --verify /任务/probe/respons
 
 ```json
 {
-  "version": 2,
+  "version": 3,
+  "analysisAlgorithm": "semantic-v2",
   "workMode": "analytical",
   "complexity": "complex",
   "majorConclusion": false,
@@ -99,7 +100,7 @@ node scripts/aggregate_reviews.cjs /任务/renders/audit.json /任务/renders/re
 node scripts/package_delivery.cjs /任务/deck.html /任务/renders/deck.pdf /任务/delivery 报告名
 ```
 
-新稿 task2/schema3 的最终审查用 schemaVersion 4，并填写当前 analysisSha256；历史 task1 仍用 schemaVersion 3。两者均绑定实际 audit、HTML/PDF 证据 id 与产物摘要。作者须覆盖每页；任务要求独立审查时，独立角色也须覆盖每页。多人分工按同一角色的覆盖并集核对，不要求每位成员重复看全册；analysis/evidence/visual 有具体依据，所有 warnings 经 accepted/fixed 处置，无未解决 major/blocking。独立审查来自实际不同实例，不能脚本生成通过结论。
+新稿 task3/schema3 的最终审查用 schemaVersion 5，填写 analysisAlgorithm: semantic-v2 与当前 analysisSha256；历史 task2/review4、task1/review3 保持原流程。它们均绑定实际 audit、HTML/PDF 证据 id 与产物摘要。作者须覆盖每页；任务要求独立审查时，独立角色也须覆盖每页。多人分工按同一角色的覆盖并集核对，不要求每位成员重复看全册；analysis/evidence/visual 有具体依据，所有 warnings 经 accepted/fixed 处置，无未解决 major/blocking。独立审查来自实际不同实例，不能脚本生成通过结论。
 
 完成审查后按 [审查快照与复用](review-reuse.md) 冻结证据。修订先保存快照，再覆盖工作稿；工具只准备继承草稿，变化页和全局判断仍须审查。未完成审查仅可用 `package_delivery.cjs --preview`，并明确称预览。
 

@@ -4,7 +4,7 @@
 
 ## Skill 介绍海报（README 头图）
 
-[skill-poster.png](skill-poster.png) 是独立的 **3:4 海报，2160 × 2880 像素**。采用中文介绍、四项能力和真实报告原页缩略图；原页用于展示，不应在缩略尺寸下读取具体数据。
+[skill-poster.png](skill-poster.png) 是独立的 **3:4 海报，2160 × 2880 像素**。当前介绍 1.5.0：四项能力结合内容改动追踪、多页来源、阅读检查与局部修订复核；配真实报告原页缩略图；原页用于展示，不应在缩略尺寸下读取具体数据。
 
 可编辑源为 [skill-poster.html](skill-poster.html)，复用仓库随包字体及下方三张案例图。安装项目依赖并准备 Chrome 后，在仓库根目录运行：
 
@@ -14,9 +14,9 @@ node docs/showcase/build-poster.cjs
 
 已安装 Playwright Chromium 时可设置 `CHROME_CHANNEL=chromium`。脚本检查画布尺寸、元素越界、图片和字体加载，再导出双倍像素 PNG。HTML 需与仓库相对目录一起使用，PNG 可单独分享。
 
-## 1.4.0 实际报告选页：全球 AI 生物制药前沿研究
+## 1.5.0 实际报告选页：全球 AI 生物制药前沿研究
 
-来自用户指定的 `0924_mimo_forge_test/codex_retest/report` 执行项目，报告记录的成稿日期为 **2026-09-25**。整册 29 页、26 页正文；目录名称不作为成稿日期。公开图片直接复制 `renders/pNN.png` 最终 HTML 验收截图，未裁切、重绘或修改原文。
+来自用户指定的 `0924_mimo_forge_test/codex_retest/report` 执行项目，报告记录的成稿日期为 **2026-09-25**。本次采用 2026-09-26 完成严格合同验收的31页版本：26页正文、42项来源分3页；研究事实时点不变。公开图片直接复制该版本 `qa/pNN.png` 最终 HTML 验收截图，未裁切、重绘或修改原文。
 
 | 文件 | 原报告物理页码 | 展示重点 |
 |---|---|---|
@@ -28,9 +28,9 @@ node docs/showcase/build-poster.cjs
 | [ai-biopharma-valuation.png](ai-biopharma-valuation.png) | 22 | 条件估值敏感性 |
 | [ai-biopharma-diligence.png](ai-biopharma-diligence.png) | 25 | 六项投资尽调门槛 |
 
-本次已核对原目录 `audit.json` 的 acceptance 完成状态与空错误列表，以及 `review.json` 的 complete 状态、作者与独立实例对 29 页 HTML/PDF 的覆盖记录。七张公开图片的 SHA-256 均与审查 evidence 中的 HTML 截图一致；[截图清单](ai-biopharma-screenshots.json) 保留原页映射、图片校验值和审查文件校验值。
+本次已核对新版 `audit.json` 的 acceptance 完成状态与空错误列表，以及 `review.json` 的 complete 状态、作者与独立实例对 31 页 HTML/PDF 的覆盖记录。七张公开图片的 SHA-256 均与审查 evidence 中的 HTML 截图一致；[截图清单](ai-biopharma-screenshots.json) 保留原页映射、图片校验值和审查文件校验值。
 
-这些核对说明图片来自既有验收版本，不替代本次重新审查报告推理或核验所有外部事实。完整报告、数据附件与内部审查底稿未复制入仓库；截图保留原始来源、期间与限制，不代表有关公司背书，不作为当前投资或医疗建议。海报只缩放展示原页，不修改其内容。
+本版本已完成实际逐页双媒介审查；截图校验用于证明展示的是该版本，不能替代外部事实核验，本次未刷新历史研究来源。完整报告、数据附件与内部审查底稿未复制入仓库；截图保留原始来源、期间与限制，不代表有关公司背书，不作为当前投资或医疗建议。海报只缩放展示原页，不修改其内容。
 
 ## 1.3.0 最新报告选页：MES
 

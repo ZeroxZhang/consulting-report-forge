@@ -1,5 +1,12 @@
 {
-  "version": 2,
+  "version": 3,
+  "analysisAlgorithm": "semantic-v2",
+  "policyVersions": {
+    "analysis": "semantic-v2",
+    "reading": "reading-shadow-1",
+    "visual": "structural-lines-1",
+    "references": "single-page-1"
+  },
   "workMode": "analytical",
   "complexity": "simple",
   "majorConclusion": false,

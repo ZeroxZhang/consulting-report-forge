@@ -1,0 +1,26 @@
+'use strict';
+const assert=require('node:assert/strict'),candidate=require('./candidate_reference_block.cjs'),legacy=require('./check_bookends.cjs');
+const meta={date:'2026-09-25'};
+const ref=id=>({bookends:{role:'references',title:'参考资料',boundary:'line',scope:'all',total:2,entries:[{id,text:'合成来源 '+id,visible:true}],links:[],clipped:[]}});
+const rows=[{bookends:{role:'cover',title:'标题',frame:'off',meta}},{bookends:{role:'content'}},ref('S1'),ref('S2'),{bookends:{role:'back-cover',title:'封底',frame:'off',meta}}];
+const options={expectedIds:['S1','S2']};
+assert.deepEqual(candidate.inspect(rows,options).errors,[]);
+assert.ok(legacy.checkDocument(rows,{kind:'report'}).errors.some(e=>e.includes('恰有一页 references')),'候选不得改写旧政策');
+function failure(mutate,pattern){const next=structuredClone(rows);mutate(next);assert.ok(candidate.inspect(next,options).errors.some(e=>pattern.test(e)));}
+failure(r=>{r[3].bookends.entries[0].id='S1';},/重复|漏项/);
+failure(r=>{r[2].bookends.entries[0].id='S2';r[3].bookends.entries[0].id='S1';},/顺序/);
+failure(r=>{r.splice(3,1);},/数量|漏项/);
+failure(r=>{r[2].bookends.total=3;},/总数/);
+failure(r=>{r.splice(3,0,{bookends:{role:'content'}});},/连续/);
+failure(r=>{r[3].bookends.clipped=['reference-text'];},/容量/);
+failure(r=>{r[3].bookends.title='';},/标题/);
+failure(r=>{r[3].bookends.entries[0].visible=false;},/不可见/);
+failure(r=>{r[3].bookends.links=[{text:'错链',href:'/relative'}];},/绝对/);
+failure(r=>{r[3].bookends.entries[0].id='';},/ID/);
+const selected=structuredClone(rows);
+for(const r of selected.filter(r=>r.bookends.role==='references'))Object.assign(r.bookends,{total:3,scope:'selected',title:'参考资料（节选）',note:'共3项，展示2项'});
+assert.deepEqual(candidate.inspect(selected,{expectedIds:['S1','S2','S3']}).errors,[]);
+selected[3].bookends.note='';assert.ok(candidate.inspect(selected).errors.some(e=>e.includes('说明')));
+const single=structuredClone(rows);single[2].bookends.entries.push(single[3].bookends.entries[0]);single.splice(3,1);
+assert.deepEqual(candidate.inspect(single,options).errors,[]);
+console.log('PASS candidate references: one/multiple pages, continuous block, ID coverage/order, totals, selection, clipping and unchanged legacy rejection');

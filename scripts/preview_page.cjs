@@ -38,6 +38,7 @@ async function preview(options = {}) {
     const total = await page.locator('.slide').count();
     if (!total) throw Error('没有幻灯片');
     const modern = await page.evaluate(() => document.documentElement.dataset.reliabilityVersion === '2');
+    const readingShadow=await page.evaluate(()=>JSON.parse(document.getElementById('deck-task-contract')?.textContent||'null')?.version===3);
     const requested = options.all ? Array.from({length: total}, (_, i) => i + 1) : [...new Set(options.pages)];
     const outOfRange = requested.filter(n => !Number.isInteger(n) || n < 1 || n > total);
     if (outOfRange.length) problems.push('页码无效或超出范围，已跳过：' + outOfRange.join(','));
@@ -45,7 +46,7 @@ async function preview(options = {}) {
     if (!targets.length) throw Error('没有可预览的页码；本稿共 ' + total + ' 页');
     const rows = [];
     for (const number of targets) {
-      const row = await pageProbe.collect(page, number - 1, {modern});
+      const row = await pageProbe.collect(page, number - 1, {modern,readingShadow});
       row.screenshot = pageProbe.screenshotName(number);
       await page.locator('.slide.active').screenshot({path: path.join(out, row.screenshot)});
       row.review = pageProbe.summarize(row);

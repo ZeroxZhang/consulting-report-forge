@@ -125,13 +125,14 @@ function auditErrors(audit, {auditDir = process.cwd()} = {}) {
 function validate(review, audit, {baseDir = process.cwd(), auditDir = baseDir, partial = false, trail = [], cache = new Map()} = {}) {
   baseDir = fs.realpathSync(baseDir); auditDir = fs.realpathSync(auditDir);
   const errors = [], fail = msg => errors.push(msg);
-  const expectedVersion=audit?.taskContract?.version===2?4:3;
+  const caps=require('./contract_capabilities.cjs').capabilities(audit?.taskContract),expectedVersion=caps.finalReview;
   if (!review || review.schemaVersion !== expectedVersion) return ['新版交付必须使用review schemaVersion:'+expectedVersion];
-  if(expectedVersion===4){
+  if(caps.analysis){
     if(audit.taskContract.analysisPreview)errors.push('分析预览不能作为正式审查');
     try{const records=taskRecords(audit,{auditDir}),bp=records.find(r=>r.key==='blueprint'),pp=records.find(r=>r.key==='pages');
       const doc=JSON.parse(fs.readFileSync(bp.path,'utf8'));
-      if(review.analysisSha256!==require('./analysis_contract.cjs').digest(doc))errors.push('最终审查未绑定当前分析版本');
+      if(caps.strict&&review.analysisAlgorithm!==caps.algorithm)errors.push('最终审查分析算法身份错误');
+      if(review.analysisSha256!==require('./analysis_contract.cjs').digest(doc,audit.taskContract))errors.push('最终审查未绑定当前分析版本');
       errors.push(...require('./report_contract.cjs').verifyPlan(audit.taskContract,path.dirname(path.resolve(auditDir,audit.htmlArtifact.path)),JSON.parse(fs.readFileSync(pp.path,'utf8'))));
     }catch(e){errors.push('最终分析绑定失败：'+e.message);}
   }

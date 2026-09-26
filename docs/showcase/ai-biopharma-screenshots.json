@@ -1,63 +1,67 @@
 {
   "report": "全球AI生物制药前沿研究",
   "reportDate": "2026-09-25",
-  "pages": 29,
+  "pages": 31,
   "bodyPages": 26,
   "method": "Byte-identical copies of final HTML acceptance screenshots; no crop or text changes.",
   "reviewStatus": "complete",
-  "reviewSha256": "c4d9e8f51ff4d6d2be9953b78ccc3146cefbe5f3bd7af8f0b66e37d9a369abcc",
-  "auditSha256": "dda43e26889b29e49b5ca021d73071c75c962c4cc7747b8d80fd525da856ca5b",
-  "reviewedHtmlSha256": "4720f7a2d3da1dbcf220f215a269de8a547360721eb6d3448003380367276141",
-  "reviewedPdfSha256": "037c49e6aa4a1c246406384d77dce7afc9acb7a3960aa301983452d5f185047d",
+  "reviewSha256": "fee8ba53097f0bb261eaf33480a28f07d09f0beaa7d49992f15583cd47735cdb",
+  "auditSha256": "82122fa449c7ebf7fb4ea713a047a9d24fb54758008f8a349485182e5b227939",
+  "reviewedHtmlSha256": "f7f73354836ec27ff601cd68bd25abe828f295e3f8265052197c7ec2d6c27ff9",
+  "reviewedPdfSha256": "70c9315a98c258c819ca84a84ddb3882435affc56e8ca9da622a886ac10e10d2",
   "images": [
     {
       "file": "ai-biopharma-market.png",
       "physicalPage": 4,
-      "source": "renders/p04.png",
-      "sha256": "345e2fc15d36b2a5472df40367fd08cd406bc90bc4d09f1fc22ca5a7c38abe98",
+      "source": "qa/p04.png",
+      "sha256": "4a14e892d83b25a940d619f87a4802801901a5ed8653c38944b09c7fc54527c4",
       "description": "市场规模与口径"
     },
     {
       "file": "ai-biopharma-landscape.png",
       "physicalPage": 7,
-      "source": "renders/p07.png",
-      "sha256": "aa554df8b0491441aa042144d444ec02ebc22620232f8fa87ac7d0e0bdad433f",
+      "source": "qa/p07.png",
+      "sha256": "b9d1ec1a7b8b5472728e134e07a661716c03d41301447896cf497276c6085a64",
       "description": "参与者证据矩阵"
     },
     {
       "file": "ai-biopharma-deals.png",
       "physicalPage": 14,
-      "source": "renders/p14.png",
-      "sha256": "95a9f1a5253889622929d92bb6ac90a71b4f19e4ba453e5295a7a1f1d7c08d09",
+      "source": "qa/p14.png",
+      "sha256": "d0ae1115f8359d978a73f7962ce9fc99bc0338ac3613553497f57f9c07cd3f37",
       "description": "首付与条件里程碑"
     },
     {
       "file": "ai-biopharma-finance.png",
       "physicalPage": 16,
-      "source": "renders/p16.png",
-      "sha256": "20d4a7bc591ed78b9f46ecd8e0eeb2d9ec53365b8ad9acbbced9c5e122385a01",
+      "source": "qa/p16.png",
+      "sha256": "06adf3f1f671fd3935ba7714a8631c2e9b2c16c0404c92ccc2907f4d8a6fec22",
       "description": "上市样本财务比较"
     },
     {
       "file": "ai-biopharma-cash.png",
       "physicalPage": 17,
-      "source": "renders/p17.png",
-      "sha256": "ae40334bfe957c523a6d24c5beb8a3061d98f37551c9989f8fae3a5bcb94849d",
+      "source": "qa/p17.png",
+      "sha256": "2330b135820f5fd9dd7f26f2f0feb5b7ebe72522f58eff8489102096119fdaee",
       "description": "现金变动桥"
     },
     {
       "file": "ai-biopharma-valuation.png",
       "physicalPage": 22,
-      "source": "renders/p22.png",
-      "sha256": "db676ebfd5a8371220799c4329f80113951c24b73b647ae081850193775f405e",
+      "source": "qa/p22.png",
+      "sha256": "f77113c187615f44389b96c09bceaf5f5b86a5dad0fb2076ee129af6bcfc4050",
       "description": "条件估值敏感性"
     },
     {
       "file": "ai-biopharma-diligence.png",
       "physicalPage": 25,
-      "source": "renders/p25.png",
-      "sha256": "9c64e353a348bfac7be62b42cf6a7bd8801d034210b934b8fa09447adb490b40",
+      "source": "qa/p25.png",
+      "sha256": "f540d68153cec5d51fc70120e27bdf3cb8eaf215a8f3f165386902e2873a2b14",
       "description": "投资尽调门槛"
     }
-  ]
+  ],
+  "runtime": "1.5.0",
+  "acceptanceDate": "2026-09-26",
+  "referencePages": 3,
+  "referenceIds": 42
 }

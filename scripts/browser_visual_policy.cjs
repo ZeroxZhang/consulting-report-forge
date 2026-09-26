@@ -1,5 +1,5 @@
 /* 在真实浏览器中调用；函数自包含，可由 Playwright 序列化。诊断不作审美 PASS。 */
-function inspectSlide(slide) {
+function inspectSlide(slide, options = {}) {
   const errors = [], warnings = [], findings = [];
   const sr = slide.getBoundingClientRect(), scale = sr.width / (slide.offsetWidth || sr.width) || 1;
   const densityProfile = slide.dataset.densityProfile || '';
@@ -32,7 +32,8 @@ function inspectSlide(slide) {
       const sides=['Top','Right','Bottom','Left'].map(side=>({side,width:parseFloat(s[`border${side}Width`]),color:s[`border${side}Color`],style:s[`border${side}Style`]}));
       const visible=sides.filter(x=>x.width>0&&x.style!=='none'&&painted(x.color));
       // 整圈普通框线、薄中性分隔线不是色条模块；粗单边或有色单边属于可识别禁用外观。
-      const accent=visible.filter(x=>(x.width>=2||saturated(x.color))&&x.width<=16);
+      const quiet=options.quietLines||[];
+      const accent=visible.filter(x=>(x.width>=2||saturated(x.color))&&x.width<=16&&!quiet.some(q=>q.selector===label(el)&&q.side===x.side.toLowerCase()));
       if(accent.length && !(visible.length===4&&visible.every(x=>x.width===visible[0].width&&x.color===visible[0].color)))
         add(errors,'V-DECORATIVE-EDGE',el,'文字或数字模块使用装饰性边条，应重排为无边条表达。',{sides:accent.map(x=>x.side.toLowerCase())});
       // 常见零模糊、零扩散的 inset 阴影模拟边条；复杂阴影保留人工检查范围。
@@ -50,6 +51,7 @@ function inspectSlide(slide) {
     }
     if(textModule(el)) for(const pseudo of ['::before','::after']) {
       const p=getComputedStyle(el,pseudo);if(p.content==='none'||p.content==='normal'||p.display==='none'||p.visibility!=='visible'||+p.opacity===0)continue;
+      if((options.quietLines||[]).some(q=>q.selector===label(el)&&q.pseudo===pseudo)){add(findings,'V-STRUCTURAL-LINE',el,'版本化规则允许低对比水平细线；仍须实际判断结构用途。',{pseudo});continue;}
       if(quietHeaderRule(el,pseudo,p)){add(findings,'V-QUIET-HEADER',el,'已识别真实页头下方的低对比 quiet 母版细线。');continue;}
       const w=parseFloat(p.width),h=parseFloat(p.height),thin=(w>0&&w<=16&&h>=32)||(h>0&&h<=16&&w>=70);
       const edge=(parseFloat(p.left)===0||parseFloat(p.right)===0||parseFloat(p.top)===0||parseFloat(p.bottom)===0);
@@ -87,4 +89,11 @@ function inspectSlide(slide) {
   findings.push({code:'V-COVERAGE',message:'自动范围：可见 HTML 模块的典型边框、简单伪元素/窄块、零模糊 inset 阴影，以及局部空置线索。小于70×32px的文字装饰、复杂绘制、未声明对齐关系和整页重心仍须逐页实际审查；无错误不代表视觉通过。'});
   return {errors,warnings,findings};
 }
-module.exports={inspectSlide};
+async function inspect(slide,policy='legacy-1'){
+  if(policy==='legacy-1')return slide.evaluate(inspectSlide);
+  if(policy!=='structural-lines-1')throw Error('未知视觉策略：'+policy);
+  const measured=await slide.evaluate(require('./candidate_structural_lines.cjs').inspectSlide);
+  const result=await slide.evaluate(inspectSlide,{quietLines:measured.candidates});
+  return {...result,policy,structuralLines:measured.candidates};
+}
+module.exports={inspectSlide,inspect};

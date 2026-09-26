@@ -197,6 +197,33 @@ function validate(review, audit, {baseDir = process.cwd(), auditDir = baseDir, p
     }
   }
   for(const name of reviewers.author)if(reviewers.independent.has(name))fail('作者与独立审查者身份重叠：'+name);
+  // 新策略（evidence-composition-1）：组合关系、密度与结构取舍的可审记录。
+  // 页面内部多图检查由 audit 与组合审查清单连接，不能只签「看到该页」。
+  const composition=require('./composition_contract.cjs');
+  const taskPolicy=audit.taskContract?.policyVersions?.visual;
+  if(taskPolicy===composition.POLICY&&!partial){
+    const expectedBySlide=new Map();
+    for(const entry of manifest){
+      const pid=entry.pageId||('page-'+entry.page);
+      if(!expectedBySlide.has(pid))expectedBySlide.set(pid,{panelRefs:new Set(),relationRefs:new Set()});
+    }
+    // 从 audit 的页面记录派生 panel/relation 清单
+    if(Array.isArray(audit.pagesCheck?.pages))for(const page of audit.pagesCheck.pages){
+      const pid=page.id||('page-'+page.page);
+      if(!expectedBySlide.has(pid))expectedBySlide.set(pid,{panelRefs:new Set(),relationRefs:new Set()});
+      const exp=expectedBySlide.get(pid);
+      for(const panelId of composition.panelIds({exhibit:page.composition?{contract:'semantic-exhibit-v1',semantics:{composition:page.composition}}:undefined}))exp.panelRefs.add(pid+':'+panelId);
+      for(const relId of composition.relationRefs({exhibit:page.composition?{contract:'semantic-exhibit-v1',semantics:{composition:page.composition}}:undefined}))exp.relationRefs.add(pid+':'+relId);
+    }
+    for(const c of review.coverage){
+      const coveredPanels=Array.isArray(c.panelRefs)?c.panelRefs:[];
+      const coveredRelations=Array.isArray(c.relationRefs)?c.relationRefs:[];
+      for(const [pid,exp] of expectedBySlide){
+        for(const ref of exp.panelRefs)if(!coveredPanels.includes(ref))fail('coverage 缺少组合覆盖 '+ref+'；清单由合同派生，审查者填写实际所见');
+        for(const ref of exp.relationRefs)if(!coveredRelations.includes(ref))fail('coverage 缺少关系覆盖 '+ref);
+      }
+    }
+  }
   if(!partial){
     const names=[...new Set([...reviewers.author,...reviewers.independent])].sort().join('; ');
     if(review.reviewer!==names||review.independence!==(reviewers.independent.size?'independent':'author'))fail('审查汇总身份与coverage不一致');

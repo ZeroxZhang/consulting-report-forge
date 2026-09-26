@@ -63,14 +63,23 @@ function check(doc, options = {}) {
       if (!norm(page.title) || page.title !== page.content?.title) bad(at + ' title 与权威 content 不一致');
       if (page.form === 'svg.custom' && !contentApi.SEMANTIC_TYPES.includes(page.semanticType)) bad(at + ' svg.custom 须声明 semanticType，不能用自绘绕开数据语义');
       const water = page.semanticType === 'waterfall' || [page.form, ...(page.regions || []).map(r => r.form)].some(f => /waterfall/i.test(f || ''));
-      if (water && page.waterfall?.status !== 'verified') bad(at + ' 瀑布语义须有 verified waterfall 对账；示意图也不能违反加减关系');
-      if (water || page.waterfall?.status === 'verified') {
+      // 复合证据：瀑布声明在 panel.waterfall，逐 panel 对账；页级 waterfall 是旧路径。
+      const panelWaterfalls = page.composition ? Object.entries(page.composition.panels||{}).filter(([,p])=>p&&p.waterfall).map(([pid,p])=>({pid,waterfall:p.waterfall})) : [];
+      if (water && page.waterfall?.status !== 'verified' && !panelWaterfalls.length) bad(at + ' 瀑布语义须有 verified waterfall 对账；示意图也不能违反加减关系');
+      if ((water && !panelWaterfalls.length) || page.waterfall?.status === 'verified') {
         try {
           if (!page.waterfall?.input) throw Error('缺少权威 waterfall.input');
           const report = waterfall.diagnoseSpec(page.waterfall.input);
           if (report.status !== 'ready') throw Error('起点、增量与终点未通过内核诊断：' + report.issues.map(i=>i.code).join('/'));
           const b=page.waterfall,c=report.chart;
           for (const [key,value] of Object.entries({reconciliation:c.reconciliation,tolerance:c.tolerance,nodes:c.bars.length,residual:c.residual})) if (norm(b[key]) !== norm(value)) throw Error('waterfall.'+key+' 与权威输入计算结果不同');
+        } catch(error) { bad(at + ' ' + error.message); }
+      }
+      for (const {pid,waterfall:panelWf} of panelWaterfalls) {
+        try {
+          if (!panelWf.input) throw Error('panel '+pid+' 缺少权威 waterfall.input');
+          const report = waterfall.diagnoseSpec(panelWf.input);
+          if (report.status !== 'ready') throw Error('panel '+pid+' 起点、增量与终点未通过内核诊断：' + report.issues.map(i=>i.code).join('/'));
         } catch(error) { bad(at + ' ' + error.message); }
       }
     }
@@ -256,6 +265,31 @@ function verifyDeck(doc, slides, {warnings = []} = {}) {
         warnings.push(...result.warnings.map(w=>'第 '+slide.page+' 页图示 '+exhibit.id+' '+w));
         for(const [key,value] of Object.entries(actual))if(declared.capacity?.[key]!==undefined&&value>declared.capacity[key])errors.push('第 '+slide.page+' 页图示 '+exhibit.id+' 实际 '+key+'='+value+' 超过蓝图计划 '+declared.capacity[key]);
       }
+    }
+    // 复合证据逐 panel 核对：稳定身份、形式、容量、漏图与额外展品。
+    if (declared.composition && Array.isArray(slide.exhibits)) {
+      const expected=require('./composition_contract.cjs').expectedPanels(declared);
+      const byPanel=new Map();
+      for(const exhibit of slide.exhibits){const pid=exhibit.panelId;if(!pid)continue;if(!byPanel.has(pid))byPanel.set(pid,[]);byPanel.get(pid).push(exhibit);}
+      for(const exp of expected){
+        const found=byPanel.get(exp.panelId)||[];
+        const panelForm=exp.form;
+        const isSvg=['exhibit-kit','echarts-recipes','precision','diagram'].includes(forms.get(panelForm).module)&&forms.get(panelForm).kind==='svg';
+        if(isSvg&&!found.some(e=>e.form===panelForm))errors.push('第 '+slide.page+' 页 panel '+exp.panelId+' 缺少与形式 '+panelForm+' 对应的带形式标记图示');
+        for(const exhibit of found.filter(e=>e.form===panelForm)){
+          if(panelForm.startsWith('diagram.'))errors.push(...require('./diagram_contract.cjs').verifyRendered(panelForm,exhibit.diagram).map(e=>'第 '+slide.page+' 页 panel '+exp.panelId+' 图示 '+exhibit.id+' '+e));
+          if(!Object.keys(capacityPolicy.rules(panelForm)).length)continue;
+          let actual;
+          try{actual=JSON.parse(decodeURIComponent(exhibit.capacity||''));}catch(_){errors.push('第 '+slide.page+' 页 panel '+exp.panelId+' 图示 '+exhibit.id+' 容量标记不可解析');continue;}
+          const result=capacityPolicy.inspect(panelForm,actual,{requireAll:true});
+          errors.push(...result.errors.map(e=>'第 '+slide.page+' 页 panel '+exp.panelId+' '+e));
+          warnings.push(...result.warnings.map(w=>'第 '+slide.page+' 页 panel '+exp.panelId+' '+w));
+          for(const [key,value] of Object.entries(actual))if(exp.capacity?.[key]!==undefined&&value>exp.capacity[key])errors.push('第 '+slide.page+' 页 panel '+exp.panelId+' 图示 '+exhibit.id+' 实际 '+key+'='+value+' 超过该 panel 计划 '+exp.capacity[key]);
+        }
+      }
+      // 额外未登记的实质展品：不在任何声明 panel 下的带 form 标记图示。
+      const declaredPanels=new Set(expected.map(e=>e.panelId));
+      for(const [pid,exhibits] of byPanel)if(!declaredPanels.has(pid))for(const exhibit of exhibits)if(exhibit.form)errors.push('第 '+slide.page+' 页图示 '+exhibit.id+'（'+exhibit.form+'）归属 panel '+pid+' 未登记；须拆分登记或明确组合语义');
     }
     if (declared.visual !== undefined && norm(slide.visual) !== norm(declared.visual)) errors.push('第 ' + slide.page + ' 页 data-visual 缺失或与 pages.json 不一致');
     // 同一句话存在成稿与 pages.json 两处，逐字相同才认。报错要把两句都摊开——

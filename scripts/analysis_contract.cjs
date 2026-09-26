@@ -18,6 +18,9 @@ function adopted(doc){
   if(doc.analysisAlgorithm==='semantic-v2')for(const s of list(doc.slides)){
     require('./analysis_projection.cjs').metricRefs(s).forEach(r=>result.metricRefs.add(r));
     list(s.exhibitBindings).forEach(b=>result.artifactRefs.add(b.artifactRef));
+    // 组合 panel 的 claimRefs 是页内证明分工，必须显式进入已采纳依赖闭包；
+    // 被签名不等于被审查，嵌套引用不能因为不在 s.claimRefs 顶层就漏掉。
+    require('./composition_contract.cjs').claimRefs(s).forEach(r=>result.claimRefs.add(r));
   }
   let before;
   do{
@@ -60,6 +63,16 @@ function validate(doc,{task,stage='research',baseDir,preview=false}={}){
   if(strict&&doc.analysisAlgorithm!=='semantic-v2')bad('task3 蓝图须声明 analysisAlgorithm: semantic-v2');
   if(!strict&&doc.analysisAlgorithm!==undefined)bad('严格蓝图不能降级到旧任务合同');
   if(strict)errors.push(...require('./analysis_projection.cjs').validate(doc));
+  // 组合标记与 task 策略必须一致：旧策略带组合标记要显式升级；新策略不得退回「只查主图」。
+  if(strict){
+    const composition=require('./composition_contract.cjs');
+    const hasComposition=list(doc.slides).some(s=>composition.hasComposition(s));
+    errors.push(...composition.policyErrors(task,{composition:hasComposition,stage}));
+    for(const s of list(doc.slides))if(composition.hasComposition(s)){
+      try{composition.deriveVisual(s,doc.deck?.ratio||'16x9');}
+      catch(e){bad(s.id+' '+e.message);}
+    }
+  }
   if(!object(doc.deck)||!text(doc.deck.title)||!text(doc.deck.audience))bad('deck 须有 title/audience');
   if(doc.deck?.governingThought!==undefined)bad('schema 3 governingThought 由 synthesis.answerClaimRefs 派生，不得双写');
   if(!object(a)||!object(a.brief))return [...errors,'analysis.brief 缺失'];
@@ -119,7 +132,7 @@ function validate(doc,{task,stage='research',baseDir,preview=false}={}){
     if(doc.artifacts.length&&!baseDir)bad('核对分析附件须提供 baseDir');
     if(baseDir)errors.push(...artifactErrors(doc,baseDir));
   }
-  for(const s of list(doc.slides))if(content.CONTENT_ROLES.has(s.pageRole)){if(s.sourcePlan!==undefined)bad('schema 3 slide 不能双写 sourcePlan');refs(s,'claimRefs');refs(s,'metricRefs');if(!list(s.claimRefs).length)bad('正文须引用主张');if(stage==='ready')errors.push(...require('./form_contract.cjs').validate(s.visual).errors.map(e=>s.id+' '+e));}
+  for(const s of list(doc.slides))if(content.CONTENT_ROLES.has(s.pageRole)){if(s.sourcePlan!==undefined)bad('schema 3 slide 不能双写 sourcePlan');refs(s,'claimRefs');refs(s,'metricRefs');if(!list(s.claimRefs).length)bad('正文须引用主张');if(stage==='ready'){const comp=require('./composition_contract.cjs');const vis=comp.hasComposition(s)?comp.deriveVisual(s,doc.deck?.ratio||'16x9'):s.visual;errors.push(...require('./form_contract.cjs').validate(vis).errors.map(e=>s.id+' '+e));}}
   if(stage==='ready'&&!errors.length){
     try{errors.push(...require('./deck_blueprint.cjs').validate(materialize(doc),{ready:false}).errors);}catch(e){bad(e.message);}
     if(!preview&&task?.workMode!=='editorial')errors.push(...require('./analysis_review_contract.cjs').check(doc,{task,baseDir}));

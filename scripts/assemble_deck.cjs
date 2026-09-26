@@ -74,6 +74,20 @@ async function assemble(options={}){
       if(!Array.isArray(keys)||!keys.length||keys.some(k=>!Object.hasOwn(p.bindingMap,k)))throw Error(p.id+' 未知内容绑定：'+raw);
       el.textContent=keys.map(k=>p.bindingMap[k]).join('；');
      }
+     // 复合证据 panel 身份对账：data-panel-id 与组合声明一致，每个声明 panel 恰有一个审计根。
+     if(p.composition){
+      const expectedIds=new Set(Object.keys(p.composition.panels||{}));
+      const found=new Map();
+      for(const el of slide.querySelectorAll('[data-panel-id]')){
+       const pid=el.dataset.panelId;
+       if(!pid)throw Error(p.id+' data-panel-id 不能为空');
+       if(found.has(pid))throw Error(p.id+' panel '+pid+' 有多个审计根；panel 审计根互不嵌套');
+       found.set(pid,el);
+       if(!expectedIds.has(pid))throw Error(p.id+' data-panel-id="'+pid+'" 未在组合声明中登记');
+       for(const [otherPid,otherEl] of found){if(otherPid!==pid&&otherEl.contains(el))throw Error(p.id+' panel '+pid+' 嵌套于 '+otherPid+' 的审计根内；内容由最近的 panel 根唯一拥有');}
+      }
+      for(const pid of expectedIds)if(!found.has(pid))throw Error(p.id+' 缺少 panel '+pid+' 的审计根（data-panel-id）');
+     }
     });
     doc.documentElement.dataset.pageContractVersion='4';
    }

@@ -90,8 +90,9 @@ function inspectSlide(slide, options = {}) {
   return {errors,warnings,findings};
 }
 async function inspect(slide,policy='legacy-1'){
-  if(policy==='legacy-1')return slide.evaluate(inspectSlide);
-  if(policy!=='structural-lines-1')throw Error('未知视觉策略：'+policy);
+  // 能力查询而非字符串相等：evidence-composition-1 必须包含 structural-lines-1 的检查，换策略值不能让细线检查失效。
+  const capability=require('./contract_capabilities.cjs').visualPolicy(policy);
+  if(!capability.structuralLines)return slide.evaluate(inspectSlide);
   const measured=await slide.evaluate(require('./candidate_structural_lines.cjs').inspectSlide);
   const result=await slide.evaluate(inspectSlide,{quietLines:measured.candidates});
   return {...result,policy,structuralLines:measured.candidates};

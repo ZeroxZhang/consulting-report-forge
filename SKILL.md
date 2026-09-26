@@ -51,6 +51,8 @@ node scripts/compile_blueprint.cjs /任务/deck-blueprint.json /任务/pages.jso
 
 ## 4. 从证据关系选择表达与布局
 
+先组织证据，再选图形与空间组织。每页先回答：本页证明什么；哪些证据共同支持它；各展品分别让读者看出什么；展品之间是对照、拆解、递进、互补、总览与细节，还是边界与反证。只有证明任务有变化才增加展品；单图仍是有效结果，不为结构字段编造新数据。
+
 先确定比较、变化、构成、机制、条件或取舍，再选图形和可承载的布局；容量不足时重新组织，两者迭代。不要先选格子再凑证据。
 
 schema 3 正文页在 `visual.selection` 写 `relationship` 和具体的 `reason`，解释主张需要读出的关系及该形式的编码；有实质备选时再写 `alternative` 与 `tradeoff`。有已登记容量规则的形式同时写 `visual.capacity` 的计划计数。`ready` 拦截关系与形式明显不匹配、缺计数或超过硬上限；`pages.json` 保留这两项，最终 QA 将已登记渲染器的实际图示容量与蓝图计划对账。选型理由是否成立仍由审稿者按证据和最终图判断。
@@ -60,6 +62,8 @@ schema 3 正文页在 `visual.selection` 写 `relationship` 和具体的 `reason
 - 自绘 SVG 必须说明实际语义。瀑布统一从权威原始输入经内核诊断，起点、增量、终点必须闭合；示意图也不能出现错误加减关系。
 - 使用 `diagram.*` 时按 [图示语义合同](references/diagram-semantics.md) 声明节点、边和角色；渲染器按形式拒绝不相符的结构，输出携带可核对的形式与语义标记。
 - 同类分面、连续同型图和表格可帮助比较。报告不因图型/布局种数、重复次数或空白像素直接失败；相关诊断仍须结合画面解释或修复。
+
+复合证据页（新视觉策略 `evidence-composition-1`）在 `exhibit.semantics.composition` 登记 panels/relations/scaleGroups：每个 panel 有稳定键、证明分工（claimRefs）、形式、选型和容量；relations 解释组合关系；scaleGroups 记录跨图量尺约定。`visual.regions` 只声明位置与 panelRef，旧格式字段由编译适配层派生。阅读入口 `anchorPanel` 与布局 primary 独立，不要求阅读入口更大。单图页用一个 panel，relations 可为空。详见[单页系统](references/consulting-page-system.md)。
 
 具体表达见 [表达指南](references/expression-guide.md)与[自动生成的形式容量目录](references/form-capacity.md)，区域、密度与组件类名见 [单页系统](references/consulting-page-system.md)。需要组件时运行 `node scripts/sweep_forms.cjs` 查询，原生 SVG 与 HTML 表格同样是有效表达。未封装图型可自绘或通过原生配置生成静态 SVG；登记表和分析方法表不是能力白名单，组件上限不应外推为全局禁令。禁止伪 3D、无意义色条、未说明截轴、只靠颜色、悬停才可读的关键内容与以微字塞满页面。
 

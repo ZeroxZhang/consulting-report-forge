@@ -18,6 +18,8 @@ function validate(record,doc,{task,baseDir}={}){
   else errors.push(...analysis.artifactErrors(doc,baseDir));
   const used=analysis.adopted(doc),reviews=Array.isArray(record.reviews)?record.reviews:[];
   const roles=task?.complexity==='complex'||task?.majorConclusion?['author','independent']:['author'];
+  const composition=require('./composition_contract.cjs');
+  const compositionPolicy=composition.isCompositionTask(task);
   const identities=new Map();
   for(const r of reviews){
     if(!text(r.reviewer)||!text(r.instanceId)||!['author','independent'].includes(r.role)||!text(r.basis)||!['ready','conditional'].includes(r.conclusion))errors.push('分析审查身份、依据或结论未就绪');
@@ -25,6 +27,19 @@ function validate(record,doc,{task,baseDir}={}){
     if(r.conclusion==='conditional'&&(!Array.isArray(r.limitationClaimRefs)||!r.limitationClaimRefs.length||r.limitationClaimRefs.some(id=>!used.claimRefs.includes(id))))errors.push('有条件通过须引用已采纳限制主张');
     if(caps.strict&&(!Array.isArray(r.coverage?.slideRefs)||r.coverage.slideRefs.some(id=>!doc.slides.some(s=>s.id===id))))errors.push('严格分析审查 coverage.slideRefs 无效');
     for(const k of ['claimRefs','issueRefs','optionRefs'])if(!Array.isArray(r.coverage?.[k])||r.coverage[k].some(id=>!({claimRefs:doc.claims,issueRefs:doc.analysis.issues,optionRefs:doc.analysis.options}[k]||[]).some(x=>x.id===id)))errors.push('分析审查 coverage.'+k+' 无效');
+    // 新策略条件审查身份：analysisSha256 不含 task.policyVersions，仅切策略时旧签署摘要仍会匹配。
+    // 必须拒绝没有对应策略身份与组合覆盖的旧签署，不能把「被签名」当成「被审查」。
+    if(compositionPolicy){
+      if(r.policyVersions?.visual!==composition.POLICY)errors.push('分析审查缺少策略身份 '+composition.POLICY+'：仅切换视觉策略不改分析摘要，旧签署不能沿用；须实际重审');
+      for(const slide of doc.slides){
+        if(!r.coverage?.slideRefs?.includes(slide.id))continue;
+        const expectedPanels=composition.panelIds(slide),expectedRelations=composition.relationRefs(slide);
+        const coveredPanels=Array.isArray(r.coverage?.panelRefs)?r.coverage.panelRefs:[];
+        const coveredRelations=Array.isArray(r.coverage?.relationRefs)?r.coverage.relationRefs:[];
+        for(const panelId of expectedPanels)if(!coveredPanels.includes(slide.id+':'+panelId)&&!coveredPanels.includes(panelId))errors.push('分析审查缺少组合覆盖 '+slide.id+' panel '+panelId+'；清单由合同派生，审查者填写实际所见');
+        for(const relId of expectedRelations)if(!coveredRelations.includes(slide.id+':'+relId)&&!coveredRelations.includes(relId))errors.push('分析审查缺少关系覆盖 '+slide.id+' relation '+relId);
+      }
+    }else if(r.policyVersions!==undefined&&r.policyVersions.visual!==undefined&&!['legacy-1','structural-lines-1'].includes(r.policyVersions.visual))errors.push('分析审查的策略身份与当前任务不一致');
   }
   for(const role of roles){
     const relevant=reviews.filter(r=>r.role===role);if(!relevant.length)errors.push('缺少 '+role+' 分析审查');

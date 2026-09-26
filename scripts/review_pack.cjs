@@ -56,7 +56,21 @@ function prepare({auditFile,outputDir}){
     ...(caps.analysis?{analysisSha256:null}:{}),...(caps.strict?{analysisAlgorithm:caps.algorithm}:{}),coverage:[],
     checks:Object.fromEntries(['analysis','evidence','visual'].map(k=>[k,{status:'not_reviewed',basis:''}])),warningReview:[],issues:[]});
   write('diagnostics.json',diagnostics);write('warning-decisions.json',{auditSha256:grouped.auditSha256,groups:grouped.groups.map(g=>({...g,status:'not_reviewed',note:''}))});
-  write('review-pack.json',{auditFile:path.resolve(auditFile),auditSha256:grouped.auditSha256,priorityPages:priorityPages,pages:ranked,evidence:entries,note:'优先查看风险页，正式验收仍须覆盖全部 HTML/PDF；草稿没有审查身份或通过结论。'});
+  // 新策略：组合覆盖清单由合同派生，审查者填写实际所见，工具不生成 PASS。
+  const composition=require('./composition_contract.cjs');
+  const isComposition=audit.taskContract?.policyVersions?.visual===composition.POLICY;
+  const compositionChecklist=isComposition?(()=>{
+    const list=[];
+    for(const row of (audit.rows||[])){
+      const pid=row.pageId||('page-'+row.page);
+      for(const panelId of composition.panelIds({exhibit:row.composition?{contract:'semantic-exhibit-v1',semantics:{composition:row.composition}}:undefined}))list.push({slideId:pid,panelRef:pid+':'+panelId,reason:'逐 panel 核对实际形式、数据绑定、容量、来源与打印存在性'});
+      for(const relId of composition.relationRefs({exhibit:row.composition?{contract:'semantic-exhibit-v1',semantics:{composition:row.composition}}:undefined}))list.push({slideId:pid,relationRef:pid+':'+relId,reason:'核对组合关系能否直接读出，是否共同支持页结论'});
+    }
+    return list;
+  })():[];
+  write('review-pack.json',{auditFile:path.resolve(auditFile),auditSha256:grouped.auditSha256,priorityPages:priorityPages,pages:ranked,evidence:entries,
+    ...(compositionChecklist.length?{compositionChecklist}:{}),
+    note:'优先查看风险页，正式验收仍须覆盖全部 HTML/PDF；草稿没有审查身份或通过结论。'+(compositionChecklist.length?' 组合覆盖清单由合同派生，逐项填写实际所见。':'')});
   return {status:'prepared',directory:outputDir,priorityPages:priorityPages,drafts:roles.map(r=>r+'.json'),warningGroups:grouped.groups.length,warningObservations:(audit.warnings||[]).length};
 }
 module.exports={prepare,warningGroups,expandDispositions};

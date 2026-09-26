@@ -14,11 +14,10 @@ function normalize(value = {}, defaults = {}) {
   const caps=capabilities(c);
   if(caps.strict&&c.analysisAlgorithm!==caps.algorithm)throw Error('task3 须显式声明 analysisAlgorithm: semantic-v2');
   if(caps.strict){
-    const policies={analysis:'semantic-v2',reading:'reading-shadow-1',visual:'legacy-1',references:'single-page-1'};
-    const selected=c.policyVersions??policies;
-    if(!selected||Object.keys(selected).length!==4||Object.entries(policies).some(([k,v])=>k==='references'?!['single-page-1','reference-block-1'].includes(selected[k]):k==='visual'?!['legacy-1','structural-lines-1'].includes(selected[k]):selected[k]!==v))throw Error('不支持的严格合同 policyVersions');
-    c.policyVersions={...selected};
-    if(selected.references==='reference-block-1'&&(!Array.isArray(c.referenceIds)||!c.referenceIds.length||c.referenceIds.some(id=>typeof id!=='string'||!id.trim())||new Set(c.referenceIds).size!==c.referenceIds.length))throw Error('reference-block-1 须登记有序且唯一的 referenceIds');
+    // 策略合法性集中在 contract_capabilities 查询；此处不再散落字符串相等判断。
+    const policyTable=require('./contract_capabilities.cjs');
+    c.policyVersions=policyTable.normalizePolicies(c.policyVersions??policyTable.DEFAULT_POLICIES);
+    if(c.policyVersions.references==='reference-block-1'&&(!Array.isArray(c.referenceIds)||!c.referenceIds.length||c.referenceIds.some(id=>typeof id!=='string'||!id.trim())||new Set(c.referenceIds).size!==c.referenceIds.length))throw Error('reference-block-1 须登记有序且唯一的 referenceIds');
   }else if(c.policyVersions!==undefined)throw Error('新版策略身份不能降级到旧任务合同');
   if(c.referenceIds!==undefined&&c.policyVersions?.references!=='reference-block-1')throw Error('referenceIds 只能配套 reference-block-1');
   if(!caps.strict&&c.analysisAlgorithm!==undefined)throw Error('严格分析算法不能降级到旧任务合同');

@@ -68,9 +68,14 @@ function validate(doc, options = {}) {
       if (!norm(slide.proves)) bad(where + '.proves 须说明读者要直接看出的关系');
       if (!slide.visual || typeof slide.visual !== 'object') bad(where + '.visual 缺失');
       else {
-        if (!norm(slide.visual.form)) bad(where + '.visual.form 须声明表达形式');
-        else if (slide.visual.form !== 'custom') { try { forms.get(slide.visual.form); } catch (error) { bad(where + '.visual.form ' + error.message + '；自定义表达可写 svg.custom 并声明 semanticType 与实际表达'); } }
-        if (!norm(slide.visual.primary)) bad(where + '.visual.primary 须说明第一眼的主展品');
+        // 组合策略下 visual.form 由编译适配层从 primary panel 派生；作者可显式写但须一致。
+        const composition=require('./composition_contract.cjs');
+        let derivedForm=slide.visual.form;
+        if(composition.hasComposition(slide)){try{derivedForm=composition.deriveVisual(slide,doc.deck?.ratio||'16x9').form;}catch(e){bad(where+' '+e.message);}}
+        if (!norm(derivedForm)) bad(where + '.visual.form 须声明表达形式（组合页由 panel.form 派生）');
+        else if (derivedForm !== 'custom') { try { forms.get(derivedForm); } catch (error) { bad(where + '.visual.form ' + error.message + '；自定义表达可写 svg.custom 并声明 semanticType 与实际表达'); } }
+        const derivedPrimary=composition.hasComposition(slide)?composition.deriveVisual(slide,doc.deck?.ratio||'16x9').primary:slide.visual.primary;
+        if (!norm(derivedPrimary)) bad(where + '.visual.primary 须说明第一眼的主展品');
         // v2 的目录与自定义区域是平等路径；只有历史 v1 使用布局豁免字段。
         if (!norm(slide.visual.layout)) bad(where + '.visual.layout 须填目录编号（如 L09）' + (doc.schemaVersion === 2 ? '或 custom 并声明 visual.regions' : '，见 assets/layout-atlas/catalog.json'));
         else if (doc.schemaVersion === 2 && slide.visual.layout === 'custom') { /* 自由区域由编译后的 v4 合同检查 */ }

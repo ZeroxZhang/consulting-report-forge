@@ -18,12 +18,12 @@ function inspectPage(slide){
     links:[...slide.querySelectorAll('.reference-item a')].map(e=>({text:e.textContent.trim(),href:e.getAttribute('href')}))};
 }
 function checkDocument(rows,{kind,referencePolicy='single-page-1',expectedIds}={}){
-  if(referencePolicy==='reference-block-1'){
+  const capability=require('./contract_capabilities.cjs').referencePolicy(referencePolicy);
+  if(capability.referenceBlock){
     if(!Array.isArray(expectedIds)||!expectedIds.length)return {kind,errors:['参考资料块缺少权威来源 ID 清单'],warnings:[]};
     const result=require('./candidate_reference_block.cjs').inspect(rows,{kind,expectedIds});
     return {...result,kind,candidate:false,policy:'reference-block-1',warnings:result.warnings||[]};
   }
-  if(referencePolicy!=='single-page-1')return {kind,errors:['未知参考资料策略'],warnings:[]};
   const errors=[],warnings=[],all=rows.map((r,i)=>({...r.bookends,page:i+1}));
   const byRole=role=>all.filter(r=>r.role===role);
   if(kind!==undefined&&!['report','collection','fragment'].includes(kind))errors.push('未知文档类型: '+kind);

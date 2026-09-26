@@ -63,6 +63,11 @@ function validate(doc){
         if(key==='fontFamily'&&typeof value!=='string')errors.push(s.id+' fontFamily 须为字符串');
         if(key!=='fontFamily'&&(typeof value!=='number'||!Number.isFinite(value)||value<0))errors.push(s.id+' 样式尺寸/字重须为非负有限数字');
       }
+      // 组合落在 semantics 下，自动进语义摘要；这里只补结构校验，不扩大投影排除字段。
+      if(object(ex.semantics)&&ex.semantics.composition!==undefined){
+        const compositionErrors=require('./composition_contract.cjs').validate(s,{claims:list(doc.claims)});
+        errors.push(...compositionErrors);
+      }
     }else if(s.exhibit?.contract!==undefined)errors.push(s.id+' 未知 exhibit.contract');
     try{resolve(s.exhibit,values);}catch(e){errors.push(s.id+' '+e.message);}
     for(const binding of list(s.displayBindings)){

@@ -1,4 +1,5 @@
-/* 显式版本表；未知未来版本一律拒绝，不以 >= 推断语义。 */
+/* 显式版本表与显式策略能力表；未知未来版本一律拒绝，不以 >= 推断语义。
+   策略能力集中在此查询，散落的字符串相等判断会让换策略值后某项检查悄悄失效。 */
 'use strict';
 const versions=Object.freeze({
   1:Object.freeze({analysis:false,strict:false,analysisReview:null,finalReview:3,algorithm:null}),
@@ -6,4 +7,58 @@ const versions=Object.freeze({
   3:Object.freeze({analysis:true,strict:true,analysisReview:2,finalReview:5,algorithm:'semantic-v2'})
 });
 function capabilities(task){const version=task&&Object.hasOwn(task,'version')?task.version:1;if(!Number.isInteger(version)||!Object.hasOwn(versions,version))throw Error('不支持的任务合同版本：'+version);return versions[version];}
-module.exports={capabilities};
+
+/* 视觉策略能力。evidence-composition-1 必须包含 structural-lines-1 的全部检查，再加逐 panel 检查。
+   waterfallScope 决定瀑布体检作用域：旧策略保持页面级冻结行为，新策略下沉到 panel。 */
+const VISUAL_POLICIES=Object.freeze({
+  'legacy-1':Object.freeze({structuralLines:false,perPanel:false,composition:false,waterfallScope:'page',scaleGroups:false,panelIdentity:false}),
+  'structural-lines-1':Object.freeze({structuralLines:true,perPanel:false,composition:false,waterfallScope:'page',scaleGroups:false,panelIdentity:false}),
+  'evidence-composition-1':Object.freeze({structuralLines:true,perPanel:true,composition:true,waterfallScope:'panel',scaleGroups:true,panelIdentity:true})
+});
+const REFERENCE_POLICIES=Object.freeze({
+  'single-page-1':Object.freeze({referenceBlock:false}),
+  'reference-block-1':Object.freeze({referenceBlock:true})
+});
+const READING_POLICIES=Object.freeze({'reading-shadow-1':Object.freeze({shadow:true})});
+const ANALYSIS_POLICIES=Object.freeze({'semantic-v2':Object.freeze({strictProjection:true}),'legacy-v1':Object.freeze({strictProjection:false})});
+const POLICY_SLOTS=Object.freeze(['analysis','reading','visual','references']);
+const DEFAULT_POLICIES=Object.freeze({analysis:'semantic-v2',reading:'reading-shadow-1',visual:'legacy-1',references:'single-page-1'});
+
+function visualPolicy(name){
+  if(!Object.hasOwn(VISUAL_POLICIES,name))throw Error('未知视觉策略：'+name);
+  return VISUAL_POLICIES[name];
+}
+function referencePolicy(name){
+  if(!Object.hasOwn(REFERENCE_POLICIES,name))throw Error('未知参考资料策略：'+name);
+  return REFERENCE_POLICIES[name];
+}
+function policy(slot,name){
+  const tables={visual:VISUAL_POLICIES,references:REFERENCE_POLICIES,reading:READING_POLICIES,analysis:ANALYSIS_POLICIES};
+  const table=tables[slot];
+  if(!table)throw Error('未知策略槽位：'+slot);
+  if(!Object.hasOwn(table,name))throw Error('不支持的'+({visual:'视觉',references:'参考资料',reading:'阅读',analysis:'分析'}[slot])+'策略：'+name);
+  return table[name];
+}
+function can(slot,name,capability){
+  const table=policy(slot,name);
+  if(!Object.hasOwn(table,capability))throw Error('未登记的策略能力：'+slot+'.'+capability);
+  return table[capability]===true||table[capability];
+}
+function visualNames(){return Object.keys(VISUAL_POLICIES);}
+function referenceNames(){return Object.keys(REFERENCE_POLICIES);}
+
+/* 策略组合校验：四项齐全、各槽位在册，其余槽位只接受唯一现行值。 */
+function normalizePolicies(selected){
+  if(!selected||typeof selected!=='object'||Array.isArray(selected))throw Error('不支持的严格合同 policyVersions');
+  if(Object.keys(selected).length!==POLICY_SLOTS.length)throw Error('不支持的严格合同 policyVersions');
+  for(const slot of POLICY_SLOTS)if(!Object.hasOwn(selected,slot)||typeof selected[slot]!=='string')throw Error('不支持的严格合同 policyVersions');
+  policy('analysis',selected.analysis);
+  policy('reading',selected.reading);
+  policy('visual',selected.visual);
+  policy('references',selected.references);
+  if(selected.analysis!=='semantic-v2')throw Error('不支持的严格合同 policyVersions');
+  if(selected.reading!=='reading-shadow-1')throw Error('不支持的严格合同 policyVersions');
+  return {...selected};
+}
+module.exports={capabilities,VISUAL_POLICIES,REFERENCE_POLICIES,READING_POLICIES,ANALYSIS_POLICIES,POLICY_SLOTS,DEFAULT_POLICIES,
+  visualPolicy,referencePolicy,policy,can,visualNames,referenceNames,normalizePolicies};

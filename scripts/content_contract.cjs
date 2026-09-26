@@ -109,8 +109,16 @@ function validate(doc) {
     try {
       let required = slide.visual?.semanticType === 'waterfall';
       try { required ||= !!forms.get(formName(slide.visual?.form)).limits?.reconciles; } catch (_) { /* 原有形式校验负责 */ }
-      if (required && slide.waterfall === undefined) errors.push(at + ' 瀑布表达须声明 slide.waterfall.input，由内核派生对账结果');
+      // 复合证据：瀑布声明在 panel.waterfall，逐 panel 体检；页级 waterfall 是旧路径。
+      const compositionOf = require('./composition_contract.cjs').compositionOf(slide);
+      const hasPanelWaterfall = compositionOf && Object.values(compositionOf.panels||{}).some(p=>p&&p.waterfall!==undefined);
+      if (required && slide.waterfall === undefined && !hasPanelWaterfall) errors.push(at + ' 瀑布表达须声明 waterfall.input（页级或 panel 级），由内核派生对账结果');
       if (slide.waterfall !== undefined) derivedWaterfall(slide);
+      if (hasPanelWaterfall) for (const [pid, panel] of Object.entries(compositionOf.panels)) {
+        if (panel.waterfall === undefined) continue;
+        try { derivedWaterfall({id: pid, waterfall: panel.waterfall}); }
+        catch (e) { errors.push(at + ' panel ' + pid + ' ' + e.message); }
+      }
     } catch (error) { errors.push(at + ' ' + error.message); }
     if (!isObject(plan)) { errors.push(at + ' 缺少 sourcePlan'); return; }
     const keys = plan.keys;
@@ -260,15 +268,26 @@ function compile(doc, options = {}) {
   const ratio = doc.deck?.ratio || '16x9';
   const pages = bodySlides(doc).map((slide, index) => {
     if (!isObject(slide.visual)) throw Error(slide.id + ' 缺少 visual');
-    const content = buildContent(slide, doc.sources), visual = slide.visual;
+    const content = buildContent(slide, doc.sources);
+    // 复合证据：由 panels 派生旧格式必需的 region.form / page.form / primary / selection / capacity。
+    // 作者重复声明时必须一致，deriveVisual 会报冲突，不静默择一。
+    const composition = require('./composition_contract.cjs');
+    const visual = composition.hasComposition(slide) ? composition.deriveVisual(slide, ratio) : slide.visual;
     const page = {page: index + 1, id: slide.id, title: content.title, proves: interpolateText(slide.proves, content.metrics),
       form: formName(visual.form), visual: norm(visual.primary), layout: visual.layout,
-      regions: compileRegions(slide, ratio), density: copy(slide.density), content, contentHash: contentHash(content)};
+      regions: compileRegions({...slide, visual}, ratio), density: copy(slide.density), content, contentHash: contentHash(content)};
     if (visual.semanticType !== undefined) page.semanticType = visual.semanticType;
     if (visual.selection !== undefined) page.selection = copy(visual.selection);
     if (visual.capacity !== undefined) page.capacity = copy(visual.capacity);
     if (visual.sizing !== undefined) page.sizing = copy(visual.sizing);
     if (slide.waterfall !== undefined) page.waterfall = derivedWaterfall(slide);
+    if (composition.hasComposition(slide)) {
+      // 编译后的组合：panel 数据里的 $metric 解析为真值，保留稳定 panelId 供 DOM/探针对账。
+      const resolved = copy(composition.compositionOf(slide));
+      const values = evaluateMetrics(slide);
+      for (const panel of Object.values(resolved.panels || {})) if (panel.data !== undefined) panel.data = require('./analysis_projection.cjs').resolve(panel.data, values);
+      page.composition = resolved;
+    }
     for (const key of ['annotations', 'repetitionReason', 'layoutReason']) if (visual[key] !== undefined) page[key] = copy(visual[key]);
     const layoutErrors = page.layout === 'custom' ? layouts.customPageErrors(page, slide.id, ratio) : layouts.pageErrors(page, slide.id, ratio);
     if (layoutErrors.length) throw Error('派生布局无效：' + layoutErrors.join('；'));

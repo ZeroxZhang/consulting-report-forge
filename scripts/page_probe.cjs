@@ -50,6 +50,9 @@ function inspectDom(s, wfForms) {
     const id = 'p' + ([...s.parentElement.querySelectorAll('.slide')].indexOf(s) + 1) + '-ex' + j;
     e.setAttribute('data-deck-exhibit-id', id);
     const form=e.getAttribute('data-form')||null;
+    // panel 稳定身份：最近的 data-panel-id 祖先。data-deck-exhibit-id 只作媒介查找辅助，不能充当业务 ID。
+    const panelRoot=e.closest('[data-panel-id]');
+    const panelId=panelRoot?panelRoot.getAttribute('data-panel-id'):null;
     const visiblePart=part=>{if(!part)return false;const r=part.getBoundingClientRect();if(r.width<=0&&r.height<=0)return false;for(let n=part;n&&n!==e.parentElement;n=n.parentElement){const cs=getComputedStyle(n);if(cs.display==='none'||cs.visibility==='hidden'||cs.visibility==='collapse'||Number(cs.opacity)===0)return false;}return true;};
     const colorVisible=value=>!!value&&value!=='none'&&value!=='transparent'&&!/^rgba?\([^)]*,\s*0(?:\.0+)?\)$/.test(value);
     const strokeVisible=part=>{if(!visiblePart(part))return false;const cs=getComputedStyle(part);return colorVisible(cs.stroke)&&Number(cs.strokeOpacity)>0&&parseFloat(cs.strokeWidth)>0;};
@@ -64,7 +67,7 @@ function inspectDom(s, wfForms) {
       laneTitleText:[...e.querySelectorAll('text[data-role="lane-title"]')].filter(shapeVisible).map(t=>t.textContent.trim()),
       stageTitleText:[...e.querySelectorAll('text[data-role="stage-title"]')].filter(shapeVisible).map(t=>t.textContent.trim())
     }:null;
-    return {id, tag: e.tagName, form, capacity:e.getAttribute('data-capacity')||null, diagram, labels: [...e.querySelectorAll('text')].map(t => t.textContent.trim()).filter(Boolean)};
+    return {id, panelId, tag: e.tagName, form, capacity:e.getAttribute('data-capacity')||null, diagram, labels: [...e.querySelectorAll('text')].map(t => t.textContent.trim()).filter(Boolean)};
   });
   const textEvidence = [], walker = document.createTreeWalker(s, NodeFilter.SHOW_TEXT); let node;
   while (node = walker.nextNode()) {
@@ -96,6 +99,17 @@ function inspectDom(s, wfForms) {
      把不是瀑布的图也当成瀑布来判。（同类教训：本仓库曾因按属性名猜测形式而误判。） */
   const form = s.dataset.form || '';
   const auditAxes = [...s.querySelectorAll('[data-role="reconciliation"]')];
+  /* 新策略逐 panel 体检：每张瀑布各自一条对账轴，同一 panel 内重复对账结论仍阻断。
+     旧策略保持页面级 WF-MULTIPLE-AUDIT 冻结行为，不全局删除原检查。 */
+  const panelAxes=new Map();
+  for(const axis of auditAxes){const root=axis.closest('[data-panel-id]');const pid=root?root.getAttribute('data-panel-id'):null;if(!panelAxes.has(pid))panelAxes.set(pid,[]);panelAxes.get(pid).push(axis);}
+  const waterfallByPanel=[...panelAxes.entries()].map(([pid,axes])=>({
+    panelId:pid, axes:axes.length,
+    residual: axes.length===1?(axes[0].getAttribute('data-residual')||''):null,
+    tolerance: axes.length===1?(axes[0].getAttribute('data-tolerance')||''):null,
+    nodes: axes.length===1?Number(axes[0].getAttribute('data-nodes')):null,
+    model: axes.length===1?axes[0].getAttribute('data-waterfall-model'):null
+  }));
   const waterfall = {
     form, isWaterfallForm: wfForms.indexOf(form) >= 0,
     axes: auditAxes.length,
@@ -107,7 +121,8 @@ function inspectDom(s, wfForms) {
     bars: auditAxes.length === 1 ? [...(auditAxes[0].closest('svg')?.querySelectorAll('[data-from][data-to]')||[])].filter(e=>e.getAttribute('data-role')==='bar'||e.tagName.toLowerCase()==='rect'&&(e.getAttribute('data-anchor-id')||'').startsWith('bar:')).map(e=>{
       const numeric=key=>e.hasAttribute(key)&&e.getAttribute(key).trim()!==''?Number(e.getAttribute(key)):null;
       return {label:e.getAttribute('data-anchor-label'),type:e.getAttribute('data-semantic')||e.getAttribute('data-anchor-group'),value:e.hasAttribute('data-value')?numeric('data-value'):numeric('data-anchor-value'),from:numeric('data-from'),to:numeric('data-to')};
-    }):[]
+    }):[],
+    byPanel: waterfallByPanel
   };
   const notePad = [], noteSeen = new Set();
   for (const e of s.querySelectorAll('*')) {
@@ -184,6 +199,13 @@ async function collect(page, index, {modern = false, readingShadow = false} = {}
   const slide = page.locator('.slide.active');
   const result = await slide.evaluate(inspectDom, WF_FORMS);
   result.page = index + 1;
+  // 瀑布作用域由视觉策略能力决定：evidence-composition-1 逐 panel，其余保持页面级冻结行为。
+  const visualPolicyName = await slide.evaluate(() => {
+    try { return JSON.parse(document.getElementById('deck-task-contract')?.textContent || 'null')?.policyVersions?.visual || 'legacy-1'; }
+    catch (_) { return 'legacy-1'; }
+  }).catch(() => 'legacy-1');
+  try { result.waterfallScope = require('./contract_capabilities.cjs').visualPolicy(visualPolicyName).waterfallScope; }
+  catch (_) { result.waterfallScope = 'page'; }
   result.bookends = await slide.evaluate(bookends.inspectPage);
   if(readingShadow)result.readingShadow=await slide.evaluate(require('./browser_reading_audit.cjs').inspectSlide);
   if (modern) {
@@ -201,11 +223,18 @@ function screenshotName(pageNumber) {
 }
 
 /* 瀑布现场的自查判据。声明侧的校验在 check_pages，这里只判"图本身说不说得通"：
-   一页只能有一个对账结论；声明是瀑布形式的页，图上必须真的有一条对账零轴。 */
+   一页只能有一个对账结论；声明是瀑布形式的页，图上必须真的有一条对账零轴。
+   新策略（evidence-composition-1）把作用域下沉到 panel：每张瀑布各自体检，同页多条独立瀑布合法；
+   同一 panel 内出现重复对账结论仍阻断。旧任务保持原 WF-MULTIPLE-AUDIT 规则。 */
 function waterfallErrors(row) {
   const facts = row.waterfall, found = [];
   if (!facts) return found;
-  if (facts.axes > 1) found.push({code: 'WF-MULTIPLE-AUDIT', fatal: true, message: '这一页有 ' + facts.axes + ' 条对账零轴：一次体检只能有一个结论，声明也只能写一个'});
+  const perPanel = row.waterfallScope === 'panel';
+  if (perPanel) {
+    for (const entry of facts.byPanel || []) {
+      if (entry.axes > 1) found.push({code: 'WF-MULTIPLE-AUDIT', fatal: true, panelId: entry.panelId, message: 'panel ' + (entry.panelId || '（无归属）') + ' 有 ' + entry.axes + ' 条对账零轴：一个 panel 内只能有一个对账结论'});
+    }
+  } else if (facts.axes > 1) found.push({code: 'WF-MULTIPLE-AUDIT', fatal: true, message: '这一页有 ' + facts.axes + ' 条对账零轴：一次体检只能有一个结论，声明也只能写一个'});
   /* 提醒，不是阻塞：这一页可能走的是老 items 路径，本来就没有内核报告，作者没做错什么。
      真正该拦的那一条——"pages.json 声明 verified、图上却没有零轴"——由 verifyDeck 判，那里看得见声明。
      判据落在探针里是为了让单页自查与正式审计同一套结论，不是为了让探针替 declarations 做决定。 */

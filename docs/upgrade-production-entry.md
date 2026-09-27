@@ -55,6 +55,7 @@ node scripts/report.cjs dispositions /任务/task.json --audit /验收/audit.jso
 ```
 
 - `visual: legacy-1` 继续原判据；`structural-lines-1` 仅允许符合测量条件的浅色、低对比、水平细线。高饱和彩色装饰线、粗线、竖线仍按原规则检查；结构用途仍须实际查看。
+- `visual: evidence-composition-1` 继承结构细线检查，增加逐 panel 身份、容量、量尺及瀑布对账；`narrative-focus-1` 进一步增加标题链推进、单页收束与重点感检查。两者均非新建默认，可用 `report.cjs init <新目录> --visual <策略名>` 显式启用；已有任务用 `migrate_strict_analysis.cjs <task.json> <新目录> --to-policy <策略名>` 生成待审草稿，不直接改旧任务消除报错。前置与最终审查须补齐对应策略的[分析覆盖](../references/analysis-review.md)和[成稿覆盖](../references/static-html-pdf.md#最终验收与交付)。
 - `references: single-page-1` 保持单页；`reference-block-1` 要求有序、唯一的完整 referenceIds 清单。该清单属于已签任务合同，不能仅靠页面自报总数。它核对 ID 完整性，不自动证明来源真假。
 - 来源清单只维护一份：优先使用 `bookends.referenceBundle({sources,pageSize,columns,selectedIds,note})`，将返回的 `referenceIds` 写入派生 task、`html` 写入片段。两者同源生成，不手工抄写第二份 ID 清单。
 - `bookends.referencesBlock({sources,pageSize,columns,selectedIds,note})` 由完整来源生成连续页面，节选数量按整块计。pageSize 由作者明确选择，不自动缩字；每页 DOM 裁切和实际 PDF 条目提取继续验收。

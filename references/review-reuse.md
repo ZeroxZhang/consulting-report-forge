@@ -54,6 +54,8 @@ node scripts/prepare_review_reuse.cjs /任务/renders/audit.json /任务/snapsho
 
 审查者需要实际查看待重审页的 HTML/PDF，将本轮真实覆盖追加到草稿的 `coverage`，重新填写三项检查的依据，处理当前告警与遗留问题，最后才设为 `complete`。`pendingPages` 是该份草稿尚未覆盖的页；多人分工时按角色覆盖的并集完成，不要求每个人都看全册。更换审查者时，不能沿用另一人的继承记录。
 
+扩展视觉策略还须补齐[最终审查覆盖](static-html-pdf.md#最终验收与交付)：组合策略的 `panelRefs/relationRefs`，以及叙事策略的 `layers` 中的 `narrative` 与逐页 `narrativeReadings`。当前复用工具只准备基础覆盖，不自动复制这些扩展字段；`pendingPages` 为空也不表示整册组合与叙事已审。审查者须复核当前整册并补齐相应覆盖，再聚合，不能把旧字段机械复制为本轮判断。
+
 ```sh
 node scripts/aggregate_reviews.cjs /任务/renders/audit.json /任务/renders/review.json /任务/review-update/author-1.json /任务/review-update/independent-1.json
 node scripts/snapshot_review.cjs /任务/renders/audit.json /任务/renders/review.json /任务/snapshots/revised

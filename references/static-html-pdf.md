@@ -79,7 +79,7 @@ node scripts/preview_page.cjs /任务/deck.html 3
 
 先做最能暴露问题的代表页；蓝图和片段应对应完整的当前制作范围。已有整册片段时可以 `assemble_deck.cjs ... --upto 3` 仅装前 3 页正文，产物自动标为制作期切片，不能用于最终验收。它仍需完整 blueprint/pages 记录，不修改权威源来冒充完整报告。
 
-密度按证据职责选择：balanced 有主证据与支持/边界；dense 增加不同职责的证据及判断含义；sparse 说明减少信息的必要性。不能为凑数补空话。形式数量、重复与空白检测是待复核诊断，不能仅为消除提示而换图型或拉伸空框；主图确实太小时，可以扩大真实绘图区并复看；可读性与语义错误仍是阻断项。
+密度按证据职责选择：balanced 有主证据与支持/边界；dense 增加不同职责的证据及判断含义；sparse 说明减少信息的必要性。不能为凑数补空话。形式数量、重复与空白检测是待复核诊断，不能仅为消除提示而换图型或拉伸空框；仍须按[整册多样性验收](visual-qa.md#整册多样性验收)落实尽可能多地使用适配图型与布局的默认要求。主图确实太小时，可以扩大真实绘图区并复看；可读性与语义错误仍是阻断项。
 
 ## 最终验收与交付
 
@@ -101,6 +101,8 @@ node scripts/package_delivery.cjs /任务/deck.html /任务/renders/deck.pdf /�
 ```
 
 新稿 task3/schema3 的最终审查用 schemaVersion 5，填写 analysisAlgorithm: semantic-v2 与当前 analysisSha256；历史 task2/review4、task1/review3 保持原流程。它们均绑定实际 audit、HTML/PDF 证据 id 与产物摘要。作者须覆盖每页；任务要求独立审查时，独立角色也须覆盖每页。多人分工按同一角色的覆盖并集核对，不要求每位成员重复看全册；analysis/evidence/visual 有具体依据，所有 warnings 经 accepted/fixed 处置，无未解决 major/blocking。独立审查来自实际不同实例，不能脚本生成通过结论。
+
+显式视觉策略还有额外覆盖要求：`evidence-composition-1` 与 `narrative-focus-1` 的最终 `coverage[]` 必须保留实际所审的 `panelRefs/relationRefs`（格式为 `slideId:panelId`、`slideId:relationId`）。`narrative-focus-1` 还要求 `coverage[].layers` 包含 `narrative`，并用 `narrativeReadings:[{slideId,observedTakeaway}]` 记录逐正文页实际读到的收束句（至少6字），不能照抄蓝图代替看图。基础 `checks` 仍是 analysis/evidence/visual，叙事要求落在 coverage；审查包草稿不能代替这些实际覆盖。前置审查使用不同的覆盖字段，见[前置分析审查](analysis-review.md#记录格式结构说明不是可直接签署的成品)。
 
 完成审查后按 [审查快照与复用](review-reuse.md) 冻结证据。修订先保存快照，再覆盖工作稿；工具只准备继承草稿，变化页和全局判断仍须审查。未完成审查仅可用 `package_delivery.cjs --preview`，并明确称预览。
 

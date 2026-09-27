@@ -54,7 +54,7 @@
 
 `analysis.synthesis.answerClaimRefs` 指向核心答案，basis 写采纳/收窄理由。schema3 不手填 governingThought，它从这些主张派生。high 优先级问题必须 answered、bounded、out_of_scope，或进入 openIssueRefs；缩小/排除须有 basis。
 
-先运行 synthesis 校验，再做 [前置分析审查](analysis-review.md)。审查不是用户审批。复杂或重大分析必须实际独立实例复核；完成前可显式预览，但不得正式交付。分析审查结束后再组织标题链和页面。
+形成综合答案后，组织标题链、页面证明任务和展品语义，按[整册图表与版式规划](content-authoring.md#整册图表与版式规划)完成选型。将这些内容写入蓝图后，运行 synthesis 校验，再对当前完整投影做 [前置分析审查](analysis-review.md)，通过后进入正式页面制作。严格分析摘要包含页面标题、展品和选型理由，不能先签署无页面的研究骨架，再添加页面而沿用原签名。审查不是用户审批。复杂或重大分析必须实际独立实例复核；完成前可显式预览，但不得正式交付。
 
 ## 6. 三道门与返回路径
 

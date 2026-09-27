@@ -21,14 +21,18 @@
   function span(value,min,max,def,name){if(value===undefined)return def;if(typeof value!=='number'||!Number.isFinite(value)||value<min||value>max)fail(name+' 需为 '+min+'–'+max+' 的数值');return value;}
   function decimals(value,digits=1){return Number(value.toFixed(digits)).toLocaleString('zh-CN',{maximumFractionDigits:digits});}
   function display(item,spec){return item.display===undefined?decimals(item.value,spec.decimals===undefined?1:spec.decimals)+(spec.suffix||''):String(item.display);}
-  function roleColor(role,index){
+  /* neutral 是数据角色，gray-3 是网格与轴线色：两者同名不同物。
+     条形的中性填充用 gray-3 是有意的退让；但折线、数据点与其名称若也用 gray-3，
+     就是白底上一条对比度约 1.5:1 的线加一行同样浅的字——实测整条序列连同它的名字都读不出来。
+     asStroke 标记「这一处是图元或文字，不是块状填充」，neutral 在这种场合退回 gray-2。 */
+  function roleColor(role,index,asStroke){
     if(role==='accent')return '@accent';
     if(role==='risk')return '@risk';
     if(role==='good')return '@good';
     if(role==='caution')return '@caution';
     if(role==='positive')return '@delta-positive';
     if(role==='negative')return '@delta-negative';
-    if(role==='neutral')return '@gray-3';
+    if(role==='neutral')return asStroke?'@gray-2':'@gray-3';
     return colors[index%colors.length];
   }
   function grid(extra){return Object.assign({left:10,right:48,top:24,bottom:22,containLabel:true},extra||{});}
@@ -71,7 +75,7 @@
     if(hi!==undefined&&values.length&&hi<Math.max(...values))fail('timeSeries.max 低于最大数据 '+decimals(Math.max(...values))+'，折线会被裁掉；收窄纵轴不能丢数据');
     if(lo!==undefined&&hi!==undefined&&!(hi>lo))fail('timeSeries 的 min 必须小于 max');
     const yRange={min:lo===undefined?(spec.zeroBaseline?Math.min(0,...values):undefined):lo,max:hi===undefined?(spec.zeroBaseline?Math.max(0,...values):undefined):hi};
-    return {animation:false,tooltip:{show:false},grid:grid({right:92}),xAxis:categoryAxis(periods,{boundaryGap:false,axisLabel:{color:'@gray-2',interval:0}}),yAxis:valueAxis(spec,yRange),series:series.map((s,i)=>({name:s.name,type:'line',connectNulls:false,showSymbol:symbolOn(s),symbolSize:5,lineStyle:{width:s.selected?3:2,color:roleColor(s.role,i)},itemStyle:{color:roleColor(s.role,i)},endLabel:{show:true,formatter:s.name,color:roleColor(s.role,i),fontWeight:s.selected?700:400},labelLayout:{moveOverlap:'shiftY'},data:s.values}))};
+    return {animation:false,tooltip:{show:false},grid:grid({right:92}),xAxis:categoryAxis(periods,{boundaryGap:false,axisLabel:{color:'@gray-2',interval:0}}),yAxis:valueAxis(spec,yRange),series:series.map((s,i)=>({name:s.name,type:'line',connectNulls:false,showSymbol:symbolOn(s),symbolSize:5,lineStyle:{width:s.selected?3:2,color:roleColor(s.role,i,true)},itemStyle:{color:roleColor(s.role,i,true)},endLabel:{show:true,formatter:s.name,color:roleColor(s.role,i,true),fontWeight:s.selected?700:400},labelLayout:{moveOverlap:'shiftY'},data:s.values}))};
   }
 
   function composition(spec={}){
@@ -81,7 +85,11 @@
     if(new Set(first).size!==first.length)fail('构成系列名称必须唯一');
     const rows=items.map((item,i)=>{text(item.label,'items['+i+'].label');const segs=list(item.segments,'items['+i+'].segments');if(segs.length!==first.length)fail('所有类别必须显式列出相同系列');const values=segs.map((seg,j)=>{if(text(seg.label,'segment.label')!==first[j])fail('所有类别的系列顺序必须一致');const v=num(seg.value,'segment.value');if(v<0)fail('构成值不能为负数');return v;});const total=values.reduce((a,b)=>a+b,0);if(total<=0)fail('构成总量必须大于0');return {label:item.label,values,total};});
     const percent=spec.mode==='percent';
-    return {animation:false,tooltip:{show:false},legend:{bottom:0,textStyle:{color:'@gray-1'}},grid:grid({bottom:48}),xAxis:categoryAxis(rows.map(r=>r.label),{axisLabel:{color:'@ink',interval:0}}),yAxis:valueAxis(spec,{min:0,max:percent?100:undefined,axisLabel:{formatter:percent?'{value}%':'{value}',color:'@gray-2'}}),series:first.map((name,j)=>({name,type:'bar',stack:'total',barMaxWidth:54,itemStyle:{color:colors[j%colors.length],borderColor:'@page-bg',borderWidth:1},label:{show:true,position:'inside',formatter:p=>decimals(p.value,spec.decimals===undefined?1:spec.decimals)+(percent?'%':''),color:'@on-accent'},data:rows.map(r=>percent?r.values[j]/r.total*100:r.values[j])}))};
+    /* 片段比一行字还矮时，标签塞在里面会被片段边界裁掉：读者看到的是半个数字（实测 4% 的片段就是这样）。
+       这类片段改成把标签放到条外右侧，颜色改用墨色；grid 右侧留出对应的位置。 */
+    const full=percent?100:Math.max(...rows.map(r=>r.total));
+    const tiny=v=>v/full<0.08;
+    return {animation:false,tooltip:{show:false},legend:{bottom:0,textStyle:{color:'@gray-1'}},grid:grid({bottom:48,right:84}),xAxis:categoryAxis(rows.map(r=>r.label),{axisLabel:{color:'@ink',interval:0}}),yAxis:valueAxis(spec,{min:0,max:percent?100:undefined,axisLabel:{formatter:percent?'{value}%':'{value}',color:'@gray-2'}}),series:first.map((name,j)=>({name,type:'bar',stack:'total',barMaxWidth:54,itemStyle:{color:colors[j%colors.length],borderColor:'@page-bg',borderWidth:1},label:{show:true,position:'inside',formatter:p=>decimals(p.value,spec.decimals===undefined?1:spec.decimals)+(percent?'%':''),color:'@on-accent'},data:rows.map(r=>{const v=percent?r.values[j]/r.total*100:r.values[j];return {value:v,label:tiny(v)?{position:'right',distance:6,color:'@ink',fontWeight:400}:undefined};})}))};
   }
 
   function histogram(spec={}){
@@ -107,7 +115,10 @@
     const max=spec.max===undefined?Math.max(...flat)===min?min+1:Math.max(...flat):num(spec.max,'max');if(!(max>min))fail('热力图范围必须递增');
     if(Math.min(...flat)<min||Math.max(...flat)>max)fail('热力范围必须覆盖全部数据');
     const data=values.flatMap((row,i)=>row.map((v,j)=>({value:[j,i,v]})));
-    return {animation:false,tooltip:{show:false},grid:grid({right:70}),xAxis:categoryAxis(columns,{position:'top'}),yAxis:categoryAxis(rows,{inverse:true}),visualMap:{min,max,orient:'vertical',right:0,top:'middle',calculable:false,inRange:{color:['@seq-1','@seq-3','@seq-5']},textStyle:{color:'@gray-2'}},series:[{type:'heatmap',label:{show:true},data,emphasis:{disabled:true}}]};
+    /* 色条没有端点数值时，读者只能看出「深/浅」，无法把颜色读回刻度。
+       两端写上是哪两个值，色条才是一条可读的刻度而不是装饰。 */
+    const scaleText=spec.scaleText||['高 '+decimals(max,1),'低 '+decimals(min,1)];
+    return {animation:false,tooltip:{show:false},grid:grid({right:70}),xAxis:categoryAxis(columns,{position:'top'}),yAxis:categoryAxis(rows,{inverse:true}),visualMap:{min,max,orient:'vertical',right:0,top:'middle',calculable:false,text:scaleText,inRange:{color:['@seq-1','@seq-3','@seq-5']},textStyle:{color:'@gray-2'}},series:[{type:'heatmap',label:{show:true},data,emphasis:{disabled:true}}]};
   }
 
   function sankey(spec={}){

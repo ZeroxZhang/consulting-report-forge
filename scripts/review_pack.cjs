@@ -58,7 +58,7 @@ function prepare({auditFile,outputDir}){
   write('diagnostics.json',diagnostics);write('warning-decisions.json',{auditSha256:grouped.auditSha256,groups:grouped.groups.map(g=>({...g,status:'not_reviewed',note:''}))});
   // 新策略：组合覆盖清单由合同派生，审查者填写实际所见，工具不生成 PASS。
   const composition=require('./composition_contract.cjs');
-  const isComposition=audit.taskContract?.policyVersions?.visual===composition.POLICY;
+  const isComposition=composition.supportsComposition(audit.taskContract);
   const compositionChecklist=isComposition?(()=>{
     const list=[];
     for(const row of (audit.rows||[])){
@@ -68,9 +68,30 @@ function prepare({auditFile,outputDir}){
     }
     return list;
   })():[];
+  /* 新策略：叙事覆盖清单逐页预填"这一页声明了什么"，把"你看到的收束句是什么"留空给审查者。
+     预填的只有待查对象，没有通过结论，也没有把蓝图声明当成已核实的页面事实。 */
+  const narrativeCaps=(()=>{try{return require('./contract_capabilities.cjs').visualPolicy(audit.taskContract?.policyVersions?.visual);}catch(_){return null;}})();
+  let narrativeChecklist=[],narrativeArc=null,narrativeDiagnostics=[];
+  if(narrativeCaps&&narrativeCaps.narrative){
+    try{
+      const record=require('./review_contract.cjs').taskRecords(audit,{auditDir:base}).find(r=>r.key==='blueprint');
+      const blueprint=JSON.parse(fs.readFileSync(record.path,'utf8'));
+      narrativeArc=blueprint.deck?.arc||null;
+      narrativeDiagnostics=require('./narrative_contract.cjs').diagnostics(blueprint,{task:audit.taskContract});
+      const slideOf=id=>(blueprint.slides||[]).find(s=>s&&s.id===id)||{};
+      narrativeChecklist=bodyRows.map(row=>{
+        const id=row.pageId||('page-'+row.page),slide=slideOf(id);
+        return {slideId:id,page:row.page,title:slide.title||row.title||'',adds:slide.adds||'',proves:slide.proves||'',
+          observedTakeaway:'',arcFit:''};
+      });
+    }catch(error){narrativeChecklist=[{error:'叙事清单派生失败：'+error.message}];}
+  }
   write('review-pack.json',{auditFile:path.resolve(auditFile),auditSha256:grouped.auditSha256,priorityPages:priorityPages,pages:ranked,evidence:entries,
     ...(compositionChecklist.length?{compositionChecklist}:{}),
-    note:'优先查看风险页，正式验收仍须覆盖全部 HTML/PDF；草稿没有审查身份或通过结论。'+(compositionChecklist.length?' 组合覆盖清单由合同派生，逐项填写实际所见。':'')});
+    ...(narrativeChecklist.length?{narrativeArc,narrativeChecklist,...(narrativeDiagnostics.length?{narrativeDiagnostics}:{})}:{}),
+    note:'优先查看风险页，正式验收仍须覆盖全部 HTML/PDF；草稿没有审查身份或通过结论。'
+      +(compositionChecklist.length?' 组合覆盖清单由合同派生，逐项填写实际所见。':'')
+      +(narrativeChecklist.length?' 叙事清单只预填了本页声明的推动点，observedTakeaway 须填你在页面上实际读到的收束句，不是把声明抄一遍。':'')});
   return {status:'prepared',directory:outputDir,priorityPages:priorityPages,drafts:roles.map(r=>r+'.json'),warningGroups:grouped.groups.length,warningObservations:(audit.warnings||[]).length};
 }
 module.exports={prepare,warningGroups,expandDispositions};

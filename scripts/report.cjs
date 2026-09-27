@@ -37,7 +37,7 @@ function recover(taskFile){
   try{process.kill(owner.pid,0);throw Error('锁持有进程仍在运行');}catch(e){if(e.code!=='ESRCH')throw e;}
   fs.rmSync(lock,{recursive:true});return {status:'recovered',previousOwner:owner};
 }
-function initialize(directory,{strict=true}={}){
+function initialize(directory,{strict=true,visual=null}={}){
   directory=path.resolve(directory);if(fs.existsSync(directory))throw Error('新任务目录已存在，拒绝重置');
   fs.mkdirSync(path.dirname(directory),{recursive:true});
   const staging=fs.mkdtempSync(directory+'.init-');
@@ -45,6 +45,13 @@ function initialize(directory,{strict=true}={}){
     const task=read(path.join(__dirname,'../templates/task.json'));
     if(strict)Object.assign(task,{version:3,analysisAlgorithm:'semantic-v2'});
     else{task.version=2;delete task.analysisAlgorithm;delete task.policyVersions;delete task.referenceIds;}
+    /* 显式启用候选视觉策略的唯一入口。候选阶段默认仍是模板里的 structural-lines-1，
+       只有作者明确写 --visual 才会启用；未知策略在这里就被拒绝，不会留下半开的任务。 */
+    if(visual){
+      if(!strict)throw Error('--visual 只能用于严格合同：候选策略要求 task3 与 semantic-v2');
+      require('./contract_capabilities.cjs').visualPolicy(visual);
+      task.policyVersions={...task.policyVersions,visual};
+    }
     write(path.join(staging,'task.json'),contract.normalize(task));
     const blueprint=read(path.join(__dirname,'../templates/research-blueprint.json'));
     if(strict)blueprint.analysisAlgorithm='semantic-v2';
@@ -52,7 +59,7 @@ function initialize(directory,{strict=true}={}){
     write(path.join(staging,'deck-blueprint.json'),blueprint);
     write(path.join(staging,'intake.json'),{status:'incomplete',note:'先补齐问题、证据和综合；尚未生成页面或审查结论。'});
     fs.renameSync(staging,directory);
-    return {status:'created',directory,taskFile:path.join(directory,'task.json'),strict};
+    return {status:'created',directory,taskFile:path.join(directory,'task.json'),strict,...(visual?{visual}:{})};
   }catch(e){fs.rmSync(staging,{recursive:true,force:true});throw e;}
 }
 function options(args,allowed){
@@ -60,9 +67,9 @@ function options(args,allowed){
 }
 async function run(args){
   const [command,taskFile,...rest]=args;
-  if(!taskFile)throw Error('用法：report.cjs init <新目录> [--contract legacy|strict]；或 status|next|compile|assemble|qa|review-pack|reuse|aggregate|snapshot|package <task.json> [选项]');
+  if(!taskFile)throw Error('用法：report.cjs init <新目录> [--contract legacy|strict] [--visual narrative-focus-1]；或 status|next|compile|assemble|qa|review-pack|reuse|aggregate|snapshot|package <task.json> [选项]');
   if(['status','next'].includes(command))return require('./report_status.cjs').run(args);
-  if(command==='init'){const o=options(rest,['contract']);if(o.contract&&!['legacy','strict'].includes(o.contract))throw Error('contract 仅支持 legacy/strict');return initialize(taskFile,{strict:o.contract!=='legacy'});}
+  if(command==='init'){const o=options(rest,['contract','visual']);if(o.contract&&!['legacy','strict'].includes(o.contract))throw Error('contract 仅支持 legacy/strict');return initialize(taskFile,{strict:o.contract!=='legacy',visual:o.visual||null});}
   if(command==='recover-lock'){if(rest.length)throw Error('recover-lock 不接受额外参数');return recover(taskFile);}
   const specs={compile:['preview'],assemble:['pages','css','title'],qa:['html','tier','pages'],'review-pack':['audit'],dispositions:['audit','decisions','review'],reuse:['audit','snapshot'],aggregate:['audit','reviews'],snapshot:['audit','review'],package:['audit','review','name']};
   if(!specs[command])throw Error('未知操作：'+command);

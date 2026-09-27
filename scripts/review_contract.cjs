@@ -122,6 +122,55 @@ function auditErrors(audit, {auditDir = process.cwd()} = {}) {
   return errors;
 }
 
+/* 审查层集合随策略能力扩展：narrative-focus-1 多了"整册连读"这一层。
+   旧策略的审查记录没有这一层，要求的层集合因此不能全局写死，否则旧稿会被新规则追溯作废。 */
+function requiredLayers(taskContract){
+  const visualCaps=(()=>{try{return require('./contract_capabilities.cjs').visualPolicy(taskContract?.policyVersions?.visual||'legacy-1');}catch(_){return null;}})();
+  return visualCaps&&visualCaps.narrative?[...layers,'narrative']:layers;
+}
+/* 叙事覆盖：逐页记录实际读到的收束句，且与该页 DOM 上的收束句对得上。
+   只列 slideId 是签名不是读过；抄蓝图声明也一样会被相似度拦下。 */
+function narrativeCoverageErrors(coverage,bodyRows){
+  const errors=[],narrative=require('./narrative_contract.cjs');
+  const readings=Array.isArray(coverage?.narrativeReadings)?coverage.narrativeReadings:[];
+  const byId=new Map();
+  for(const item of readings){
+    if(!item||typeof item.slideId!=='string'||!item.slideId.trim()){errors.push('coverage 的 narrativeReadings 每项须有 slideId');continue;}
+    if(byId.has(item.slideId))errors.push('coverage 的叙事覆盖重复：'+item.slideId);
+    byId.set(item.slideId,item);
+  }
+  for(const row of bodyRows){
+    const id=row.pageId||('page-'+row.page),item=byId.get(id);
+    if(!item){errors.push('coverage 缺少叙事覆盖 '+id+'（第 '+row.page+' 页）：逐页记录实际读到的收束句，工具不生成 PASS');continue;}
+    const observed=typeof item.observedTakeaway==='string'?item.observedTakeaway.trim():'';
+    if(observed.length<6){errors.push('coverage 的 '+id+' observedTakeaway 须填写该页实际读到的收束句（至少6字），不能留空');continue;}
+    const actual=row.focus?.takeawayText||'';
+    if(actual&&narrative.similarity(observed,actual)<0.6)errors.push('coverage 的 '+id+' observedTakeaway 与该页实际收束句对不上：'
+      +'页面上的收束句是「'+String(actual).slice(0,40)+'」。要填实际读到的，不能改成蓝图里的声明');
+  }
+  for(const id of byId.keys())if(!bodyRows.some(r=>(r.pageId||('page-'+r.page))===id))errors.push('coverage 的叙事覆盖引用了非正文页：'+id);
+
+  /* 相邻页其实在讲同一件事：蓝图侧的近似重复只能抓到逐字复述，
+     同义改写（"名义额不是现金" 与 "名义金额不等于现金流入"）在字面上几乎不相干。
+     但审查者逐页写下的 observedTakeaway 是同一套词汇——两页写出来一样，说明读者读到的就是同一件事。
+     这是这条判据唯一可靠的落点，也是"审查者填实际所见"这个要求的用处所在。 */
+  const recorded=[...byId.values()].filter(item=>typeof item.observedTakeaway==='string'&&item.observedTakeaway.trim().length>=6);
+  const explained=new Set((Array.isArray(coverage?.repetitionBasis)?coverage.repetitionBasis:[])
+    .map(item=>item&&[item[0],item[1]].sort().join('|')).filter(Boolean));
+  for(let i=0;i<recorded.length;i++)for(let j=i+1;j<recorded.length;j++){
+    const left=recorded[i],right=recorded[j],pair=[left.slideId,right.slideId].sort().join('|');
+    const score=narrative.overlapRatio(left.observedTakeaway,right.observedTakeaway);
+    if(score<narrative.REVIEW_TAKEAWAY_OVERLAP)continue;
+    if(explained.has(pair))continue;
+    errors.push('叙事覆盖里 '+left.slideId+' 与 '+right.slideId+' 记录的收束句几乎相同（重合率 '+Math.round(score*100)
+      +'%）：读者从这两页拿到的是同一件事，故事线在这里没有推进。合并页面、改写其中一页的分工，'
+      +'或确实要并排强调时在 coverage.repetitionBasis 写 ['+left.slideId+','+right.slideId+'] 与理由');
+  }
+  return errors;
+}
+function bodyRowsOf(audit){
+  return (audit?.rows||[]).filter(r=>!['cover','back-cover','references','divider'].includes(r.bookends?.role));
+}
 function validate(review, audit, {baseDir = process.cwd(), auditDir = baseDir, partial = false, trail = [], cache = new Map()} = {}) {
   baseDir = fs.realpathSync(baseDir); auditDir = fs.realpathSync(auditDir);
   const errors = [], fail = msg => errors.push(msg);
@@ -133,10 +182,15 @@ function validate(review, audit, {baseDir = process.cwd(), auditDir = baseDir, p
       const doc=JSON.parse(fs.readFileSync(bp.path,'utf8'));
       if(caps.strict&&review.analysisAlgorithm!==caps.algorithm)errors.push('最终审查分析算法身份错误');
       if(review.analysisSha256!==require('./analysis_contract.cjs').digest(doc,audit.taskContract))errors.push('最终审查未绑定当前分析版本');
-      errors.push(...require('./report_contract.cjs').verifyPlan(audit.taskContract,path.dirname(path.resolve(auditDir,audit.htmlArtifact.path)),JSON.parse(fs.readFileSync(pp.path,'utf8'))));
+      /* 展开空数组等于 errors.push()：push 不带参数会压进一个 undefined，
+         最后聚合时表现为一条看不出内容、也无法处置的 [null] 错误。逐处判长度。
+         实测：narrative-focus-1 的稿子聚合必挂在这一条上。 */
+      const planErrors=require('./report_contract.cjs').verifyPlan(audit.taskContract,path.dirname(path.resolve(auditDir,audit.htmlArtifact.path)),JSON.parse(fs.readFileSync(pp.path,'utf8')));
+      if(planErrors.length)errors.push(...planErrors);
     }catch(e){errors.push('最终分析绑定失败：'+e.message);}
   }
-  errors.push(...auditErrors(audit, {auditDir}));
+  const engineeringErrors=auditErrors(audit, {auditDir});
+  if(engineeringErrors.length)errors.push(...engineeringErrors);
   if (!audit || typeof audit !== 'object') return errors;
   if (review.status !== 'complete') fail('审查未完成');
   if (review.htmlSha256 !== audit.htmlArtifact?.sha256 || review.pdfSha256 !== audit.pdfArtifact?.sha256 || review.auditSha256 !== hash(stable(audit))) fail('审查未绑定当前HTML/PDF/audit');
@@ -169,8 +223,10 @@ function validate(review, audit, {baseDir = process.cwd(), auditDir = baseDir, p
   if (!Array.isArray(review.coverage) || !review.coverage.length) return [...errors, '审查coverage缺失'];
   const sets = {author: {html: new Set(), pdf: new Set()}, independent: {html: new Set(), pdf: new Set()}};
   const reviewers={author:new Set(),independent:new Set()};
+  const visualCaps=(()=>{try{return require('./contract_capabilities.cjs').visualPolicy(audit?.taskContract?.policyVersions?.visual||'legacy-1');}catch(_){return null;}})();
+  const mustCover=requiredLayers(audit?.taskContract);
   for (const c of review.coverage) {
-    if (!c || !sets[c.independence] || typeof c.reviewer !== 'string' || !c.reviewer.trim() || !Array.isArray(c.layers) || layers.some(l => !c.layers.includes(l))) {fail('coverage身份/四层范围无效'); continue;}
+    if (!c || !sets[c.independence] || typeof c.reviewer !== 'string' || !c.reviewer.trim() || !Array.isArray(c.layers) || mustCover.some(l => !c.layers.includes(l))) {fail('coverage身份/范围无效：实际覆盖层须包含 '+mustCover.join('/')); continue;}
     reviewers[c.independence].add(c.reviewer.trim());
     if(partial&&(c.reviewer!==review.reviewer||c.independence!==review.independence))fail('原始审查coverage与顶层身份不一致');
     const refs = Array.isArray(c.evidence) ? c.evidence.map(e => e?.id) : [];
@@ -197,11 +253,17 @@ function validate(review, audit, {baseDir = process.cwd(), auditDir = baseDir, p
     }
   }
   for(const name of reviewers.author)if(reviewers.independent.has(name))fail('作者与独立审查者身份重叠：'+name);
-  // 新策略（evidence-composition-1）：组合关系、密度与结构取舍的可审记录。
+  /* 新策略（narrative-focus-1）：整册故事线要真的被读过一遍。
+     只签"看过这些页"证明不了故事线——要求逐页记录实际读到的收束句，且与该页 DOM 上的收束句对得上。
+     清单由合同派生、草稿预填待查对象，工具不生成 PASS；审查者填的是所见，不是声明的复述。 */
+  if(visualCaps&&visualCaps.narrative&&!partial){
+    const bodyRows=bodyRowsOf(audit);
+    for(const c of review.coverage){const found=narrativeCoverageErrors(c,bodyRows);if(found.length)fail(...found);}
+  }
+  // 支持复合证据的策略：组合关系、密度与结构取舍的可审记录。能力查询而非策略名相等。
   // 页面内部多图检查由 audit 与组合审查清单连接，不能只签「看到该页」。
   const composition=require('./composition_contract.cjs');
-  const taskPolicy=audit.taskContract?.policyVersions?.visual;
-  if(taskPolicy===composition.POLICY&&!partial){
+  if(visualCaps&&visualCaps.composition&&!partial){
     const expectedBySlide=new Map();
     for(const entry of manifest){
       const pid=entry.pageId||('page-'+entry.page);
@@ -231,4 +293,4 @@ function validate(review, audit, {baseDir = process.cwd(), auditDir = baseDir, p
   if (!partial) for (const role of requiresIndependent(audit) ? ['author', 'independent'] : ['author']) for (const medium of ['html', 'pdf']) for (let n = 1; n <= audit.pages; n++) if (!sets[role][medium].has(n)) fail(role + ' ' + medium + '缺页：' + n);
   return errors;
 }
-module.exports = {validate, layers, auditErrors, reuseDifferences, taskRecords, issueIdentity};
+module.exports = {validate, layers, auditErrors, reuseDifferences, taskRecords, issueIdentity, requiredLayers, narrativeCoverageErrors, bodyRowsOf};

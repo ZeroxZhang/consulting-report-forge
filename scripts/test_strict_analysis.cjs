@@ -66,5 +66,26 @@ try{
  assert.throws(()=>migrator.migrate(path.join(original,'task.json'),target),/覆盖/);
  assert.throws(()=>migrator.migrate(path.join(original,'task.json'),path.join(original,'inside')),/之外/);
  fs.mkdirSync(path.join(dir,'locked.lock'));assert.throws(()=>migrator.migrate(path.join(original,'task.json'),path.join(dir,'locked')),/EEXIST/);
+ /* 策略升级迁移：内容没变，变的是"按哪套规则审"。正因为分析摘要不变，旧签署才更要显式作废。 */
+ {
+  const bpBefore=contract.fileHash(path.join(target,'blueprint.json'));
+  const upgraded=path.join(dir,'upgraded');
+  const result=migrator.migratePolicy(path.join(target,'task.json'),upgraded,'narrative-focus-1');
+  assert.equal(result.status,'incomplete');
+  assert.equal(result.mode,'policy-upgrade');
+  assert.ok(result.addedCapabilities.includes('narrative')&&result.addedCapabilities.includes('pageFocus'));
+  assert.equal(contract.fileHash(path.join(target,'blueprint.json')),bpBefore,'迁移不得改写源任务');
+  const upTask=JSON.parse(fs.readFileSync(path.join(upgraded,'task.json')));
+  assert.equal(upTask.policyVersions.visual,'narrative-focus-1');
+  // 草稿固定 incomplete：不搬运签署，也不预填弧线与逐页新增理解
+  assert.equal(JSON.parse(fs.readFileSync(path.join(upgraded,'analysis-review.json'))).status,'incomplete');
+  const upMigration=JSON.parse(fs.readFileSync(path.join(upgraded,'migration.json')));
+  assert.ok(upMigration.pending.some(x=>x.field==='deck.arc')&&upMigration.pending.some(x=>x.field==='slide.adds'));
+  assert.ok(upMigration.originalFiles.length>=2);
+  assert.ok(review.check(JSON.parse(fs.readFileSync(path.join(upgraded,'blueprint.json'))),{task:upTask,baseDir:upgraded}).length>0,'升级草稿不能自带通过结论');
+  assert.throws(()=>migrator.migratePolicy(path.join(target,'task.json'),upgraded,'narrative-focus-1'),/覆盖/);
+  assert.throws(()=>migrator.migratePolicy(path.join(upgraded,'task.json'),path.join(dir,'noop'),'narrative-focus-1'),/无需升级/);
+  assert.throws(()=>migrator.migratePolicy(path.join(target,'task.json'),path.join(dir,'unknown'),'nope-1'),/未知视觉策略/);
+ }
 }finally{fs.rmSync(dir,{recursive:true,force:true});}
 console.log('PASS strict analysis: semantic mutation, exact diff, separated styles, conservative custom, references, anti-downgrade, review coverage, atomic draft migration');

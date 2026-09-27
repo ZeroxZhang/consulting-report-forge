@@ -6,7 +6,7 @@
 
 深度调研 · 商业分析 · 专家协作 · 数据建模 · Storyline · 视觉报告
 
-[![Version](https://img.shields.io/badge/version-1.5.0-17324D?style=flat-square)](package.json) [![License](https://img.shields.io/badge/license-Apache--2.0-007C91?style=flat-square)](LICENSE) [![Output](https://img.shields.io/badge/output-HTML%20%2B%20PDF-17324D?style=flat-square)](#你会拿到什么) [![Node](https://img.shields.io/badge/Node.js-20%2B-007C91?style=flat-square&logo=nodedotjs&logoColor=white)](#快速开始) [![GitHub Stars](https://img.shields.io/github/stars/ZeroxZhang/consulting-report-forge?style=flat-square&logo=github&label=Stars)](https://github.com/ZeroxZhang/consulting-report-forge/stargazers)
+[![Version](https://img.shields.io/badge/version-1.6.0-17324D?style=flat-square)](package.json) [![License](https://img.shields.io/badge/license-Apache--2.0-007C91?style=flat-square)](LICENSE) [![Output](https://img.shields.io/badge/output-HTML%20%2B%20PDF-17324D?style=flat-square)](#你会拿到什么) [![Node](https://img.shields.io/badge/Node.js-20%2B-007C91?style=flat-square&logo=nodedotjs&logoColor=white)](#快速开始) [![GitHub Stars](https://img.shields.io/github/stars/ZeroxZhang/consulting-report-forge?style=flat-square&logo=github&label=Stars)](https://github.com/ZeroxZhang/consulting-report-forge/stargazers)
 
 <a href="docs/showcase/skill-poster.png"><img src="docs/showcase/skill-poster.png" width="600" alt="Consulting Report Forge 技能介绍海报：研究有来源、分析有方法、表达有主线、交付有复核；真实 AI 生物制药报告选览"></a>
 
@@ -23,6 +23,23 @@
 面向需要研究深度与专业表达的战略团队、咨询顾问、行业研究人员和经营管理者。
 
 **你希望得到的，是一次有依据的讨论：机会在哪里，判断为什么成立，有哪些选择，下一步怎么验证。**
+
+## 1.6.0：一册一条线索，一页一件事
+
+本版处理的是"稿子都对，但读起来不知道重点在哪"这一类问题。
+
+| 本次升级 | 与 1.5.0 相比的变化 |
+|---|---|
+| **一页可以有多个展品** | 同页每件展品拥有独立身份，数据、来源、容量、量尺与 HTML/PDF 呈现逐件核对；单图仍是有效结果，不设图数与版式配额 |
+| **故事线成为可校验对象** | 声明本册沿哪条弧线推进，每个正文页写清"读者比上一页多知道什么"；相邻页讲同一件事会被拦下，核心答案必须真的被某一页承担 |
+| **重点感可测量** | 每个正文页恰有一个收束节点，屏幕与打印都在；副标题不复述标题；声明的主动展品是页面上实际最大的东西 |
+| **旧稿保持原解释** | 旧任务、旧摘要、旧快照沿用原合同；新能力走显式策略，不原地改写历史记录 |
+
+**新报告默认仍是 1.5.0 的严格合同。** 复合证据与叙事视角通过显式策略启用（`report init --visual`，或对已有任务用 `migrate_strict_analysis --to-policy` 生成新目录草稿）；切换策略会使整册视觉复用失效，需要重新完成 HTML/PDF 审查，旧 PASS 不继承。
+
+**当前状态：候选能力已通过全部工程测试与代表页验收，尚未完成同题同模型的行为对照，因此没有切换新建任务默认。** 六份三组先导成稿已归档评估：两版在定性与单图任务上无显著差异，量化比较任务上旧版更易读。据此的判断是：复合证据与表达规则补上了工程能力，但"比较目标是否真的落到跨页编码"仍需复测确认。
+
+[复合证据升级方案](docs/2026-09-26-evidence-composition-upgrade-plan.md) · [实施记录](docs/2026-09-26-evidence-composition-implementation.md) · [逐展品校验修复](docs/2026-09-26-composition-validation-fixes.md) · [先导评估结果](docs/2026-09-26-behavior-pilot-results.md) · [维护边界](docs/maintainer-contracts.md)
 
 ## 1.5.0：内容改动可追踪，报告修订更可靠
 

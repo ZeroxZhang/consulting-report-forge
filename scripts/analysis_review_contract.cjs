@@ -19,7 +19,12 @@ function validate(record,doc,{task,baseDir}={}){
   const used=analysis.adopted(doc),reviews=Array.isArray(record.reviews)?record.reviews:[];
   const roles=task?.complexity==='complex'||task?.majorConclusion?['author','independent']:['author'];
   const composition=require('./composition_contract.cjs');
-  const compositionPolicy=composition.isCompositionTask(task);
+  /* 能力查询而非字符串相等：narrative-focus-1 包含 evidence-composition-1 的全部检查，
+     换了策略值不能让组合覆盖静默失效（同一教训见 contract_capabilities 的集中查询说明）。 */
+  const visualCaps=(()=>{try{return require('./contract_capabilities.cjs').visualPolicy(task?.policyVersions?.visual);}catch(_){return null;}})();
+  const compositionPolicy=!!visualCaps?.composition;
+  const narrativePolicy=!!visualCaps?.narrative;
+  const expectedVisual=task?.policyVersions?.visual;
   const identities=new Map();
   for(const r of reviews){
     if(!text(r.reviewer)||!text(r.instanceId)||!['author','independent'].includes(r.role)||!text(r.basis)||!['ready','conditional'].includes(r.conclusion))errors.push('分析审查身份、依据或结论未就绪');
@@ -30,7 +35,7 @@ function validate(record,doc,{task,baseDir}={}){
     // 新策略条件审查身份：analysisSha256 不含 task.policyVersions，仅切策略时旧签署摘要仍会匹配。
     // 必须拒绝没有对应策略身份与组合覆盖的旧签署，不能把「被签名」当成「被审查」。
     if(compositionPolicy){
-      if(r.policyVersions?.visual!==composition.POLICY)errors.push('分析审查缺少策略身份 '+composition.POLICY+'：仅切换视觉策略不改分析摘要，旧签署不能沿用；须实际重审');
+      if(r.policyVersions?.visual!==expectedVisual)errors.push('分析审查缺少策略身份 '+expectedVisual+'：仅切换视觉策略不改分析摘要，旧签署不能沿用；须实际重审');
       for(const slide of doc.slides){
         if(!r.coverage?.slideRefs?.includes(slide.id))continue;
         const expectedPanels=composition.panelIds(slide),expectedRelations=composition.relationRefs(slide);
@@ -40,6 +45,18 @@ function validate(record,doc,{task,baseDir}={}){
         for(const relId of expectedRelations)if(!coveredRelations.includes(slide.id+':'+relId)&&!coveredRelations.includes(relId))errors.push('分析审查缺少关系覆盖 '+slide.id+' relation '+relId);
       }
     }else if(r.policyVersions!==undefined&&r.policyVersions.visual!==undefined&&!['legacy-1','structural-lines-1'].includes(r.policyVersions.visual))errors.push('分析审查的策略身份与当前任务不一致');
+    /* 叙事主线同样需要条件审查身份：它改变的是整册推进方式，而 analysisSha256 不含 policyVersions。
+       要求逐页覆盖 + 一段审查者自己的连读依据；只列 slideRefs 是签名，不是读过。 */
+    if(narrativePolicy){
+      if(r.policyVersions?.visual!==expectedVisual)errors.push('分析审查缺少策略身份 '+expectedVisual+'：仅切换策略不改分析摘要，旧签署不能沿用；须实际重审');
+      const covered=Array.isArray(r.coverage?.narrativeRefs)?r.coverage.narrativeRefs:[];
+      for(const slide of doc.slides){
+        if(!require('./narrative_contract.cjs').NARRATIVE_ROLES.has(slide.pageRole))continue;
+        if(!r.coverage?.slideRefs?.includes(slide.id))continue;
+        if(!covered.includes(slide.id))errors.push('分析审查缺少叙事覆盖 '+slide.id+'：逐页核对本页相对上一页新增的理解是否成立');
+      }
+      if(!text(r.coverage?.arcBasis)||String(r.coverage.arcBasis).trim().length<12)errors.push('分析审查须在 coverage.arcBasis 写至少12字：为什么声明的弧线与逐页新增理解确实构成一条推进，而不是若干页的并列');
+    }
   }
   for(const role of roles){
     const relevant=reviews.filter(r=>r.role===role);if(!relevant.length)errors.push('缺少 '+role+' 分析审查');

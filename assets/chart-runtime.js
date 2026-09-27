@@ -70,9 +70,12 @@
     }else if(name==='composition'){
       const totals=spec.items.map(x=>x.segments.reduce((sum,s)=>sum+s.value,0)),max=Math.max(...totals),barWidth=Math.min(54,(width-100)/spec.items.length*.6);
       spec.items.forEach((item,i)=>item.segments.forEach((seg,j)=>{
-        const v=opt.series[j].data[i],label=opt.series[j].label.formatter({value:v}),denom=spec.mode==='percent'?totals[i]:max,h=seg.value/denom*plotH;
-        if(h<font*1.8)risk('segment-space',{item:item.label,segment:seg.label,value:seg.value},'「'+item.label+'·'+seg.label+'」高度约 '+h.toFixed(1)+'px，段内放不下标签；请改用引线标注或局部放大，零值以位置标记表示，不虚增面积。');
-        else if(widthOf(label,font)>barWidth-6)risk('segment-label',{item:item.label,segment:seg.label},'「'+item.label+'·'+seg.label+'」的标注长于我方可用的柱宽；请改用引线或缩短标签。');
+        // 数据项可以带自己的 label 覆盖（配方用它把放不下的标签移到条外）：取数值时要认这种写法，
+        // 否则会把 {value,label} 当成数值传给格式化函数。
+        const raw=opt.series[j].data[i],v=raw!==null&&typeof raw==='object'?raw.value:raw,outside=!!(raw!==null&&typeof raw==='object'&&raw.label&&raw.label.position&&raw.label.position!=='inside');
+        const label=opt.series[j].label.formatter({value:v}),denom=spec.mode==='percent'?totals[i]:max,h=seg.value/denom*plotH;
+        if(h<font*1.8&&!outside)risk('segment-space',{item:item.label,segment:seg.label,value:seg.value},'「'+item.label+'·'+seg.label+'」高度约 '+h.toFixed(1)+'px，段内放不下标签；请改用引线标注或局部放大，零值以位置标记表示，不虚增面积。');
+        else if(!outside&&widthOf(label,font)>barWidth-6)risk('segment-label',{item:item.label,segment:seg.label},'「'+item.label+'·'+seg.label+'」的标注长于我方可用的柱宽；请改用引线或缩短标签。');
       }));
       opt.series.forEach(s=>s.label.color=textColor(s.itemStyle.color,t));
     }else if(name==='groupedBar'){

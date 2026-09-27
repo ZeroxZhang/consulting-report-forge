@@ -133,6 +133,8 @@ function validate(doc,{task,stage='research',baseDir,preview=false}={}){
     if(baseDir)errors.push(...artifactErrors(doc,baseDir));
   }
   for(const s of list(doc.slides))if(content.CONTENT_ROLES.has(s.pageRole)){if(s.sourcePlan!==undefined)bad('schema 3 slide 不能双写 sourcePlan');refs(s,'claimRefs');refs(s,'metricRefs');if(!list(s.claimRefs).length)bad('正文须引用主张');if(stage==='ready'){const comp=require('./composition_contract.cjs');const vis=comp.hasComposition(s)?comp.deriveVisual(s,doc.deck?.ratio||'16x9'):s.visual;errors.push(...require('./form_contract.cjs').validate(vis).errors.map(e=>s.id+' '+e));}}
+  // 叙事主线：一册一条推进的论证。旧策略不检查，读旧稿的解释因此不变。
+  errors.push(...require('./narrative_contract.cjs').validate(doc,{task,stage}));
   if(stage==='ready'&&!errors.length){
     try{errors.push(...require('./deck_blueprint.cjs').validate(materialize(doc),{ready:false}).errors);}catch(e){bad(e.message);}
     if(!preview&&task?.workMode!=='editorial')errors.push(...require('./analysis_review_contract.cjs').check(doc,{task,baseDir}));

@@ -19,6 +19,44 @@ const norm=v=>String(v===undefined||v===null?'':v).replace(/\s+/g,' ').trim();
 const copy=v=>JSON.parse(JSON.stringify(v));
 const formName=value=>value==='custom'?'svg.custom':value;
 
+/* 自动量尺仅覆盖已接入实际坐标测量与适配器的渲染器；其他形式明确走人工审查。
+   适配器名与策略能力表同源：探针按同一张表分派，加渲染器时两处一起改，不会一方静默失效。 */
+const AUTO_SCALE_ADAPTERS=Object.freeze({'kit.dumbbell':'kit.dumbbell-v1','kit.slope':'kit.slope-v1'});
+const AUTO_SCALE_FORMS=Object.freeze(Object.keys(AUTO_SCALE_ADAPTERS));
+function scaleErrors(scale,where){
+  if(!object(scale))return [where+' 须提供 scale 的 domain/unit/scaleType'];
+  const errors=[];
+  if(!Array.isArray(scale.domain)||scale.domain.length!==2||!scale.domain.every(Number.isFinite)||scale.domain[0]>=scale.domain[1])errors.push(where+' domain 须为两个递增有限数');
+  if(!text(scale.unit))errors.push(where+' unit 须明确单位');
+  if(scale.scaleType!=='linear')errors.push(where+' 自动量尺目前仅支持 linear');
+  return errors;
+}
+function sameScale(a,b){return JSON.stringify(a.domain)===JSON.stringify(b.domain)&&a.unit===b.unit&&a.scaleType===b.scaleType;}
+function verifyScales(composition,exhibits,{warnings=[],where='本页'}={}){
+  const errors=[];
+  for(const [gid,g] of Object.entries(composition.scaleGroups||{})){
+    const at=where+' scaleGroup '+gid;
+    if(g.check==='manual'){
+      warnings.push(at+' ['+g.panelRefs.join(',')+'] 量尺自动未覆盖，须实看当前媒介的范围、单位、映射与比较边界：'+g.basis);
+      continue;
+    }
+    const measured=[];
+    for(const pid of g.panelRefs){
+      const panel=composition.panels[pid],found=exhibits.filter(e=>e.panelId===pid&&e.form===formName(panel.form));
+      const scale=found.length===1?found[0].scale:null;
+      if(!AUTO_SCALE_FORMS.includes(formName(panel.form))||!scale||scale.error||scale.adapter!==AUTO_SCALE_ADAPTERS[formName(panel.form)]||!Number.isFinite(scale.pixelSpan)||scale.pixelSpan<=0){errors.push(at+' panel '+pid+' 缺少有效的实际量尺测量；不能把声明当验证');continue;}
+      if(!sameScale(panel.scale||{},scale))errors.push(at+' panel '+pid+' 实际 domain/unit/scaleType 与计划不一致');
+      if(g.mode==='shared'&&!sameScale(g,scale))errors.push(at+' panel '+pid+' 实际量尺与共同量尺不一致');
+      measured.push({pid,scale});
+    }
+    if(g.mode==='shared'&&measured.length>1){
+      const first=measured[0].scale;
+      for(const {pid,scale} of measured.slice(1))if(Math.abs(scale.pixelSpan-first.pixelSpan)>0.5)errors.push(at+' panel '+pid+' 绘图区像素映射不同，不能直接比较长度');
+    }
+  }
+  return errors;
+}
+
 /* —— 读取入口 —— */
 function compositionOf(slide){
   const ex=slide&&slide.exhibit;
@@ -26,15 +64,20 @@ function compositionOf(slide){
   return object(ex.semantics)?ex.semantics.composition??null:null;
 }
 function hasComposition(slide){return compositionOf(slide)!=null;}
-function isCompositionTask(task){return task?.policyVersions?.visual===POLICY;}
+/* 能力查询而非字符串相等：narrative-focus-1 包含 evidence-composition-1 的全部检查。
+   写死相等的话，换到包含策略时组合校验会整体沉默——这正是 contract_capabilities 要防的那类失效。 */
+function supportsComposition(task){
+  try{return caps.visualPolicy(task?.policyVersions?.visual).composition===true;}catch(_){return false;}
+}
+function isCompositionTask(task){return supportsComposition(task);}
 
 /* —— 策略一致性：组合标记与 task 策略必须成对出现 —— */
 function policyErrors(task,{composition,stage='research'}={}={}){
   const errors=[];
   const visual=task?.policyVersions?.visual;
-  if(composition&&visual!==POLICY)errors.push('semantics.composition 需要显式视觉策略 '+POLICY+'；当前 '
+  if(composition&&!supportsComposition(task))errors.push('semantics.composition 需要支持复合证据的视觉策略（'+POLICY+' 或包含它的策略）；当前 '
     +(visual?visual:'任务未声明 policyVersions.visual')+' 不支持复合证据。旧策略输入新的组合标记时须显式升级任务策略，不能把未知内容只纳入签名而跳过组合检查');
-  if(!composition&&visual===POLICY&&stage==='ready')errors.push(POLICY+' 要求每页登记完整 panel 计划；缺少 semantics.composition 时不能退回「只查主图」');
+  if(!composition&&supportsComposition(task)&&stage==='ready')errors.push(visual+' 要求每页登记完整 panel 计划；缺少 semantics.composition 时不能退回「只查主图」');
   return errors;
 }
 
@@ -95,6 +138,7 @@ function validate(slide,{task,claims=[],sourceKeys=[],stage='research'}={}){
       if(panel.semanticType!==undefined&&!require('./content_contract.cjs').SEMANTIC_TYPES.includes(panel.semanticType))bad(where+' semanticType 无效');
     }
     if(panel.data!==undefined&&!object(panel.data))bad(where+' data 须为对象');
+    if((norm(formName(panel.form)).includes('waterfall')||panel.semanticType==='waterfall')&&panel.waterfall===undefined)bad(where+' 瀑布须声明自己的 waterfall.input');
     if(panel.waterfall!==undefined){
       if(!object(panel.waterfall)||!object(panel.waterfall.input))bad(where+' waterfall 须有 input:{items或records,config}');
       else for(const k of Object.keys(panel.waterfall))if(!['input','residualReason'].includes(k))bad(where+' waterfall.'+k+' 由内核派生，不能手填');
@@ -152,7 +196,16 @@ function validate(slide,{task,claims=[],sourceKeys=[],stage='research'}={}){
       if(!SCALE_MODES.includes(group.mode))bad(where+' mode 须为 '+SCALE_MODES.join('/'));
       if(!SCALE_CHECKS.includes(group.check))bad(where+' check 须为 '+SCALE_CHECKS.join('/'));
       if(!text(group.basis,12))bad(where+' basis 须至少12字：同口径可直接比大小，还是要逐轴查值');
-      if(group.check==='auto'&&!object(group)&&false)bad(where+' 自动核查须提供可核对的尺度元数据');
+      if(new Set(prefs).size!==prefs.length)bad(where+' panelRefs 重复');
+      if(group.check==='auto'){
+        if(group.mode==='shared')errors.push(...scaleErrors(group,where));
+        for(const ref of prefs){
+          const panel=panels[ref];if(!object(panel))continue;
+          errors.push(...scaleErrors(panel.scale,where+' panel '+ref));
+          if(!AUTO_SCALE_FORMS.includes(formName(panel.form)))bad(where+' panel '+ref+' 的形式尚无真实量尺探针；须使用 manual 并实际审查');
+          if(group.mode==='shared'&&object(panel.scale)&&!sameScale(group,panel.scale))bad(where+' panel '+ref+' 的 domain/unit/scaleType 与共同量尺不一致');
+        }
+      }
       if(group.check==='manual')for(const k of ['domain','unit','scaleType'])if(group[k]!==undefined)bad(where+' 人工覆盖的量尺不写可自动核对的 '+k+'，避免把未测量写成通过');
     }
     for(const key of ids){
@@ -265,6 +318,6 @@ function waterfallScopes(slide,page){
   }
   return scopes;
 }
-module.exports={POLICY,COMPOSITION_VERSION,RELATION_KINDS,SCALE_MODES,SCALE_CHECKS,
-  compositionOf,hasComposition,isCompositionTask,policyErrors,validate,
+module.exports={POLICY,COMPOSITION_VERSION,RELATION_KINDS,SCALE_MODES,SCALE_CHECKS,AUTO_SCALE_ADAPTERS,AUTO_SCALE_FORMS,
+  compositionOf,hasComposition,isCompositionTask,supportsComposition,policyErrors,validate,verifyScales,
   claimRefs,metricRefs,relationRefs,panelIds,deriveVisual,expectedPanels,ownershipErrors,waterfallScopes};

@@ -8,7 +8,7 @@
 
 ## 实际合同组合与维护入口
 
-当前运行时为 1.5.0；新任务使用严格合同，旧任务保持原合同。以下是代码实际存在的路径，不表示任意版本可自由混搭。
+当前运行时为 1.6.0；新任务使用严格合同，旧任务保持原合同。以下是代码实际存在的路径，不表示任意版本可自由混搭。
 
 | 路径 | 合同组合 | 产生与校验 |
 |---|---|---|
@@ -20,8 +20,11 @@
 | 已有迁移工具 | blueprint2 → blueprint3 待分析草稿与 ID 映射 | migrate_blueprint；不覆盖输入，不迁移签署，schema1 需先整理内容 |
 | 当前新任务 | blueprint3 / task3 / pages4 / analysis-review2 / final-review5 | semantic-v2 已接入编译/装配/审查/快照/复用/打包；migrate_strict_analysis 创建未签草稿；新任务默认启用，见 [严格合同](strict-analysis-contract.md) |
 | 复合证据任务 | blueprint3 / task3 + visual=evidence-composition-1 / pages4 / analysis-review2 / final-review5 | composition_contract 结构校验与派生；逐 panel 形式/容量/瀑布体检；策略审查身份与组合覆盖；首次启用使整册视觉复用失效（task.policyVersions 进 dependenciesSha256） |
+| 叙事视角任务（候选） | blueprint3 / task3 + visual=narrative-focus-1 / pages4 / analysis-review2 / final-review5 | 在复合证据全部检查之上加 narrative_contract：`deck.arc`、逐页 `adds`、核心答案被正文承担、相邻页新增理解重复；成稿侧逐页 `data-reading-role="takeaway"` 唯一性与重点感实测（page_probe `focus` + check_pages）；最终审查新增 narrative 层与逐页 `observedTakeaway` 覆盖。**默认未启用**，须 `report.cjs init --visual narrative-focus-1` 或 `migrate_strict_analysis --to-policy` |
 
-策略能力集中在 `scripts/contract_capabilities.cjs` 查询，不再散落字符串相等判断。`evidence-composition-1` 包含 `structural-lines-1` 的全部检查再加逐 panel 检查。未知策略一律拒绝，不以 `>=` 推断语义。
+策略能力集中在 `scripts/contract_capabilities.cjs` 查询，不再散落字符串相等判断。包含关系是 `narrative-focus-1 ⊃ evidence-composition-1 ⊃ structural-lines-1`；组合与叙事检查都按能力查询启用，换策略值不会让既有检查静默失效或误报。未知策略一律拒绝，不以 `>=` 推断语义。能力值一旦存在就不原地改语义——已产出的 `evidence-composition-1` 报告保持原解释。
+
+**候选状态。** `narrative-focus-1` 通过全部工程测试与代表页验收，但尚未完成同题同模型的行为对照，因此 `templates/task.json` 仍是 `structural-lines-1`。切换新建默认须先按升级方案的发布底线完成复测；回退只需撤回"新建任务默认启用"，已创建的新策略任务保留支持该策略的运行时，不把其 visual 改回旧值以消除报错。
 
 只读操作见 [R1 实施记录](upgrade-r1-validation.md)。参考资料块和细线检查已接入 task3 的显式策略，不能据此放行旧合同。字体诊断新增分类仅影响新运行的输出；历史 audit 不补字段、不重算、不改签名。归并摘要不替换历史 warningReview 字符串与处置身份。
 

@@ -60,7 +60,9 @@ function threeColumn(){
               selection:{relationship:'text',reason:'成本拆解需保留口径说明，用结构化文字呈现更准确。'}},
             profit:{purpose:'给出利润终值与差额，收束本页判断',claimRefs:['finding'],form:'html.kpi',
               selection:{relationship:'kpi',reason:'利润终值和差额适合用KPI卡片直接读数。'},
-              capacity:{items:2}}
+              // 页面上是三张卡（期初利润、期末利润、差额）。计划写 2 会让逐 panel 容量对账把成稿判成超计划；
+              // 上限要按实际证据单元数写，不能按"我以为放几张"写。
+              capacity:{items:3}}
           },
           relations:[{id:'rev-cost-profit',kind:'complement',panelRefs:['revenue','cost','profit'],
             reason:'收入、成本及利润变化共同解释会计算术关系，不据此识别经营因果。'}]}

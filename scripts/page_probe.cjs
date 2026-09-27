@@ -67,7 +67,37 @@ function inspectDom(s, wfForms) {
       laneTitleText:[...e.querySelectorAll('text[data-role="lane-title"]')].filter(shapeVisible).map(t=>t.textContent.trim()),
       stageTitleText:[...e.querySelectorAll('text[data-role="stage-title"]')].filter(shapeVisible).map(t=>t.textContent.trim())
     }:null;
-    return {id, panelId, tag: e.tagName, form, capacity:e.getAttribute('data-capacity')||null, diagram, labels: [...e.querySelectorAll('text')].map(t => t.textContent.trim()).filter(Boolean)};
+    let scale=null;
+    if(e.hasAttribute('data-scale'))try{
+      const meta=JSON.parse(decodeURIComponent(e.getAttribute('data-scale'))),m=e.getScreenCTM();
+      /* 每个渲染器各自声明量尺适配器与它映射到哪一维：dumbbell 是横向比较，slope 是纵向。
+         没有登记适配器的形式不会被自动核对，走 manual 人工路径——不能拿声明当验证。 */
+      const ADAPTERS={dumbbell:{adapter:'kit.dumbbell-v1',axis:'x'},slope:{adapter:'kit.slope-v1',axis:'y'}};
+      const spec=ADAPTERS[String(form||'').replace(/^kit\./,'')];
+      const axis=meta.axis||spec?.axis;
+      if(!spec||meta.adapter!==spec.adapter||meta.scaleType!=='linear'||!['x','y'].includes(axis)||axis!==spec.axis
+        ||!Array.isArray(meta.domain)||meta.domain.length!==2||!meta.domain.every(Number.isFinite)||meta.domain[1]<=meta.domain[0]
+        ||!Array.isArray(meta.range)||meta.range.length!==2||!meta.range.every(Number.isFinite)||meta.range[1]===meta.range[0]||!m)throw Error('量尺元数据无效');
+      const marks=[...e.querySelectorAll('circle[data-role="start"],circle[data-role="end"]')].filter(shapeVisible);
+      if(!marks.length)throw Error('没有可测量的数据点');
+      for(const mark of marks){
+        const raw=mark.getAttribute('data-anchor-value'),v=Number(raw),cx=Number(mark.getAttribute('cx')),cy=Number(mark.getAttribute('cy')),mm=mark.getScreenCTM();
+        const expected=meta.range[0]+(v-meta.domain[0])/(meta.domain[1]-meta.domain[0])*(meta.range[1]-meta.range[0]);
+        // 只在适配器声明的那一维上比较：另一维是分类位置，不承载数值映射。
+        const screenOf=(point,matrix)=>axis==='x'
+          ?new DOMPoint(matrix.a*point.x+matrix.c*point.y+matrix.e,matrix.b*point.x+matrix.d*point.y+matrix.f)
+          :new DOMPoint(matrix.a*cx+matrix.c*point.y+matrix.e,matrix.b*cx+matrix.d*point.y+matrix.f);
+        const actualPoint={x:cx,y:cy},expectedPoint=axis==='x'?{x:expected,y:cy}:{x:cx,y:expected};
+        const a2=screenOf(actualPoint,mm),b2=screenOf(expectedPoint,m);
+        if(raw===null||!Number.isFinite(v)||!mm||Math.hypot(a2.x-b2.x,a2.y-b2.y)/logicalScale>0.5)throw Error('数据点实际坐标与量尺不一致');
+      }
+      const unitPixels=axis==='x'?Math.hypot(m.a,m.b):Math.hypot(m.c,m.d);
+      scale={...meta,pixelSpan:Math.abs(meta.range[1]-meta.range[0])*unitPixels/logicalScale};
+    }catch(error){scale={error:error.message};}
+    const drawn=e.getBoundingClientRect();
+    // 逻辑像素面积：主展品是否真的占主导，只能在真实绘制尺寸上比，不能拿声明的 span 比。
+    const area=(drawn.width*drawn.height)/(logicalScale*logicalScale);
+    return {id, panelId, tag: e.tagName, form, scale, area:Math.round(area), capacity:e.getAttribute('data-capacity')||null, diagram, labels: [...e.querySelectorAll('text')].map(t => t.textContent.trim()).filter(Boolean)};
   });
   const textEvidence = [], walker = document.createTreeWalker(s, NodeFilter.SHOW_TEXT); let node;
   while (node = walker.nextNode()) {
@@ -103,13 +133,17 @@ function inspectDom(s, wfForms) {
      旧策略保持页面级 WF-MULTIPLE-AUDIT 冻结行为，不全局删除原检查。 */
   const panelAxes=new Map();
   for(const axis of auditAxes){const root=axis.closest('[data-panel-id]');const pid=root?root.getAttribute('data-panel-id'):null;if(!panelAxes.has(pid))panelAxes.set(pid,[]);panelAxes.get(pid).push(axis);}
-  const waterfallByPanel=[...panelAxes.entries()].map(([pid,axes])=>({
-    panelId:pid, axes:axes.length,
-    residual: axes.length===1?(axes[0].getAttribute('data-residual')||''):null,
-    tolerance: axes.length===1?(axes[0].getAttribute('data-tolerance')||''):null,
-    nodes: axes.length===1?Number(axes[0].getAttribute('data-nodes')):null,
-    model: axes.length===1?axes[0].getAttribute('data-waterfall-model'):null
-  }));
+  const visible=e=>{if(!e)return false;const r=e.getBoundingClientRect();if(!r.width&&!r.height)return false;for(let n=e;n&&n!==s.parentElement;n=n.parentElement){const cs=getComputedStyle(n);if(cs.display==='none'||cs.visibility==='hidden'||cs.visibility==='collapse'||Number(cs.opacity)===0)return false;}return true;};
+  const readBars=axis=>[...(axis?.closest('svg')?.querySelectorAll('[data-from][data-to]')||[])].filter(e=>visible(e)&&(e.getAttribute('data-role')==='bar'||e.tagName.toLowerCase()==='rect'&&(e.getAttribute('data-anchor-id')||'').startsWith('bar:'))).map(e=>{
+    const numeric=key=>e.hasAttribute(key)&&e.getAttribute(key).trim()!==''?Number(e.getAttribute(key)):null;
+    return {label:e.getAttribute('data-anchor-label'),type:e.getAttribute('data-semantic')||e.getAttribute('data-anchor-group'),value:e.hasAttribute('data-value')?numeric('data-value'):numeric('data-anchor-value'),from:numeric('data-from'),to:numeric('data-to')};
+  });
+  const waterfallByPanel=[...panelAxes.entries()].map(([pid,allAxes])=>{
+    const axes=allAxes.filter(visible),axis=axes.length===1?axes[0]:null;
+    return {panelId:pid,axes:axes.length,residual:axis?(axis.getAttribute('data-residual')||''):null,
+      tolerance:axis?(axis.getAttribute('data-tolerance')||''):null,nodes:axis?Number(axis.getAttribute('data-nodes')):null,
+      model:axis?axis.getAttribute('data-waterfall-model'):null,bars:readBars(axis)};
+  });
   const waterfall = {
     form, isWaterfallForm: wfForms.indexOf(form) >= 0,
     axes: auditAxes.length,
@@ -135,7 +169,7 @@ function inspectDom(s, wfForms) {
   }
   /* 判断／依据／限定不是装饰：三级缺一，这一格就退回散文，而散文数得出字数、数不出依据条数。
      所以这里数的是结构而不是字数——只有结构判得出「这一格是不是只装了三分之一」。 */
-  const finding = [...s.querySelectorAll('.finding')].filter(f=>{const r=f.getBoundingClientRect(),cs=getComputedStyle(f);return r.width>0&&r.height>0&&cs.display!=='none'&&cs.visibility!=='hidden';}).map(f => {
+  const readFinding=f=>{
     const txt = el => ((f.querySelector(el) || {}).textContent || '').trim();
     return {
       verdict: txt('.finding__verdict').length,
@@ -146,6 +180,11 @@ function inspectDom(s, wfForms) {
         rank: st.querySelectorAll('.finding__rank i').length
       }))
     };
+  };
+  const finding=[...s.querySelectorAll('.finding')].filter(visible).map(readFinding);
+  const panels=[...s.querySelectorAll('[data-panel-id]')].map(root=>{
+    const own=selector=>[...root.querySelectorAll(selector)].filter(e=>e.closest('[data-panel-id]')===root&&visible(e));
+    return {panelId:root.dataset.panelId,visible:visible(root),kpiCards:own('.kpi-card').length,finding:own('.finding').map(readFinding),tables:own('table').length};
   });
   return {
     bindings: [...s.querySelectorAll('[data-content-key]')].map(e => {
@@ -172,11 +211,44 @@ function inspectDom(s, wfForms) {
       return {key:e.dataset.contentKey,text:e.textContent,visible,...(reasons.length?{visibilityReasons:[...new Set(reasons)]}:{})};
     }),
     pageId:s.dataset.pageId||'',pagePlanHash:s.dataset.pagePlanHash||'',contentHash: s.dataset.contentHash || '', semanticType:s.dataset.semanticType || '',
-    exhibits, finding, kpiCards:[...s.querySelectorAll('.slide__body .kpi-card')].filter(e=>{const r=e.getBoundingClientRect(),cs=getComputedStyle(e);return r.width>0&&r.height>0&&cs.display!=='none'&&cs.visibility!=='hidden';}).length, textEvidence, unreadableText: unreadable, form: s.dataset.form || null, visual: s.dataset.visual || '', proves: s.dataset.proves || '', densityProfile: s.dataset.densityProfile || '',
+    panels, exhibits, finding, kpiCards:[...s.querySelectorAll('.slide__body .kpi-card')].filter(e=>{const r=e.getBoundingClientRect(),cs=getComputedStyle(e);return r.width>0&&r.height>0&&cs.display!=='none'&&cs.visibility!=='hidden';}).length, textEvidence, unreadableText: unreadable, form: s.dataset.form || null, visual: s.dataset.visual || '', proves: s.dataset.proves || '', densityProfile: s.dataset.densityProfile || '',
     // v3 布局绑定：QA 拿它和 pages.json、布局目录三方对账。
     layout: s.dataset.layout || '', modules: [...s.querySelectorAll('[data-module]')].map(e => e.dataset.module || ''),
     waterfall,
     title: s.querySelector('.slide__title,.cover-title,.divider-name')?.textContent || '',
+    /* 重点感事实：这一页读者第一眼看到什么、有几处收束、主展品实际占了多大绘制面积。
+       这里只测量；判定是 narrative_contract 的纯函数，浏览器侧不产出结论。 */
+    focus: (() => {
+      const bodyEl = s.querySelector('.slide__body');
+      const text = el => ((el && el.textContent) || '').trim();
+      const fontOf = el => {
+        const cs = getComputedStyle(el);
+        if (el.tagName.toLowerCase() === 'text' && el.getScreenCTM) { const m = el.getScreenCTM(); return parseFloat(cs.fontSize) * Math.hypot(m.c, m.d) / logicalScale; }
+        return parseFloat(cs.fontSize);
+      };
+      let largestBodyFont = 0, largestBodyText = '';
+      if (bodyEl && visible(bodyEl)) for (const el of bodyEl.querySelectorAll('*')) {
+        if (el.children.length || !text(el) || el.closest('[data-decorative="true"]') || !visible(el)) continue;
+        const f = fontOf(el);
+        if (f > largestBodyFont) { largestBodyFont = f; largestBodyText = text(el).slice(0, 40); }
+      }
+      const box = el => { const r = el.getBoundingClientRect(); return r.width && r.height ? (r.width * r.height) / (logicalScale * logicalScale) : 0; };
+      const titleEl = s.querySelector('.slide__title,.cover-title,.divider-name');
+      // 每个 panel 审计根的可见绘制面积：主展品是否真占主导，按实际渲染尺寸判，不按声明的占比判。
+      const panelAreas = [...s.querySelectorAll('[data-panel-id]')].filter(visible).map(root => ({ panelId: root.dataset.panelId, area: Math.round(box(root)) }));
+      // 收束句的实际文字：审查者要填的是"页面上读到的",不是蓝图里声明的，两者对不上就说明没真看这一页。
+      const takeawayNodes = [...s.querySelectorAll('[data-reading-role="takeaway"]')].filter(visible);
+      return {
+        takeawayText: takeawayNodes.length === 1 ? text(takeawayNodes[0]) : '',
+        title: titleEl && visible(titleEl) ? { font: Math.round(fontOf(titleEl) * 10) / 10, text: text(titleEl).slice(0, 60) } : null,
+        largestBodyFont: Math.round(largestBodyFont * 10) / 10,
+        largestBodyText,
+        lead: text(s.querySelector('.slide__lead')),
+        takeaways: [...s.querySelectorAll('[data-reading-role="takeaway"]')].filter(visible).length,
+        bodyArea: bodyEl && visible(bodyEl) ? Math.round(box(bodyEl)) : 0,
+        panelAreas
+      };
+    })(),
     overflow: bad, tinyText: tiny, smallDataText: smallData, scaledSvg,
     charts: [...s.querySelectorAll('.chart')].map(e => ({width: e.clientWidth, height: e.clientHeight, rendered: !!e.querySelector('svg,canvas'), error: e.dataset.chartError || null, risks: e.dataset.chartRisks || null})),
     // 表格内的数据条 sparkline 也是 svg；不排除它，"整页图被换成带数据条的表"就会漏判。
@@ -204,6 +276,8 @@ async function collect(page, index, {modern = false, readingShadow = false} = {}
     try { return JSON.parse(document.getElementById('deck-task-contract')?.textContent || 'null')?.policyVersions?.visual || 'legacy-1'; }
     catch (_) { return 'legacy-1'; }
   }).catch(() => 'legacy-1');
+  // 策略名随页带回：check_pages 的能力查询需要它，不能靠调用方另传一份可能漂移的值。
+  result.policyName = visualPolicyName;
   try { result.waterfallScope = require('./contract_capabilities.cjs').visualPolicy(visualPolicyName).waterfallScope; }
   catch (_) { result.waterfallScope = 'page'; }
   result.bookends = await slide.evaluate(bookends.inspectPage);

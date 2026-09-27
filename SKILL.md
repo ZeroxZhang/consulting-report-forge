@@ -34,6 +34,8 @@ description: >-
 
 先把有条件的核心答案写在全局 claims，并以 `analysis.synthesis.answerClaimRefs` 引用；schema3 的 `governingThought` 由它派生。再按 [叙事方法](references/consulting-storyline.md) 形成“问题—证据—判断—边界”的推进。标题连读应有完整论证；每页 `proves` 对应画面能证明的关系。证据不够就缩小结论，不用强词弥补。
 
+叙事视图策略 `narrative-focus-1`（候选，需显式启用，见第 4 节）把这条推进变成可校验对象：`deck.arc` 声明本册沿哪条弧线走，每个正文页用 `adds` 写清**读者读完本页比上一页多知道什么**，核心答案必须被某一页真的承担。相邻页声称同一件新增理解会被拦下——那是两页在讲同一件事，读者读到的是长度而不是推进。
+
 新任务统一用 `node scripts/report.cjs init /任务/新报告` 创建，采用 schema3 / task3 / semantic-v2；研究可从无页面的 [研究模板](templates/research-blueprint.json) 起步。使用[蓝图模板](templates/deck-blueprint.json)与[内容制作合同](references/content-authoring.md)。蓝图是标题、关键主张、来源、计算、密度和页面意图的权威源；`pages.json` 由编译器生成，不手工维护第二套内容。
 
 新稿按[严格合同](docs/strict-analysis-contract.md)执行，前置审查 v2、最终审查 v5。旧稿继续原合同，不自动改算法、补签或转换版本。统一入口、任务锁、多页参考资料和审查包见[生产入口](docs/upgrade-production-entry.md)。
@@ -63,7 +65,9 @@ schema 3 正文页在 `visual.selection` 写 `relationship` 和具体的 `reason
 - 使用 `diagram.*` 时按 [图示语义合同](references/diagram-semantics.md) 声明节点、边和角色；渲染器按形式拒绝不相符的结构，输出携带可核对的形式与语义标记。
 - 同类分面、连续同型图和表格可帮助比较。报告不因图型/布局种数、重复次数或空白像素直接失败；相关诊断仍须结合画面解释或修复。
 
-复合证据页（新视觉策略 `evidence-composition-1`）在 `exhibit.semantics.composition` 登记 panels/relations/scaleGroups：每个 panel 有稳定键、证明分工（claimRefs）、形式、选型和容量；relations 解释组合关系；scaleGroups 记录跨图量尺约定。`visual.regions` 只声明位置与 panelRef，旧格式字段由编译适配层派生。阅读入口 `anchorPanel` 与布局 primary 独立，不要求阅读入口更大。单图页用一个 panel，relations 可为空。详见[单页系统](references/consulting-page-system.md)。
+复合证据页（视觉策略 `evidence-composition-1`）在 `exhibit.semantics.composition` 登记 panels/relations/scaleGroups：每个 panel 有稳定键、证明分工（claimRefs）、形式、选型和容量；relations 解释组合关系；scaleGroups 记录跨图量尺约定。`visual.regions` 只声明位置与 panelRef，旧格式字段由编译适配层派生。阅读入口 `anchorPanel` 与布局 primary 独立，不要求阅读入口更大。单图页用一个 panel，relations 可为空。详见[单页系统](references/consulting-page-system.md)。
+
+**一页只讲一件事，且这件事在页面上收束。** 视觉策略 `narrative-focus-1`（候选，前者加叙事主线与单页焦点；显式启用 `report.cjs init <目录> --visual narrative-focus-1` 或迁移 `migrate_strict_analysis.cjs <task.json> <新目录> --to-policy narrative-focus-1`）要求每个正文页在成稿里恰有一个 `data-reading-role="takeaway"` 节点——这一页唯一被声明为"读者要记住什么"的地方。多个收束点等于没有收束点；一个都没有，页面就只是并列了几块内容。副标题写口径、单位、期间或样本，不复述标题的判断。声明的 primary 应当是页面上实际最大的东西，正文里也不该出现比标题更大的字：读者第一眼落在哪里，哪里就是这一页真正的重点。
 
 具体表达见 [表达指南](references/expression-guide.md)与[自动生成的形式容量目录](references/form-capacity.md)，区域、密度与组件类名见 [单页系统](references/consulting-page-system.md)。需要组件时运行 `node scripts/sweep_forms.cjs` 查询，原生 SVG 与 HTML 表格同样是有效表达。未封装图型可自绘或通过原生配置生成静态 SVG；登记表和分析方法表不是能力白名单，组件上限不应外推为全局禁令。禁止伪 3D、无意义色条、未说明截轴、只靠颜色、悬停才可读的关键内容与以微字塞满页面。
 

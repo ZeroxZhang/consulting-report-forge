@@ -165,7 +165,10 @@ async function assemble(options={}){
      for(let i=0;i<count;i++){
       await slidesLoc.evaluateAll((es,index)=>es.forEach((s,j)=>s.classList.toggle('active',index===j)),i);
       const facts=await slidesLoc.nth(i).evaluate(probe.inspectDom,probe.WF_FORMS);
-      Object.assign(assembled.slideForms[i],{waterfall:facts.waterfall,bindings:facts.bindings,title:facts.title,contentHash:facts.contentHash,semanticType:facts.semanticType,pagePlanHash:facts.pagePlanHash,pageId:facts.pageId,exhibits:facts.exhibits,kpiCards:facts.kpiCards});
+      // panels 是逐 panel 校验（审计根、html.kpi / html.finding 容量）的唯一事实来源。
+      // 它由 inspectDom 产出、qa 侧一直在用；这里漏搬过一次，结果是所有用 html.kpi panel 的组合页
+      // 在装配期被判成"缺少可见内容"——缺的是事实，不是页面。搬全 inspectDom 的逐页事实，不再逐项挑。
+      Object.assign(assembled.slideForms[i],{waterfall:facts.waterfall,bindings:facts.bindings,title:facts.title,contentHash:facts.contentHash,semanticType:facts.semanticType,pagePlanHash:facts.pagePlanHash,pageId:facts.pageId,exhibits:facts.exhibits,kpiCards:facts.kpiCards,panels:facts.panels,finding:facts.finding});
      }
     }finally{await probePage.close();}
    }

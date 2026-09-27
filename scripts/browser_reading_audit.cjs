@@ -3,7 +3,10 @@ function inspectSlide(slide){
   const started=performance.now(),box=slide.getBoundingClientRect(),scale=box.width/(slide.offsetWidth||box.width)||1;
   const observations=[],unsupported=[],lines=[],characters=[],MAX_CHARS=4000,MAX_LINES=1200;
   const shown=el=>{if(!el.getClientRects().length)return false;for(let n=el;n&&n.nodeType===1;n=n.parentElement){const s=getComputedStyle(n);if(s.display==='none'||s.visibility!=='visible'||+s.opacity===0)return false;}return true;};
-  const selector=el=>{const parts=[];for(let n=el;n&&n!==slide;n=n.parentElement)parts.unshift(n.localName+':nth-child('+(Array.prototype.indexOf.call(n.parentElement.children,n)+1)+')');return parts.join(' > ')||':scope';};
+  /* 选择器只沿真实祖先链上溯：elementsFromPoint 会返回 slide 之外的页面级浮层（翻页提示、进度条、预览横幅），
+     它们的祖先链走到 documentElement 就到头。少了这个终止条件，一个浮层就会让整页测量抛错——
+     报出来的是「读取 null 的 children」，与真正的问题（浮层不属于本页）相差很远。 */
+  const selector=el=>{const parts=[];for(let n=el;n&&n!==slide&&n.parentElement;n=n.parentElement)parts.unshift(n.localName+':nth-child('+(Array.prototype.indexOf.call(n.parentElement.children,n)+1)+')');return parts.join(' > ')||':scope';};
   const rect=r=>({x:r.left,y:r.top,width:r.width,height:r.height});
   const logical=r=>({x:(r.x-box.left)/scale,y:(r.y-box.top)/scale,width:r.width/scale,height:r.height/scale});
   const overlap=(a,b)=>({width:Math.min(a.x+a.width,b.x+b.width)-Math.max(a.x,b.x),height:Math.min(a.y+a.height,b.y+b.height)-Math.max(a.y,b.y)});

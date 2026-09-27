@@ -164,8 +164,8 @@ function baseDoc(){
   slide.exhibit.semantics.composition.panels.cost={...baseComposition().panels.cost,
     form:'recipe.rankedBar',selection:{relationship:'comparison',reason:'排序条形比较成本构成。'},capacity:{items:99}};
   const errs=composition.validate(slide,{claims:[baseClaim()]});
-  ok('B01 同形图各用各的容量计划',errs.some(e=>e.includes('panel cost'))||errs.length>=0);
-  ok('B01 容量越界由 form 合同检查',errs.some(e=>e.includes('capacity')||e.includes('容量')||e.includes('items'))||true);
+  ok('B01 同形图各用各的容量计划',errs.some(e=>e.includes('panel cost')&&e.includes('99')));
+  ok('B01 容量越界由 form 合同检查',errs.some(e=>e.includes('超过硬上限')));
 }
 
 // —— B05 双瀑布：新策略接受，旧策略保持原拒绝 ——
@@ -187,6 +187,14 @@ function baseDoc(){
   ok('B05 新策略 panel 级',caps.visualPolicy('evidence-composition-1').waterfallScope==='panel');
 }
 
+// 每张瀑布必须有自己的输入，不能借另一panel的合同通过。
+{
+  const slide=baseSlide();slide.exhibit.semantics.composition.panels.cost.form='kit.waterfall';
+  ok('B06 次图缺瀑布输入被拒',composition.validate(slide,{claims:[baseClaim()]}).some(e=>e.includes('panel cost')&&e.includes('waterfall.input')));
+  delete slide.exhibit.semantics.composition.panels.cost.form;
+  noThrow('缺form返回合同错误而非抛异常',()=>composition.validate(slide,{claims:[baseClaim()]}));
+}
+
 // —— B08 声明共同量尺但 domain/unit 不同 ——
 {
   const slide=baseSlide();
@@ -194,8 +202,32 @@ function baseDoc(){
   slide.exhibit.semantics.composition.panels.cost.scaleGroup='shared-scale';
   slide.exhibit.semantics.composition.scaleGroups={
     'shared-scale':{panelRefs:['revenue','cost'],mode:'shared',check:'auto',basis:'两图同口径同单位可直接比较长度。',domain:[0,100],unit:'万元',scaleType:'linear'}};
+  for(const panel of Object.values(slide.exhibit.semantics.composition.panels)){
+    panel.form='kit.dumbbell';panel.capacity={items:1};
+    panel.selection={relationship:'comparison',reason:'通过共同量尺比较两个期间的数值差异。'};
+    panel.scale={domain:[0,100],unit:'万元',scaleType:'linear'};
+  }
   ok('B08 合法共同量尺接受',composition.validate(slide,{claims:[baseClaim()]}).filter(e=>e.includes('scaleGroup')).length===0);
 
+  for(const [field,value] of [['domain',[0,1000]],['unit','美元'],['scaleType','log']]){
+    const changed=JSON.parse(JSON.stringify(slide));changed.exhibit.semantics.composition.panels.cost.scale[field]=value;
+    ok('B08 拒绝不一致 '+field,composition.validate(changed,{claims:[baseClaim()]}).some(e=>e.includes('scaleGroup')&&e.includes('cost')));
+  }
+  const missing=JSON.parse(JSON.stringify(slide));delete missing.exhibit.semantics.composition.panels.cost.scale;
+  ok('B08 拒绝缺少实际尺度计划',composition.validate(missing,{claims:[baseClaim()]}).some(e=>e.includes('cost')&&e.includes('scale')));
+  /* 适配器表决定哪些形式能自动核对。已接入的按各自适配器核对，未接入的必须退到 manual。 */
+  const unsupported=JSON.parse(JSON.stringify(slide));unsupported.exhibit.semantics.composition.panels.cost.form='kit.bullet';
+  ok('B08 未接入适配器的形式不冒充自动核验',composition.validate(unsupported,{claims:[baseClaim()]}).some(e=>e.includes('manual')));
+  const renamed=JSON.parse(JSON.stringify(slide));renamed.exhibit.semantics.composition.panels.cost.form='kit.slope';
+  ok('B08 已接入适配器的形式按各自适配器核对',
+    composition.validate(renamed,{claims:[baseClaim()]}).some(e=>e.includes('cost')&&e.includes('量尺'))===false
+    &&composition.AUTO_SCALE_FORMS.includes('kit.slope'));
+  ok('B08 适配器表与形式一一对应',
+    Object.keys(composition.AUTO_SCALE_ADAPTERS).every(f=>composition.AUTO_SCALE_FORMS.includes(f))
+    &&composition.AUTO_SCALE_ADAPTERS['kit.dumbbell']!==composition.AUTO_SCALE_ADAPTERS['kit.slope']);
+
+  const noDomain=JSON.parse(JSON.stringify(slide));delete noDomain.exhibit.semantics.composition.scaleGroups['shared-scale'].domain;
+  ok('B08 自动组缺domain不能通过',composition.validate(noDomain,{claims:[baseClaim()]}).some(e=>e.includes('domain')));
   const bad=baseSlide();
   bad.exhibit.semantics.composition.panels.revenue.scaleGroup='mixed-scale';
   bad.exhibit.semantics.composition.panels.cost.scaleGroup='mixed-scale';
@@ -229,7 +261,12 @@ function baseDoc(){
 {
   ok('C02 旧策略不是组合策略',!composition.isCompositionTask(baseTask('structural-lines-1')));
   ok('C02 新策略是组合策略',composition.isCompositionTask(baseTask('evidence-composition-1')));
-  ok('C02 组合标记+旧策略被拒',composition.policyErrors(baseTask('structural-lines-1'),{composition:true}).some(e=>e.includes('需要显式视觉策略')));
+  ok('C02 组合标记+旧策略被拒',composition.policyErrors(baseTask('structural-lines-1'),{composition:true}).some(e=>e.includes('需要支持复合证据的视觉策略')));
+  /* 包含策略：narrative-focus-1 内嵌全部组合能力，不能因策略名不同而整体沉默或误报。 */
+  ok('C02 包含策略支持组合',composition.supportsComposition(baseTask('narrative-focus-1')));
+  ok('C02 包含策略不误报',composition.policyErrors(baseTask('narrative-focus-1'),{composition:true}).length===0);
+  ok('C02 包含策略缺 panel 在 ready 仍被拒',composition.policyErrors(baseTask('narrative-focus-1'),{composition:false,stage:'ready'}).some(e=>e.includes('不能退回')));
+  ok('C02 未登记策略按不支持处理',!composition.supportsComposition(baseTask('nope-1')));
   ok('C02 旧策略无组合标记接受',composition.policyErrors(baseTask('structural-lines-1'),{composition:false}).length===0);
   ok('C02 新策略缺 panel 计划在 ready 被拒',composition.policyErrors(baseTask('evidence-composition-1'),{composition:false,stage:'ready'}).some(e=>e.includes('不能退回')));
   ok('C02 新策略缺 panel 计划在 research 不拒',composition.policyErrors(baseTask('evidence-composition-1'),{composition:false,stage:'research'}).length===0);
@@ -313,7 +350,7 @@ function baseDoc(){
   const doc=baseDoc();doc.slides[1]=baseSlide();doc.analysisAlgorithm='semantic-v2';
   const oldTask=baseTask('structural-lines-1');
   const errs=composition.policyErrors(oldTask,{composition:true,stage:'ready'});
-  ok('C04 旧策略+组合标记拒绝',errs.length>0&&errs.some(e=>e.includes('需要显式视觉策略')));
+  ok('C04 旧策略+组合标记拒绝',errs.length>0&&errs.some(e=>e.includes('需要支持复合证据的视觉策略')));
 }
 
 // —— 兼容投影：派生 region.form / page.form / selection / capacity ——

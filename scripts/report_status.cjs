@@ -22,6 +22,8 @@ function inspect(taskFile,{auditFile,reviewFile}={}){
   if(doc){
     if(doc.schemaVersion===3&&task.version===2)limitations.push('analysis-review1 未覆盖 slides.exhibit、标题及侧栏；VALID 仅表示现有合同有效。');
     if(task.version===3)limitations.push(...require('./analysis_projection.cjs').project(doc).warnings.map(w=>w.slideId+'：'+w.message));
+    // 推进诊断：相邻页分工可能重叠。只提示，不阻断编译；由审查者逐条处置。
+    limitations.push(...require('./narrative_contract.cjs').diagnostics(doc,{task}).map(w=>w.message));
     stage('analysis-review',()=>doc.schemaVersion===3?require('./analysis_review_contract.cjs').check(doc,{task:contract.rebaseAnalysisTask(task,baseDir,path.dirname(blueprintFile)),baseDir:path.dirname(blueprintFile)}):[]);
     stage('pages',()=>{
       if(!task.pages?.record)return ['task 尚未绑定 pages.record'];

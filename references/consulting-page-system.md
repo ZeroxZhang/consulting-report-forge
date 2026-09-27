@@ -14,6 +14,16 @@
 | 含义区 | 将发现转换为取舍、风险或行动 | 复述标题、堆“因此建议” |
 | 来源区 | 给可核查出处和关键限定 | 微字、截断、与页码冲突 |
 
+### 重点感不是排版风格，是可测量的结果
+
+读者第一眼落在哪里，哪里就是这一页真正的重点。三件事决定它，都可以在成稿上量出来：
+
+1. **收束唯一。** 每个正文页恰有一个 `data-reading-role="takeaway"` 节点，装这一页唯一要被记住的那句话。标题给判断，副标题给口径，正文给证明，收束给结论——四处都在下判断，读者就无从判断哪个重要。
+2. **字号次序。** 标题是全页最大的字级。正文里出现比标题更大的字，读者会从那里开始读，页面就有了第二个起点。
+3. **声明与画面一致。** 蓝图声明的 primary 应当是页面上实际最大的展品。确实需要"大图作背景、小表作主证"这类非常规组织时，让它是有意的，而不是版位比例的副产品。
+
+前两条在 `narrative-focus-1` 下是硬判据与强制处置诊断；第三条是对账提示，须结合画面判断。副标题复述标题会出诊断——标题已经给出判断，副标题该写单位、期间、样本或分母。
+
 ### 密度不是拥挤
 
 | 密度 | 合理构成 | 适用页面 | 不可接受的替代 |
@@ -67,6 +77,13 @@
 | 单个强证据 | 全幅单图、图内注释 | 支持证据确有用途，单图没有遗漏必要关系 |
 
 在 `exhibit.semantics.composition` 登记组合结构：`panels` 用稳定键登记每件展品的任务、形式、数据、容量；`relations` 解释组合关系；`scaleGroups` 记录跨图量尺约定。`visual.regions` 只声明位置与 panelRef，旧格式字段由编译适配层派生。`anchorPanel` 是阅读入口，与布局 primary 独立。密度按证据职责簇计算，不按图数。
+
+量尺检查分为两条明确路径：
+
+- `check: "auto"` 当前只支持 `kit.dumbbell` 的线性数值轴。每个 panel 的 `scale` 必须提供 `domain: [min,max]`、`unit`、`scaleType: "linear"`；共同量尺组也填写这三项。渲染 spec 显式传入相同的 `domain` 与 `unit`。渲染器写出最终实际量尺，屏幕与打印探针核对数据点坐标及实际绘图区像素跨度；相同上下界但绘图区长度不同也不能直接比较长度。
+- 其他形式、自绘 SVG 或无法可靠自动测量的量尺使用 `check: "manual"`，写明比较依据和边界。QA 为各量尺组、panel 和屏幕／打印媒介保留人工告警；最终审查必须逐条处置，不能把声明或缺少元数据记为自动通过。
+
+组合页的容量和瀑布对账均以 panel 为作用域；每张瀑布提供自己的 `waterfall.input`。页级旧合同只用于非组合页，不把主图容量施加给次图。
 
 ## 目录布局的版心与模块网格
 
@@ -140,6 +157,7 @@
 | `html.finding` | `.finding > .finding__verdict`＋`.finding__grounds > .finding__step`（内含 `.finding__rank` / `.finding__label` / `.finding__why`）＋`.finding__limit` | **是**：本组件要求判断、限定、至少3条依据及正确档位；依据较少时用 `html.text`，不为组件补造内容 |
 | `html.table` | `.data-table`（`th` / `td` / `.num` / `.selected` / `.group`）；带数据条的用 `.analytical-table`（`caption` / `.column-unit` / `.table-bar` / `.total`） | 否 |
 | `html.matrix` | `.evidence-grid`、`.microbar`、`.matrix-note`、`.decision-strip`、`.evidence-note`、`.status-good` / `.status-risk` / `.status-caution` | 否 |
+| 收束节点（任意 form） | 正文页恰一个带 `data-reading-role="takeaway"` 的节点，可搭配引擎的 `.takeaway` 样式 | **是**：`narrative-focus-1` 下数量必须恰为 1，屏幕与打印两个媒介都要真的在；类名只是样式，语义靠 `data-reading-role` 这个显式标记 |
 
 **写样式时的字重陷阱**：`assets/consulting-layouts.css` 里写 `font-weight:700` 是可以的，但复用内置样式时应把选择器加入 `assets/deck-typography.js` 的归一化名单，或直接使用合同接受的正文400/500/600字重（`b,strong,.data-table th,.row-label,…` 那一行）——归一化把 700 拉回 600 才是字重合同的落点。名单漏了新选择器，成稿审计就会报"正文字重只能用 400/500/600"。（实测：`.status-label` / `.row-label` / `.analytical-table caption` 都靠这份名单归到 600。）
 

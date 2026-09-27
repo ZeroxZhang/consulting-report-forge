@@ -238,11 +238,39 @@ function verifyDeck(doc, slides, {warnings = []} = {}) {
     if (!slide.form) { errors.push('第 ' + slide.page + ' 页缺少 data-form；逐页显式声明，没有静默默认值'); return; }
     try { forms.get(slide.form); } catch (error) { errors.push('第 ' + slide.page + ' 页 ' + error.message); return; }
     if (slide.form !== declared.form) errors.push('第 ' + slide.page + ' 页 data-form="' + slide.form + '" 与 pages.json 的 ' + declared.form + ' 不一致');
-    if(doc.blueprintSchemaVersion===3&&declared.form==='html.kpi'){
+    /* 单页焦点：一页只讲一件事，且这件事在页面上收束成一句。
+       蓝图侧的 adds/proves 说明"要讲什么"，这里核的是"页面上到底有几处重点"。
+       只在 narrative-focus-1 下生效；旧策略的成稿没有这个标记，不追溯返工。 */
+    const visualCaps = (() => { try { return require('./contract_capabilities.cjs').visualPolicy(slide.policyName || 'legacy-1'); } catch (_) { return null; } })();
+    if (visualCaps?.pageFocus && slide.medium !== 'print' && slide.focus) {
+      const narrative = require('./narrative_contract.cjs');
+      errors.push(...narrative.pageFocusErrors(slide.focus, {page: slide.page}));
+      warnings.push(...narrative.samePageRepetition(slide.focus, {page: slide.page})
+        .map(w => '第 ' + w.page + ' 页焦点诊断：' + JSON.stringify(w)));
+      // 声明的主展品必须真的是这一页视觉上最大的东西；否则读者的第一眼落在别处。
+      const primaryRef = (declared.regions || []).find(r => r.role === 'primary')?.panelRef;
+      const areas = Array.isArray(slide.focus.panelAreas) ? slide.focus.panelAreas : [];
+      const primary = areas.find(a => a.panelId === primaryRef);
+      const largest = [...areas].sort((a, b) => b.area - a.area)[0];
+      if (primary && largest && largest.panelId !== primaryRef && largest.area > primary.area * 1.25) {
+        warnings.push('第 ' + slide.page + ' 页焦点诊断：' + JSON.stringify({code: 'N-PRIMARY-NOT-LARGEST', page: slide.page,
+          message: '本页声明的 primary 是 panel ' + primaryRef + '（绘制面积 ' + primary.area + '），但 panel ' + largest.panelId
+            + ' 的绘制面积 ' + largest.area + ' 明显更大。主展品与第一眼的落点不一致，请确认是有意为之，或调整版位比例'}));
+      }
+      // 正文里出现比标题还大的字，读者会从那里开始读，页面就有了第二个起点。
+      const titleFont = slide.focus.title?.font || 0;
+      if (titleFont > 0 && slide.focus.largestBodyFont > titleFont + 0.5) {
+        warnings.push('第 ' + slide.page + ' 页焦点诊断：' + JSON.stringify({code: 'N-BODY-LARGER-THAN-TITLE', page: slide.page,
+          message: '正文里有 ' + slide.focus.largestBodyFont + 'px 的文字大于标题的 ' + titleFont + 'px（「'
+            + String(slide.focus.largestBodyText || '').slice(0, 24) + '」）：字号最大的地方就是读者第一眼，'
+            + '除非它确实是本页重点，否则应降到标题之下'}));
+      }
+    }
+    if(!declared.composition&&doc.blueprintSchemaVersion===3&&declared.form==='html.kpi'){
       if(!Number.isInteger(slide.kpiCards)||slide.kpiCards<1)errors.push('第 '+slide.page+' 页声明 html.kpi，成稿须有可见 KPI 卡片');
       else if(declared.capacity?.items!==undefined&&slide.kpiCards>declared.capacity.items)errors.push('第 '+slide.page+' 页实际 KPI 卡片 '+slide.kpiCards+' 张，超过蓝图计划 '+declared.capacity.items);
     }
-    if(doc.blueprintSchemaVersion===3&&declared.form==='html.finding'){
+    if(!declared.composition&&doc.blueprintSchemaVersion===3&&declared.form==='html.finding'){
       const findings=Array.isArray(slide.finding)?slide.finding:[];
       if(findings.length!==1)errors.push('第 '+slide.page+' 页声明 html.finding，成稿须有且仅有一个可见 .finding 组件');
       for(const finding of findings){
@@ -252,7 +280,7 @@ function verifyDeck(doc, slides, {warnings = []} = {}) {
         if(declared.capacity?.items!==undefined&&actual>declared.capacity.items)errors.push('第 '+slide.page+' 页实际 finding 依据 '+actual+' 条，超过蓝图计划 '+declared.capacity.items);
       }
     }
-    if (doc.blueprintSchemaVersion === 3 && Array.isArray(slide.exhibits) && ['exhibit-kit','echarts-recipes','precision','diagram'].includes(forms.get(declared.form).module) && forms.get(declared.form).kind === 'svg') {
+    if (!declared.composition && doc.blueprintSchemaVersion === 3 && Array.isArray(slide.exhibits) && ['exhibit-kit','echarts-recipes','precision','diagram'].includes(forms.get(declared.form).module) && forms.get(declared.form).kind === 'svg') {
       const matching=slide.exhibits.filter(e=>e.form===declared.form);
       if(!matching.length)errors.push('第 '+slide.page+' 页缺少与主形式 '+declared.form+' 对应的带形式标记图示');
       for(const exhibit of matching){
@@ -268,12 +296,35 @@ function verifyDeck(doc, slides, {warnings = []} = {}) {
     }
     // 复合证据逐 panel 核对：稳定身份、形式、容量、漏图与额外展品。
     if (declared.composition && Array.isArray(slide.exhibits)) {
-      const expected=require('./composition_contract.cjs').expectedPanels(declared);
+      const compositionApi=require('./composition_contract.cjs');
+      const expected=compositionApi.expectedPanels(declared);
+      errors.push(...compositionApi.verifyScales(declared.composition,slide.exhibits,{warnings,where:'第 '+slide.page+' 页'}));
       const byPanel=new Map();
       for(const exhibit of slide.exhibits){const pid=exhibit.panelId;if(!pid)continue;if(!byPanel.has(pid))byPanel.set(pid,[]);byPanel.get(pid).push(exhibit);}
       for(const exp of expected){
         const found=byPanel.get(exp.panelId)||[];
         const panelForm=exp.form;
+        const panelFacts=slide.panels?.find(p=>p.panelId===exp.panelId);
+        if(Array.isArray(slide.panels)&&!panelFacts?.visible)errors.push('第 '+slide.page+' 页 panel '+exp.panelId+' 缺少可见审计根');
+        if(['html.kpi','html.finding'].includes(panelForm)){
+          const count=panelForm==='html.kpi'?panelFacts?.kpiCards:panelFacts?.finding?.[0]?.grounds?.length;
+          if(panelForm==='html.finding'&&panelFacts?.finding?.length!==1)errors.push('第 '+slide.page+' 页 panel '+exp.panelId+' 须有且仅有一个可见 finding');
+          const result=capacityPolicy.inspect(panelForm,{items:count},{requireAll:true});
+          errors.push(...result.errors.map(e=>'第 '+slide.page+' 页 panel '+exp.panelId+' '+e));
+          warnings.push(...result.warnings.map(w=>'第 '+slide.page+' 页 panel '+exp.panelId+' '+w));
+          if(!Number.isInteger(count)||count<1)errors.push('第 '+slide.page+' 页 panel '+exp.panelId+' 缺少可见 '+panelForm+' 内容');
+          if(count>exp.capacity?.items)errors.push('第 '+slide.page+' 页 panel '+exp.panelId+' 实际 items='+count+' 超过该 panel 计划 '+exp.capacity.items);
+        }
+
+        if(exp.waterfall){
+          const measured=slide.waterfall?.byPanel?.find(w=>w.panelId===exp.panelId);
+          try{
+            const chart=waterfall.diagnoseSpec(exp.waterfall.input).chart;
+            const block={...exp.waterfall,status:'verified',residual:chart.residual,tolerance:chart.tolerance,nodes:chart.bars.length};
+            if(measured?.axes!==1)errors.push('第 '+slide.page+' 页 panel '+exp.panelId+' 必须恰有一条可见瀑布对账轴');
+            errors.push(...waterfallMismatches({waterfall:measured},{waterfall:block},slide.page+' panel '+exp.panelId));
+          }catch(e){errors.push('第 '+slide.page+' 页 panel '+exp.panelId+' 无法核对瀑布：'+e.message);}
+        }
         const isSvg=['exhibit-kit','echarts-recipes','precision','diagram'].includes(forms.get(panelForm).module)&&forms.get(panelForm).kind==='svg';
         if(isSvg&&!found.some(e=>e.form===panelForm))errors.push('第 '+slide.page+' 页 panel '+exp.panelId+' 缺少与形式 '+panelForm+' 对应的带形式标记图示');
         for(const exhibit of found.filter(e=>e.form===panelForm)){

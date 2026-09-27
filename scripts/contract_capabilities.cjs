@@ -8,12 +8,16 @@ const versions=Object.freeze({
 });
 function capabilities(task){const version=task&&Object.hasOwn(task,'version')?task.version:1;if(!Number.isInteger(version)||!Object.hasOwn(versions,version))throw Error('不支持的任务合同版本：'+version);return versions[version];}
 
-/* 视觉策略能力。evidence-composition-1 必须包含 structural-lines-1 的全部检查，再加逐 panel 检查。
-   waterfallScope 决定瀑布体检作用域：旧策略保持页面级冻结行为，新策略下沉到 panel。 */
+/* 视觉策略能力。每一项都必须包含前一项的全部检查，再加自己的新增项——
+   narrative-focus-1 ⊃ evidence-composition-1 ⊃ structural-lines-1。换策略值不能让细线检查意外失效。
+   waterfallScope 决定瀑布体检作用域：旧策略保持页面级冻结行为，新策略下沉到 panel。
+   narrative/pageFocus/visualFocus 是 1.6.0 后半轮的能力：整册推进、单页只讲一件事、重点感实测。
+   能力值一旦存在就不原地改语义——已经产出的 evidence-composition-1 报告保持原解释。 */
 const VISUAL_POLICIES=Object.freeze({
-  'legacy-1':Object.freeze({structuralLines:false,perPanel:false,composition:false,waterfallScope:'page',scaleGroups:false,panelIdentity:false}),
-  'structural-lines-1':Object.freeze({structuralLines:true,perPanel:false,composition:false,waterfallScope:'page',scaleGroups:false,panelIdentity:false}),
-  'evidence-composition-1':Object.freeze({structuralLines:true,perPanel:true,composition:true,waterfallScope:'panel',scaleGroups:true,panelIdentity:true})
+  'legacy-1':Object.freeze({structuralLines:false,perPanel:false,composition:false,waterfallScope:'page',scaleGroups:false,panelIdentity:false,narrative:false,pageFocus:false,visualFocus:false}),
+  'structural-lines-1':Object.freeze({structuralLines:true,perPanel:false,composition:false,waterfallScope:'page',scaleGroups:false,panelIdentity:false,narrative:false,pageFocus:false,visualFocus:false}),
+  'evidence-composition-1':Object.freeze({structuralLines:true,perPanel:true,composition:true,waterfallScope:'panel',scaleGroups:true,panelIdentity:true,narrative:false,pageFocus:false,visualFocus:false}),
+  'narrative-focus-1':Object.freeze({structuralLines:true,perPanel:true,composition:true,waterfallScope:'panel',scaleGroups:true,panelIdentity:true,narrative:true,pageFocus:true,visualFocus:true})
 });
 const REFERENCE_POLICIES=Object.freeze({
   'single-page-1':Object.freeze({referenceBlock:false}),

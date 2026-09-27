@@ -228,6 +228,17 @@ try {
   const absolute = fixture(path.join(root, 'absolute'), ['alpha', 'beta'], {absoluteRecord: true}), absoluteReview = completeReview(absolute);
   rejects(() => snapshotReview({auditFile: absolute.auditFile, reviewFile: absoluteReview.reviewFile, outputDir: path.join(root, 'absolute-snapshot')}), /绝对/);
 
+  // 人工量尺项必须逐组、逐媒介处置；页级“已看过”不能替代。
+  const scaleRun=fixture(path.join(root,'manual-scales'));
+  const scaleWarnings=[];
+  const composition={panels:{main:{},support:{}},scaleGroups:{shared:{panelRefs:['main','support'],mode:'shared',check:'manual',basis:'自绘量尺没有可验证的适配器，必须实际读图核查。'}}};
+  for(const medium of ['screen','print'])require('./composition_contract.cjs').verifyScales(composition,[],{warnings:scaleWarnings,where:medium+' 第1页'});
+  scaleRun.audit.warnings.push(...scaleWarnings);write(scaleRun.auditFile,scaleRun.audit);
+  const signedScale=completeReview(scaleRun);
+  equal(reviews.validate(signedScale.review,scaleRun.audit,{baseDir:scaleRun.renderDir,auditDir:scaleRun.renderDir}),[]);
+  signedScale.review.warningReview=signedScale.review.warningReview.filter(w=>w.warning!==scaleWarnings[1]);
+  equal(reviews.validate(signedScale.review,scaleRun.audit,{baseDir:scaleRun.renderDir,auditDir:scaleRun.renderDir}).some(e=>e.includes('告警未处置')&&e.includes('print')),true);
+
   // 历史链超过上限时拒绝，不通过缓存绕过递归范围。
   const deep = fixture(path.join(root, 'deep')), base = completeReview(deep); let previousFile = base.reviewFile;
   for (let i = 1; i <= 13; i++) {

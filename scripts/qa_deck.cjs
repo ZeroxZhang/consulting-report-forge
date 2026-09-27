@@ -171,8 +171,18 @@ function parseArgs(argv){
   printCheck={expected:expected.length,missing:printMissing};
   if(boundPages){
    const printed=[];
-   for(const row of rows)printed.push({...await p.locator('.slide').nth(row.page-1).evaluate(pageProbe.inspectDom,pageProbe.WF_FORMS),page:row.page,role:row.bookends?.role});
-   errors.push(...pagesApi.verifyDeck(boundPages,printed).map(e=>'打印内容：'+e));
+   for(const row of rows)printed.push({...await p.locator('.slide').nth(row.page-1).evaluate(pageProbe.inspectDom,pageProbe.WF_FORMS),page:row.page,role:row.bookends?.role,medium:'print',policyName:taskContract?.policyVersions?.visual});
+   /* 焦点节点在两个媒介都必须真的在：屏幕上收束成一句、打印里被隐藏，等于交付的 PDF 没有重点。
+      判定按页数对账，不按元素身份——打印版可能重排，但每个正文页的收束节点数必须一致。 */
+   const focusCapability=(()=>{try{return require('./contract_capabilities.cjs').visualPolicy(taskContract?.policyVersions?.visual);}catch(_){return null;}})();
+   if(focusCapability?.pageFocus){
+    for(const row of rows){const printedCount=printed.find(x=>x.page===row.page)?.focus?.takeaways;
+     const screenCount=row.focus?.takeaways;
+     if(Number.isInteger(printedCount)&&Number.isInteger(screenCount)&&printedCount!==screenCount)errors.push('第'+row.page+'页打印媒介的 takeaway 节点数（'+printedCount+'）与屏幕（'+screenCount+'）不一致：收束节点必须在两种媒介都真实存在');}
+   }
+   const printFormWarnings=[];
+   errors.push(...pagesApi.verifyDeck(boundPages,printed,{warnings:printFormWarnings}).map(e=>'打印内容：'+e));
+   warnings.push(...printFormWarnings.map(w=>'打印图示诊断：'+w));
   }
   if(modern){await geometry.settle(p);for(const row of rows){const slide=p.locator('.slide').nth(row.page-1);if(taskContract?.version===3)row.printReadingShadow=await slide.evaluate(require('./browser_reading_audit.cjs').inspectSlide);row.printCritical=await slide.evaluate(criticalContent.inspectSlide);errors.push(...criticalContent.verifyPrint(row.critical,row.printCritical).map(e=>'第'+row.page+'页：'+e));row.printVisualPolicy=await visualPolicy.inspect(slide,taskContract?.policyVersions?.visual);errors.push(...row.printVisualPolicy.errors.map(e=>'第'+row.page+'页打印视觉禁令：'+JSON.stringify(e)));warnings.push(...row.printVisualPolicy.warnings.map(e=>'第'+row.page+'页打印视觉诊断：'+JSON.stringify(e)));}}
   if(!acceptance)await p.emulateMedia({media:'screen'});

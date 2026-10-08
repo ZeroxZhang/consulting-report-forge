@@ -6,7 +6,7 @@
 
 深度调研 · 商业分析 · 专家协作 · 数据建模 · Storyline · 视觉报告
 
-[![Version](https://img.shields.io/badge/version-1.6.0-17324D?style=flat-square)](package.json) [![License](https://img.shields.io/badge/license-Apache--2.0-007C91?style=flat-square)](LICENSE) [![Output](https://img.shields.io/badge/output-HTML%20%2B%20PDF-17324D?style=flat-square)](#你会拿到什么) [![Node](https://img.shields.io/badge/Node.js-20%2B-007C91?style=flat-square&logo=nodedotjs&logoColor=white)](#快速开始) [![GitHub Stars](https://img.shields.io/github/stars/ZeroxZhang/consulting-report-forge?style=flat-square&logo=github&label=Stars)](https://github.com/ZeroxZhang/consulting-report-forge/stargazers)
+[![Version](https://img.shields.io/badge/version-1.7.0-17324D?style=flat-square)](package.json) [![License](https://img.shields.io/badge/license-Apache--2.0-007C91?style=flat-square)](LICENSE) [![Output](https://img.shields.io/badge/output-HTML%20%2B%20PDF-17324D?style=flat-square)](#你会拿到什么) [![Node](https://img.shields.io/badge/Node.js-20%2B-007C91?style=flat-square&logo=nodedotjs&logoColor=white)](#快速开始) [![GitHub Stars](https://img.shields.io/github/stars/ZeroxZhang/consulting-report-forge?style=flat-square&logo=github&label=Stars)](https://github.com/ZeroxZhang/consulting-report-forge/stargazers)
 
 <a href="docs/showcase/skill-poster.png"><img src="docs/showcase/skill-poster.png" width="600" alt="Consulting Report Forge 技能介绍海报：研究有来源、分析有方法、表达有主线、交付有复核；真实 AI 生物制药报告选览"></a>
 
@@ -24,6 +24,14 @@
 
 **你希望得到的，是一次有依据的讨论：机会在哪里，判断为什么成立，有哪些选择，下一步怎么验证。**
 
+## 1.7.0：持久执行清单
+
+新报告在需求与路线明确后必须激活 Checklist，贯穿研究、委派、制作、验收与交付。任务状态、当前产物、提交接收和恢复线索写入独立计划；上下文压缩后先读取计划继续。图表多样性与版式布局多样性始终是两个不可豁免的固定要求，分别在规划、代表页和整册审查中核实。
+
+正式编译、验收、打包检查前置任务；日常更新清单不改变分析摘要或截图身份。打包收据与执行归档支持中断核对和新目录恢复。旧任务及旧审查合同保持原解释；视觉候选策略仍须显式选择。命令与限制见[执行清单协议](references/execution-checklist.md)。
+
+[升级方案](docs/2026-10-08-execution-checklist-upgrade-plan.md) · [实施与验证](docs/2026-10-08-execution-checklist-validation.md) · [恢复行为演练](evals/execution-checklist-20261008/README.md)
+
 ## 1.6.0：一册一条线索，一页一件事
 
 本版处理的是"稿子都对，但读起来不知道重点在哪"这一类问题。
@@ -35,7 +43,7 @@
 | **重点感可测量** | 每个正文页恰有一个收束节点，屏幕与打印都在；副标题不复述标题；实测声明的主展品与页面重心是否一致，偏差需结合画面处置 |
 | **旧稿保持原解释** | 旧任务、旧摘要、旧快照沿用原合同；新能力走显式策略，不原地改写历史记录 |
 
-**新报告默认仍是 1.5.0 的严格合同。** 复合证据与叙事视角通过显式策略启用（`report init --visual`，或对已有任务用 `migrate_strict_analysis --to-policy` 生成新目录草稿）；切换策略会使整册视觉复用失效，需要重新完成 HTML/PDF 审查，旧 PASS 不继承。
+**分析与视觉默认仍沿用 1.5.0 的严格合同；1.7.0 新建入口另外启用执行清单。** 复合证据与叙事视角通过显式策略启用（`report init --visual`，或对已有任务用 `migrate_strict_analysis --to-policy` 生成新目录草稿）；切换策略会使整册视觉复用失效，需要重新完成 HTML/PDF 审查，旧 PASS 不继承。
 
 **当前状态：候选能力已通过全部工程测试与代表页验收，尚未完成同题同模型的行为对照，因此没有切换新建任务默认。** 六份三组先导成稿已归档评估：两版在定性与单图任务上无显著差异，量化比较任务上旧版更易读。据此的判断是：复合证据与表达规则补上了工程能力，但"比较目标是否真的落到跨页编码"仍需复测确认。
 
@@ -109,7 +117,7 @@
 
 先制作核心定量页、复杂页和定性／行动页等代表页，确认信息密度、字号、留白与阅读顺序，再扩展全册。图表表达真实关系，布局安排阅读节奏，注释与来源保留判断的依据。
 
-**默认尽可能多地使用不同种类的图表与图示、不同类型的版式布局。** 在证据适配、表达准确、阅读清晰的范围内，先统筹整册选型，再制作与验收；合理重复须有具体的比较或阅读需要。不设统一种数配额，换颜色、组件名称或图内排列不算实质版式变化。执行规则见[默认前置约束](SKILL.md#默认前置约束)。
+**必须尽可能多地使用不同类型的图表，尽可能多地采用不同版式组织每一页内容。** 在证据适配、表达准确、阅读清晰的范围内，先统筹整册选型，再制作与验收；合理重复须有具体的比较或阅读需要。不设统一种数配额，换颜色、组件名称或图内排列不算实质版式变化。执行规则见[固定前置约束](SKILL.md#固定前置约束)。
 
 **布局、密度与留白一起设计。**
 
@@ -250,6 +258,7 @@
 | **独立 HTML 报告** | 离线阅读、翻页、全屏、整册总览、页码链接；字体与图表随文件交付，成品内置同版 PDF 下载 |
 | **同版 PDF** | 发送、打印与归档，关键图表和数据直接可见 |
 | **任务目录中的可编辑底稿** | 内容蓝图、页面源稿和任务配置留在制稿目录；按需另行交接，不随默认交付包分发 |
+| **任务目录中的执行计划** | 保存目标、固定要求、待办、委派与接收记录；支持中断及上下文压缩后恢复，不随默认交付包分发 |
 | **任务目录中的检查记录** | 页面截图、自动审计及实际审查记录用于内部复核；按需另行交接，不随默认交付包分发 |
 
 接收者只需要浏览器或 PDF 阅读器，无需安装制作工具。
@@ -332,21 +341,25 @@ npm ci
 
 ## 文档与验证
 
-统一入口支持任务创建、只读诊断、编译、装配、验收、审查材料准备与交付。它不会代写业务结论或自动签署审查：
+统一入口支持任务创建、清单更新、只读恢复、编译、装配、验收、审查材料准备与交付。它不会代写业务结论或自动签署审查：
 
 ```sh
-node scripts/report.cjs init /任务/新报告
+node scripts/report.cjs init /任务/新报告 --work-mode analytical
 node scripts/report.cjs status /任务/新报告/task.json
 node scripts/report.cjs next /任务/新报告/task.json
+node scripts/report.cjs resume /任务/新报告/task.json
 ```
 
-完整命令见[生产入口](docs/upgrade-production-entry.md)。新任务自动使用严格合同，无需选择版本；旧任务不会自动迁移。
+完整命令见[生产入口](docs/upgrade-production-entry.md)。新任务自动使用严格合同与执行清单；需求和路线明确后，按[执行清单协议](references/execution-checklist.md)激活计划并完成当前阶段前置项。旧任务不会自动迁移；旧 task3 可通过 `report.cjs adopt old-task.json --output 新目录` 显式接入。
 
-**已经完成的验证：** 1.5.0 通过内容变异、精确对账、旧新兼容、参考资料、浏览器排版、任务锁和中断恢复等回归；三类实际案例完成双媒介及双角色审查，局部修订准确识别单页重审。阅读检测仍有明确未覆盖范围，未进行同题同模型的提速对照。此前的 MES、分析行为评估及合成生产链验证保留，详见下方记录。
+**1.7.0 验证：** 全量合同回归、实际 HTML/PDF 生产链和三类干净上下文恢复演练通过。生产链使用明确标识的合成审查；行为演练不证明总体报告质量提升或提速，详见[验证记录](docs/2026-10-08-execution-checklist-validation.md)。
+
+**此前完成的验证：** 1.5.0 通过内容变异、精确对账、旧新兼容、参考资料、浏览器排版、任务锁和中断恢复等回归；三类实际案例完成双媒介及双角色审查，局部修订准确识别单页重审。阅读检测仍有明确未覆盖范围，未进行同题同模型的提速对照。此前的 MES、分析行为评估及合成生产链验证保留，详见下方记录。
 
 | 想进一步了解 | 文档 |
 |---|---|
 | 整套制作流程 | [技能入口](SKILL.md) · [HTML/PDF制作与交付](references/static-html-pdf.md) |
+| 强制清单、委派和恢复 | [执行协议](references/execution-checklist.md) · [生产入口](docs/upgrade-production-entry.md) · [维护边界](docs/maintainer-contracts.md) |
 | 方法、故事线与专家协作 | [分析方法](references/analysis-methods.md) · [咨询叙事](references/consulting-storyline.md) · [协作协议](references/collaboration.md) |
 | 内容一致性与来源 | [内容制作](references/content-authoring.md) · [证据身份](references/evidence-ledger.md) |
 | 页面质量与后续修订 | [视觉验收](references/visual-qa.md) · [图示语义合同](references/diagram-semantics.md) · [审查复用](references/review-reuse.md) |
@@ -360,6 +373,7 @@ node scripts/report.cjs next /任务/新报告/task.json
 
 ```sh
 npm test                     # 计算、合同、兼容性与审查复用
+npm run test:execution       # 执行清单、强制约束与真实 HTML/PDF 生产链
 npm run test:render          # 浏览器布局及瀑布绑定回归
 npm run test:upgrade-r1      # 只读状态、字体分类、旧缺口复现与候选规则
 npm run test:upgrade-r2      # 严格签名、迁移、影子测量与合成生产链

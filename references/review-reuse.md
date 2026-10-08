@@ -52,7 +52,7 @@ node scripts/prepare_review_reuse.cjs /任务/renders/audit.json /任务/snapsho
 
 草稿另用顶层 `priorReview` 关联上一轮完整审查，即使所有页面都改变、没有任何可继承覆盖，也必须继续追踪旧未决问题。问题优先沿用已有 `id`；没有 id 时按位置、严重度和描述识别，同文不同页不能互相抵消。修复后保留问题身份并标记 `resolved`，不能直接删除。该引用只记录历史，不增加页面覆盖；聚合与快照会保留并验证它。
 
-审查者需要实际查看待重审页的 HTML/PDF，将本轮真实覆盖追加到草稿的 `coverage`，重新填写三项检查的依据，处理当前告警与遗留问题，最后才设为 `complete`。`pendingPages` 是该份草稿尚未覆盖的页；多人分工时按角色覆盖的并集完成，不要求每个人都看全册。更换审查者时，不能沿用另一人的继承记录。
+审查者需要实际查看待重审页的 HTML/PDF，将本轮真实覆盖追加到草稿的 `coverage`，重新填写三项检查的依据，处理当前告警与遗留问题，最后才设为 `complete`。`pendingPages` 是该份草稿尚未覆盖的页；一般逐页审查可按角色覆盖的并集完成；启用 execution-plan-1 后，承担全册多样性判断的审查者须本人覆盖整册 HTML/PDF，不能借用同角色其他人的证据。更换审查者时，不能沿用另一人的继承记录。
 
 扩展视觉策略还须补齐[最终审查覆盖](static-html-pdf.md#最终验收与交付)：组合策略的 `panelRefs/relationRefs`，以及叙事策略的 `layers` 中的 `narrative` 与逐页 `narrativeReadings`。当前复用工具只准备基础覆盖，不自动复制这些扩展字段；`pendingPages` 为空也不表示整册组合与叙事已审。审查者须复核当前整册并补齐相应覆盖，再聚合，不能把旧字段机械复制为本轮判断。
 
@@ -72,3 +72,10 @@ node scripts/snapshot_review.cjs /任务/renders/audit.json /任务/renders/revi
 `node scripts/test_review_reuse.cjs` 使用文件级两轮验收夹具，覆盖原位置覆写、单页复用、样式/图像失效、身份与双媒介范围、历史 partial、目录迁移、来源合同不一致与篡改拒绝。它测试复用机制，不替代实际报告的视觉和分析验收。
 
 新 task3 分析使用最终 review5（semantic-v2），历史 task2 继续 review4；复用草稿的 analysisSha256 初始为空，须实际确认本轮分析后填写。分析审查摘要不直接进入视觉公共依赖，但其真实性和当前分析适用性仍由前置及最终合同核对。快照可能含内部数据，不能默认当对外材料发送。
+
+
+## 执行清单下的复用
+
+启用 `execution-plan-1` 时，复用工具在每个必要角色的首份草稿中生成两项 `qualityChecks`，初始均为 `not_reviewed`。`pendingPages` 为空也不能省略本轮 `chart-diversity` 与 `layout-diversity` 的整册判断；填写者的本人覆盖须包含全部引用证据。复杂或重大报告仍分别需要作者与独立审查者。
+
+日常更新计划进度不会改变截图公共依赖；首次启用 workflow 会改变策略身份，不能直接沿用旧全册判断。历史 review-snapshot 的核验不读取 live plan；跨目录继续制作使用[执行归档恢复](execution-checklist.md#6-打包中断与归档)，恢复副本须重新核实当前状态。

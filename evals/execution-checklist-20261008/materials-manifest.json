@@ -1,0 +1,15 @@
+{
+  "simulation": true,
+  "date": "2026-10-08",
+  "cases": [
+    "editorial-short",
+    "analytical-major",
+    "exploratory-gap"
+  ],
+  "allowedInputs": [
+    "<case>/handoff-request.md",
+    "<case>/task-context.json",
+    "<case>/resume-output.json"
+  ],
+  "note": "候选与基线使用同样模拟交接材料。fixture-task仅为生成与可复现保存，不提供给行为审查实例。未宣称候选优于基线，未测速度。"
+}

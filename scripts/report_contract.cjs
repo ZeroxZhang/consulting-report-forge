@@ -19,6 +19,8 @@ function normalize(value = {}, defaults = {}) {
     c.policyVersions=policyTable.normalizePolicies(c.policyVersions??policyTable.DEFAULT_POLICIES);
     if(c.policyVersions.references==='reference-block-1'&&(!Array.isArray(c.referenceIds)||!c.referenceIds.length||c.referenceIds.some(id=>typeof id!=='string'||!id.trim())||new Set(c.referenceIds).size!==c.referenceIds.length))throw Error('reference-block-1 须登记有序且唯一的 referenceIds');
   }else if(c.policyVersions!==undefined)throw Error('新版策略身份不能降级到旧任务合同');
+  if(c.policyVersions?.workflow){if(!c.executionPlan||Object.keys(c.executionPlan).sort().join(',')!=='id,record'||typeof c.executionPlan.id!=='string'||!c.executionPlan.id.trim()||typeof c.executionPlan.record!=='string'||!c.executionPlan.record.trim())throw Error('workflow 须绑定仅含 id/record 的 executionPlan');}
+  else if(c.executionPlan!==undefined)throw Error('executionPlan 不能脱离 workflow 或降级');
   if(c.referenceIds!==undefined&&c.policyVersions?.references!=='reference-block-1')throw Error('referenceIds 只能配套 reference-block-1');
   if(!caps.strict&&c.analysisAlgorithm!==undefined)throw Error('严格分析算法不能降级到旧任务合同');
   if(c.version===1&&(c.analysisReview!==undefined||c.analysisPreview!==undefined))throw Error('分析合同不能降级至 task version 1');
@@ -70,6 +72,7 @@ function load(file, output, defaults = {}) {
     if (raw[key].sha256 && raw[key].sha256 !== actual) throw Error(key + '记录版本已变化，请重新编译并更新 task.json');
     raw[key] = {...raw[key], record: path.relative(path.dirname(path.resolve(output)), record), sha256: actual};
   }
+  if(raw.executionPlan?.record)raw.executionPlan={...raw.executionPlan,record:path.relative(path.dirname(path.resolve(output)),path.resolve(path.dirname(path.resolve(file)),raw.executionPlan.record))};
   if(raw.pages?.record) { const pages=JSON.parse(fs.readFileSync(path.resolve(path.dirname(path.resolve(output)),raw.pages.record),'utf8')); if(pages.blueprintSchemaVersion===3)raw.analysisPreview=pages.preview===true; }
   return normalize(raw, defaults);
 }
@@ -108,7 +111,7 @@ function verifyPlan(contract, baseDir, pagesDoc) {
 /* 研究阶段只读配置，不要求尚未生成的 pages/audit 文件。 */
 function rebaseAnalysisTask(task,from,to){
   const value={...task};
-  if(task.analysisReview?.record)value.analysisReview={...task.analysisReview,record:path.relative(to,path.resolve(from,task.analysisReview.record))};
+  for(const key of ['analysisReview','executionPlan'])if(task[key]?.record)value[key]={...task[key],record:path.relative(to,path.resolve(from,task[key].record))};
   return value;
 }
 function readAnalysisTask(file,blueprintFile){

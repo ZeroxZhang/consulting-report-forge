@@ -35,8 +35,8 @@ function parseArgs(argv){
  if(out.tier==='iteration'&&!out.pages)throw Error('iteration 档要指定 --pages（如 --pages 3 或 --pages 2,5）：它的缺项清单假定只跑了点名的页；要看整册但不出 PDF 请用 --tier smoke');
  return out;
 }
-(async()=>{
- const options=parseArgs(process.argv.slice(2)),tier=options.tier;
+async function inspect(options){
+ const tier=options.tier;
  const input=path.resolve(options.input),out=path.resolve(options.directory);
  if(!fs.statSync(input).isFile())throw Error('需要HTML文件');fs.mkdirSync(out,{recursive:true});
  const acceptance=tier==='acceptance',partial=!!options.pages;
@@ -238,9 +238,13 @@ function parseArgs(argv){
  if(acceptance&&htmlArtifact.sha256!==initialSha256)errors.push('QA期间HTML文件发生变化，截图/PDF证据不能绑定当前文件');
  if(acceptance&&pdfArtifact.sha256&&taskContract&&htmlArtifact.sha256===initialSha256){try{evidenceManifest=auditEvidence.manifest(evidenceSnapshot,rows,pdfRows,{html:htmlArtifact,pdf:pdfArtifact},taskContract,out,{browser:browser.version(),viewport:{width:1400,height:820},pdfRasterScale:4/3});}catch(e){errors.push('审查证据关联失败：'+e.message);}}
  const missingStages=[...TIER_SKIPS[tier]];
- const report={tier,acceptance:{complete:acceptance&&!missingStages.length,tier,missingStages},scope:{pages:rows.map(r=>r.page),partial,of:total},taskContract,pagesCheck,pagesInventory:pagesCheck.inventory||null,evidenceManifest,criticalCoverage:modern?'DECLARED_ONLY：只检查声明的关键内容，不证明全部业务语义覆盖':'LEGACY_NOT_CHECKED',documentContract,warnings,bookendsCheck,printCheck,input,pages:total,pdfPages,htmlArtifact,pdfArtifact,pdfFonts,navigation,errors,offline:offlineState,rows,visualStatus:'NOT_REVIEWED：必须实际查看每页图片与PDF',geometryStatus:rows.some(r=>r.overflow.length||r.unreadableText.length||r.charts.some(c=>!c.rendered||c.error))||errors.length?'FAIL':'PASS'};
+ const unitsCheck=require('./execution_requirements.cjs').enabled(taskContract)?(()=>{const findings=require('./check_units.cjs').inspect(htmlBuffer.toString());if(findings.length)errors.push(...require('./check_units.cjs').describe(findings));return {status:findings.length?'FAIL':'PASS',findings,htmlSha256:htmlArtifact.sha256};})():null;
+ const report={...(unitsCheck?{unitsCheck}:{}),tier,acceptance:{complete:acceptance&&!missingStages.length,tier,missingStages},scope:{pages:rows.map(r=>r.page),partial,of:total},taskContract,pagesCheck,pagesInventory:pagesCheck.inventory||null,evidenceManifest,criticalCoverage:modern?'DECLARED_ONLY：只检查声明的关键内容，不证明全部业务语义覆盖':'LEGACY_NOT_CHECKED',documentContract,warnings,bookendsCheck,printCheck,input,pages:total,pdfPages,htmlArtifact,pdfArtifact,pdfFonts,navigation,errors,offline:offlineState,rows,visualStatus:'NOT_REVIEWED：必须实际查看每页图片与PDF',geometryStatus:rows.some(r=>r.overflow.length||r.unreadableText.length||r.charts.some(c=>!c.rendered||c.error))||errors.length?'FAIL':'PASS'};
  fs.writeFileSync(path.join(out,'audit.json'),JSON.stringify(report,null,2));
  console.log(JSON.stringify({tier,acceptance:report.acceptance.complete,pages:total,scope:report.scope,geometry:report.geometryStatus,warnings:report.warnings.length,errors,overflow:rows.filter(r=>r.overflow.length).map(r=>({page:r.page,items:r.overflow})),tiny:rows.filter(r=>r.tinyText.length).map(r=>r.page),offline:offlineState}));
- if(report.geometryStatus==='FAIL')process.exitCode=1;
+ return report;
  }finally{await browser.close()}
-})().catch(e=>{console.error(e.message);process.exitCode=1});
+}
+async function run(args,context){const options=parseArgs(args),task=taskContracts.read(fs.readFileSync(options.input,'utf8'));if(!require('./execution_requirements.cjs').enabled(task))return inspect(options);const execution=require('./execution_plan.cjs'),ctx=execution.locate(task,path.dirname(path.resolve(options.input)));return require('./task_store.cjs').lockedAsync(ctx.root,'qa',async()=>{if(options.tier==='acceptance')execution.assertGate(task,path.dirname(path.resolve(options.input)),'acceptance');return inspect(options);},context);}
+if(require.main===module)run(process.argv.slice(2)).then(r=>{if(r.geometryStatus==='FAIL')process.exitCode=1;}).catch(e=>{console.error(e.message);process.exitCode=1});
+module.exports={run,parseArgs};

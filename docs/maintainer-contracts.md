@@ -8,7 +8,7 @@
 
 ## 实际合同组合与维护入口
 
-当前运行时为 1.6.0；新任务使用严格合同，旧任务保持原合同。以下是代码实际存在的路径，不表示任意版本可自由混搭。
+当前运行时为 1.7.0；新任务使用严格合同，旧任务保持原合同。以下是代码实际存在的路径，不表示任意版本可自由混搭。
 
 | 路径 | 合同组合 | 产生与校验 |
 |---|---|---|
@@ -41,3 +41,14 @@
 目前真实工程边界仍包括两种画幅、静态HTML/PDF、自定义表达的作者验证责任，以及瀑布对账声明的作用域与对应渲染器的节点上限。旧视觉策略按页面核对单一对账声明，组合与叙事策略按 panel 核对，允许同页多张独立瀑布；同一作用域仍须恰有一个对账声明。没有新增箱线、地图等专用渲染器。
 
 审查复用中的“上一轮”“历史记录”表示同一报告的修订证据，不是技能产品版本。独立审查是否必需由任务风险决定；简单且无重大结论的任务可只保留作者审查。
+
+
+## execution-plan-1：进度与报告语义分离
+
+新建入口增加可选第五槽 `policyVersions.workflow` 与仅含 `id/record` 的 executionPlan；全局四槽 DEFAULT_POLICIES 不改。新增计划 schema1、执行归档 schema1、打包收据 schema1，均独立于 blueprint3、task3、pages4、analysis-review2、final-review5 和 review-snapshot1。固定要求目录为 `execution_requirements.cjs`，所有正式入口复用 `execution_plan.assertGate`。
+
+计划动态字段不进入 analysis_projection，也不加入 review_contract.taskRecords。audit_evidence 仅纳入 plan ID，不纳入 locator/revision；首次启用 workflow 仍会改变公共依赖，不能复用旧全册判断。qualityChecks 按 workflow 条件校验且经 aggregate 原样收集，两项各自覆盖所有必要角色与该审查者本人的当前双媒介证据。
+
+根任务与派生任务、QA 和打包共享 task_store 锁；内部上下文由进程内 WeakSet 识别，不提供 CLI 绕锁参数。QA 被统一入口直接调用，避免父进程占锁后子进程再次抢锁。生产记录核对 published、开始时输入摘要、生产者计划身份和当前依赖，不能把任意旧文件在接收时盖成当前版本。
+
+当前失效采用保守范围：输入文件/蓝图/公共分析变更会要求重新核实相关计划任务；不宣称已实现精确到单页的执行调度。现有视觉证据逐页复用机制保持独立。移动恢复保留历史快照，但重建当前生产链，不自动继承已完成状态。运行 `npm run test:execution` 验证状态与真实渲染流程；审查夹具均明确为合成数据。

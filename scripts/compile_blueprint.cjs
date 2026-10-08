@@ -13,7 +13,7 @@ function sameFile(left, right) {
   return (a.dev === b.dev && a.ino === b.ino) || fs.realpathSync(left) === fs.realpathSync(right);
 }
 
-function run(args) {
+function compile(args) {
   const [input, output, ...rest] = args;
   let snippetFile, taskFile, preview = false;
   for(let i=0;i<rest.length;i++) {
@@ -28,6 +28,7 @@ function run(args) {
   const doc = JSON.parse(fs.readFileSync(input, 'utf8'));
   const options = {ready: true, preview, baseDir:path.dirname(path.resolve(input)), ...(taskFile ? {task:require('./report_contract.cjs').readAnalysisTask(taskFile,input)} : {})};
   if(preview&&doc.schemaVersion!==3)throw Error('--preview 分析编译只支持 schema3');
+  if(!preview)require('./execution_plan.cjs').assertGate(options.task,options.baseDir,'ready');
   const checked = blueprint.validate(doc, options);
   if (checked.status !== 'PASS') throw Error('blueprint 未准备好：' + checked.errors.join('；'));
   const pages = content.compile(doc, options);
@@ -49,6 +50,8 @@ function run(args) {
   return {status: 'PASS', pages: pages.pages.length, blueprintSha256: pages.blueprintSha256, output: path.resolve(output),
     ...(snippetFile ? {snippets: path.resolve(snippetFile)} : {})};
 }
+
+function run(args,context){const idx=args.indexOf('--task'),file=idx<0?null:args[idx+1];if(file&&require('./execution_requirements.cjs').enabled(JSON.parse(fs.readFileSync(file,'utf8')))){const store=require('./task_store.cjs');return store.locked(store.rootForTask(file),'compile',()=>compile(args),context);}return compile(args);}
 
 if (require.main === module) {
   try { console.log(JSON.stringify(run(process.argv.slice(2)), null, 2)); }

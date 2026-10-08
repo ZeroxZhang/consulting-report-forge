@@ -50,3 +50,8 @@
 ## 新分析合同的落点
 
 前置审查按 [analysis-review](analysis-review.md) 记录实际实例、覆盖与摘要；候选研究结果经主笔核对后写顶层 claims，工作项只引用它。遇到内部信息缺口按 [analysis-workflow](analysis-workflow.md) 调用真实询问能力并暂停依赖分支；不要让专家各自向用户重复问同一问题。
+
+
+## 持久任务交接
+
+新工作流必须遵循[执行清单协议](execution-checklist.md#4-委派与接收)。委派输入携带 plan ID、scopeRevision、任务/attempt ID、输入摘要、固定要求及验收标准。共享计划与蓝图由主 Agent 单写；结果先提交，再核实与接收。压缩恢复先读持久计划；未知实例状态不能当成失败或完成。

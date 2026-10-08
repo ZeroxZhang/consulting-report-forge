@@ -1,0 +1,36 @@
+{
+  "date": "2026-10-08",
+  "reviewer": "/root/recovery_requirements",
+  "scope": "独立修复复验及模拟压缩恢复；未修改运行时代码",
+  "results": [
+    {
+      "case": "cancelled-start-and-delegate",
+      "status": "PASS",
+      "observed": "start 和 delegate 均被拒绝：仅 pending 任务可启动；先 reopen 并说明原因"
+    },
+    {
+      "case": "resume-context-and-read-only",
+      "status": "PASS",
+      "observed": "输出包含 intake.goal/scope、decisions、blocked.reason；调用前后 execution-plan.json 字节一致"
+    },
+    {
+      "case": "structurally-corrupt-plan-restore",
+      "status": "PASS",
+      "observed": "JSON 可解析但缺少固定 chart-plan 的当前记录，能够恢复合法历史 revision 7，并保留 corrupt 副本"
+    },
+    {
+      "case": "old-package-receipt-after-current-review-change",
+      "status": "PASS",
+      "observed": "真实三页渲染、验收、合成审查及打包完成后，生成新的有效 aggregate review。旧 receipt reconcile 被拒绝：打包收据不是当前验收/审查链；计划 revision 未变；package 为 pending",
+      "actualRendering": true,
+      "actualBusinessReview": false,
+      "syntheticReview": true
+    }
+  ],
+  "notes": [
+    "实际渲染链在隔离临时目录执行，产物已清理；原 test_execution_render.cjs 仅在内存调整输出位置，项目脚本未编辑。",
+    "首次临时运行因 macOS /var 与 /private/var 别名混用导致合成观察路径无效；将临时根目录 realpath 规范化后完整重跑通过。该次失败未算作产品验收通过。",
+    "三类行为材料为模拟交接，不是三份成稿；候选实例只读允许输入，不提供隐藏标准答案。",
+    "未宣称候选优于基线或已提速。"
+  ]
+}

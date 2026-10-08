@@ -109,3 +109,8 @@ node scripts/package_delivery.cjs /任务/deck.html /任务/renders/deck.pdf /�
 ## 缓存与验证
 
 字体缓存按源摘要、实际工具版本和字符集验证，损坏项重建；`FONT_CACHE_DIR` 可指定目录，缓存不免除缺字检查。字体改动用 `.font-venv/bin/python scripts/test_font_cache.py`。`npm test` 是合同与计算回归；`npm run test:render` 做浏览器回归；`npm run test:upgrade-render` 验证内容蓝图、自由/目录布局、实际 HTML/PDF 与内容篡改防护。
+
+
+## execution-plan-1 的制作前置条件
+
+新建任务默认带持久清单，具体命令和记录格式见[执行清单协议](execution-checklist.md)。正式 compile 前完成两项多样性规划；先做代表页取图观察，再记录制作完成，之后运行 acceptance。新验收同时检查单位/排印。smoke 不覆盖正式验收记录。原始 task 的产物定位由 productionRefs 提供，使用 compile 返回的派生 task 装配与验收。最终质量审查保留独立的 chart-diversity/layout-diversity，打包后生成执行归档。

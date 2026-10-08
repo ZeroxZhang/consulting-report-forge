@@ -145,6 +145,7 @@ if (require.main === module) {
       else throw Error('未知或缺值的选项：'+args[i]);
     }
     options.baseDir=require('node:path').dirname(require('node:path').resolve(file));
+    if((options.ready||options.stage==='ready')&&!options.preview)require('./execution_plan.cjs').assertGate(options.task,options.baseDir,'ready');
     const result = validate(JSON.parse(fs.readFileSync(file, 'utf8')), options);
     console.log(JSON.stringify(result, null, 2));
     if (result.status !== 'PASS') process.exitCode = 1;

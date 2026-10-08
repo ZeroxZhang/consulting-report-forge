@@ -1,48 +1,17 @@
 /* 统一入口复用生产合同；产物写入独立运行目录，成功后原子发布索引，绝不覆写作者配置或审查。 */
 'use strict';
-const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),crypto=require('node:crypto');
-const {spawnSync}=require('node:child_process');
+const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
 const contract=require('./report_contract.cjs');
 const read=file=>JSON.parse(fs.readFileSync(file,'utf8'));
 const write=(file,value)=>fs.writeFileSync(file,JSON.stringify(value,null,2)+'\n',{flag:'wx'});
-function stateRoot(taskFile){
-  let dir=path.dirname(fs.realpathSync(taskFile));
-  for(let current=dir;path.dirname(current)!==current;current=path.dirname(current))if(path.basename(current)==='.forge'&&path.relative(current,dir).startsWith('runs'+path.sep))return current;
-  return path.join(dir,'.forge');
-}
-async function transaction(taskFile,operation,work){
-  taskFile=fs.realpathSync(taskFile);
-  const root=stateRoot(taskFile),lock=path.join(root,'lock');
-  fs.mkdirSync(root,{recursive:true});
-  try{fs.mkdirSync(lock);}catch(e){if(e.code==='EEXIST')throw Error('任务正被操作或上次中断留下锁；确认进程已退出后运行 recover-lock。');throw e;}
-  let run;
-  try{
-    write(path.join(lock,'owner.json'),{pid:process.pid,host:os.hostname(),operation,startedAt:new Date().toISOString()});
-    run=path.join(root,'runs',Date.now()+'-'+crypto.randomUUID());fs.mkdirSync(run,{recursive:true});
-    const startedAt=new Date().toISOString();
-    const result=await work(run);
-    const record={operation,taskFile,startedAt,finishedAt:new Date().toISOString(),status:'published',result};
-    write(path.join(run,'result.json'),record);
-    const pending=path.join(root,operation+'-'+crypto.randomUUID()+'.tmp');
-    try{write(pending,{record:path.join(run,'result.json')});fs.renameSync(pending,path.join(root,'latest-'+operation+'.json'));}
-    finally{if(fs.existsSync(pending))fs.unlinkSync(pending);}
-    return {...record,directory:run};
-  }catch(e){if(run)write(path.join(run,'failure.json'),{operation,status:'failed',message:e.message,finishedAt:new Date().toISOString()});throw e;}
-  finally{fs.rmSync(lock,{recursive:true,force:true});}
-}
-function recover(taskFile){
-  const lock=path.join(stateRoot(taskFile),'lock');
-  const owner=read(path.join(lock,'owner.json'));
-  if(owner.host!==os.hostname()||!Number.isInteger(owner.pid)||owner.pid<1)throw Error('锁身份无法核实，不能自动恢复');
-  try{process.kill(owner.pid,0);throw Error('锁持有进程仍在运行');}catch(e){if(e.code!=='ESRCH')throw e;}
-  fs.rmSync(lock,{recursive:true});return {status:'recovered',previousOwner:owner};
-}
-function initialize(directory,{strict=true,visual=null}={}){
+const {transaction,recover}=require('./task_store.cjs');
+function initialize(directory,{strict=true,visual=null,workMode='analytical'}={}){
   directory=path.resolve(directory);if(fs.existsSync(directory))throw Error('新任务目录已存在，拒绝重置');
   fs.mkdirSync(path.dirname(directory),{recursive:true});
   const staging=fs.mkdtempSync(directory+'.init-');
   try{
     const task=read(path.join(__dirname,'../templates/task.json'));
+    if(!['editorial','analytical','exploratory'].includes(workMode))throw Error('work-mode 仅支持 editorial/analytical/exploratory');task.workMode=workMode;
     if(strict)Object.assign(task,{version:3,analysisAlgorithm:'semantic-v2'});
     else{task.version=2;delete task.analysisAlgorithm;delete task.policyVersions;delete task.referenceIds;}
     /* 显式启用候选视觉策略的唯一入口。候选阶段默认仍是模板里的 structural-lines-1，
@@ -52,6 +21,7 @@ function initialize(directory,{strict=true,visual=null}={}){
       require('./contract_capabilities.cjs').visualPolicy(visual);
       task.policyVersions={...task.policyVersions,visual};
     }
+    if(strict){task.policyVersions.workflow='execution-plan-1';task.executionPlan={id:crypto.randomUUID(),record:'execution-plan.json'};write(path.join(staging,'execution-plan.json'),require('./execution_plan.cjs').create(task));}
     write(path.join(staging,'task.json'),contract.normalize(task));
     const blueprint=read(path.join(__dirname,'../templates/research-blueprint.json'));
     if(strict)blueprint.analysisAlgorithm='semantic-v2';
@@ -68,33 +38,44 @@ function options(args,allowed){
 async function run(args){
   const [command,taskFile,...rest]=args;
   if(!taskFile)throw Error('用法：report.cjs init <新目录> [--contract legacy|strict] [--visual narrative-focus-1]；或 status|next|compile|assemble|qa|review-pack|reuse|aggregate|snapshot|package <task.json> [选项]');
+  if(command==='adopt'){const o=options(rest,['output']);if(!o.output)throw Error('缺少 --output');return require('./execution_archive.cjs').adopt(taskFile,o.output);}
+  if(command==='restore-bundle'){const o=options(rest,['output']);if(!o.output)throw Error('缺少 --output');return require('./execution_archive.cjs').restore(taskFile,o.output);}
+  if(command==='reconcile-package'){const o=options(rest,['receipt']);if(!o.receipt)throw Error('缺少 --receipt');return require('./execution_receipt.cjs').reconcile(taskFile,o.receipt);}
+  if(command==='checkpoint'){const o=options(rest,['output']);if(!o.output)throw Error('缺少 --output');return require('./execution_archive.cjs').archive(taskFile,o.output);}
+  if(command==='archive'){if(rest.length)throw Error('archive 不接受额外参数');return transaction(taskFile,'archive',(dir,context)=>require('./execution_archive.cjs').archive(taskFile,path.join(dir,'bundle'),{complete:true,context}));}
+  if(command==='resume')return require('./execution_plan.cjs').status(taskFile,{resume:true});
+  if(command==='plan-update'){const o=options(rest,['request']);if(!o.request)throw Error('缺少 --request');return require('./execution_plan.cjs').update(taskFile,read(o.request));}
+  if(command==='plan-restore'){const o=options(rest,['history']);if(!o.history)throw Error('缺少 --history');return require('./execution_plan.cjs').restore(taskFile,o.history);}
   if(['status','next'].includes(command))return require('./report_status.cjs').run(args);
-  if(command==='init'){const o=options(rest,['contract','visual']);if(o.contract&&!['legacy','strict'].includes(o.contract))throw Error('contract 仅支持 legacy/strict');return initialize(taskFile,{strict:o.contract!=='legacy',visual:o.visual||null});}
+  if(command==='init'){const o=options(rest,['contract','visual','work-mode']);if(o.contract&&!['legacy','strict'].includes(o.contract))throw Error('contract 仅支持 legacy/strict');return initialize(taskFile,{strict:o.contract!=='legacy',visual:o.visual||null,workMode:o['work-mode']||'analytical'});}
   if(command==='recover-lock'){if(rest.length)throw Error('recover-lock 不接受额外参数');return recover(taskFile);}
   const specs={compile:['preview'],assemble:['pages','css','title'],qa:['html','tier','pages'],'review-pack':['audit'],dispositions:['audit','decisions','review'],reuse:['audit','snapshot'],aggregate:['audit','reviews'],snapshot:['audit','review'],package:['audit','review','name']};
   if(!specs[command])throw Error('未知操作：'+command);
   const o=options(rest,specs[command]),task=contract.normalize(read(taskFile)),base=path.dirname(path.resolve(taskFile));
   const need=key=>{if(!o[key])throw Error('缺少 --'+key);return path.resolve(o[key]);};
-  return transaction(taskFile,command,async dir=>{
+  return transaction(taskFile,command,async (dir,context)=>{
     if(command==='compile'){
       if(o.preview!==undefined&&!['true','false'].includes(o.preview))throw Error('preview 须为 true/false');
       if(!task.blueprint?.record)throw Error('task 缺少 blueprint.record');
       const blueprint=path.resolve(base,task.blueprint.record),output=path.join(dir,'pages.json');
-      const result=require('./compile_blueprint.cjs').run([blueprint,output,'--task',path.resolve(taskFile),'--snippets',path.join(dir,'content-snippets.html'),...(o.preview==='true'?['--preview']:[])]);
+      const result=require('./compile_blueprint.cjs').run([blueprint,output,'--task',path.resolve(taskFile),'--snippets',path.join(dir,'content-snippets.html'),...(o.preview==='true'?['--preview']:[])],context);
       const derived=structuredClone(task);
-      for(const key of ['blueprint','analysisReview'])if(derived[key]?.record)derived[key]={...derived[key],record:path.resolve(base,derived[key].record)};
+      for(const key of ['blueprint','analysisReview','executionPlan'])if(derived[key]?.record)derived[key]={...derived[key],record:path.resolve(base,derived[key].record)};
       derived.pages={record:output,sha256:contract.fileHash(output)};
       write(path.join(dir,'task.json'),derived);
       return {...result,taskFile:path.join(dir,'task.json')};
     }
-    if(command==='assemble')return require('./assemble_deck.cjs').assemble({pagesFile:need('pages'),outputFile:path.join(dir,'deck.html'),contractFile:path.resolve(taskFile),...(o.css?{cssFile:need('css')}:{}),...(o.title?{title:o.title}:{})});
+    if(command==='assemble'){
+      const sourceInputs=[need('pages'),...(o.css?[need('css')]:[])].map(record=>({record,sha256:contract.fileHash(record)}));
+      const result=await require('./assemble_deck.cjs').assemble({pagesFile:need('pages'),outputFile:path.join(dir,'deck.html'),contractFile:path.resolve(taskFile),...(o.css?{cssFile:need('css')}:{}),...(o.title?{title:o.title}:{})},context);
+      if(sourceInputs.some(r=>contract.fileHash(r.record)!==r.sha256))throw Error('装配期间作者输入发生变化');return {...result,sourceInputs};
+    }
     if(command==='qa'){
       const htmlTask=contract.read(fs.readFileSync(need('html'),'utf8'));
       if(contract.stable(htmlTask)!==contract.stable(contract.load(taskFile,need('html'))))throw Error('HTML 与指定 task 不匹配');
-      const auditDir=path.join(dir,'qa'),cmd=[path.join(__dirname,'qa_deck.cjs'),need('html'),auditDir,'--tier',o.tier||'acceptance',...(o.pages?['--pages',o.pages]:[])];
-      const result=spawnSync(process.execPath,cmd,{encoding:'utf8',maxBuffer:20*1024*1024});
-      fs.writeFileSync(path.join(dir,'command.log'),(result.stdout||'')+(result.stderr||''));
-      if(result.error||result.status!==0)throw Error('QA 未通过，详情保留于 '+path.join(dir,'command.log'));
+      const auditDir=path.join(dir,'qa');
+      const result=await require('./qa_deck.cjs').run([need('html'),auditDir,'--tier',o.tier||'acceptance',...(o.pages?['--pages',o.pages]:[])],context);
+      if(result.geometryStatus!=='PASS')throw Error('QA 未通过，详情保留于 '+path.join(auditDir,'audit.json'));
       return {auditFile:path.join(auditDir,'audit.json')};
     }
     const auditFile=need('audit'),audit=read(auditFile),auditDir=path.dirname(auditFile);
@@ -117,7 +98,7 @@ async function run(args){
       if(review.status!=='complete')throw Error('聚合审查未完成，保留 review.json 中的错误；未更新有效产物索引');
       return {reviewFile:path.join(dir,'review.json')};
     }
-    return require('./package_delivery.cjs').packageDelivery({htmlFile:path.resolve(auditDir,audit.htmlArtifact.path),pdfFile:path.resolve(auditDir,audit.pdfArtifact.path),outputDir:path.join(dir,'delivery'),baseName:o.name||'report',auditFile,reviewFile:need('review')});
+    return require('./package_delivery.cjs').packageDelivery({htmlFile:path.resolve(auditDir,audit.htmlArtifact.path),pdfFile:path.resolve(auditDir,audit.pdfArtifact.path),outputDir:path.join(dir,'delivery'),baseName:o.name||'report',auditFile,reviewFile:need('review')},context);
   });
 }
 if(require.main===module)run(process.argv.slice(2)).then(result=>{console.log(JSON.stringify(result,null,2));if(result.status==='ACTION_REQUIRED')process.exitCode=1;}).catch(e=>{console.error(e.message);process.exitCode=1;});

@@ -1,14 +1,21 @@
 # 生产入口
 
-`node scripts/report.cjs` 统一调用既有编译、装配、QA、聚合、快照、复用及打包器。所有旧 CLI 保留。新建任务默认 task3 / semantic-v2；历史维护可显式 `init --contract legacy` 创建 task2。现有任务按自身版本读取，不自动迁移。
+`node scripts/report.cjs` 统一调用既有编译、装配、QA、聚合、快照、复用及打包器。所有旧 CLI 保留。新建任务默认 task3 / semantic-v2 / execution-plan-1；历史维护可显式 `init --contract legacy` 创建 task2。现有任务按自身版本读取，不自动迁移。
 
 ```sh
-node scripts/report.cjs init /任务/新报告
+node scripts/report.cjs init /任务/新报告 --work-mode analytical
 node scripts/report.cjs status /任务/新报告/task.json
 node scripts/report.cjs next /任务/新报告/task.json
+node scripts/report.cjs resume /任务/新报告/task.json
+# 需求与路线明确后激活清单；请求文件格式见执行清单协议。
+node scripts/report.cjs plan-update /任务/新报告/task.json --request /任务/activate.json
+# 完成分析、适用的前置审查，并提交接收 chart-plan/layout-plan 后再正式编译。
 node scripts/report.cjs compile /任务/新报告/task.json
 # compile 返回派生 taskFile：原配置不变，派生任务绑定本轮 pages。
 node scripts/report.cjs assemble /编译结果/task.json --pages /任务/pages.html --css /任务/page.css
+# 先生成预览证据并实际查看代表页，再提交接收 representatives 与 production。
+node scripts/report.cjs qa /编译结果/task.json --html /装配结果/deck.html --tier smoke
+# 代表页及制作记录有效后正式验收。
 node scripts/report.cjs qa /编译结果/task.json --html /装配结果/deck.html --tier acceptance
 node scripts/report.cjs review-pack /编译结果/task.json --audit /验收结果/qa/audit.json
 # 实际完成作者/独立审查之后：
@@ -16,13 +23,17 @@ node scripts/report.cjs aggregate /编译结果/task.json --audit /验收结果/
 node scripts/report.cjs snapshot /编译结果/task.json --audit /验收结果/qa/audit.json --review /聚合结果/review.json
 node scripts/report.cjs reuse /编译结果/task.json --audit /新验收/qa/audit.json --snapshot /旧快照/snapshot
 node scripts/report.cjs package /编译结果/task.json --audit /验收结果/qa/audit.json --review /聚合结果/review.json --name 报告
+node scripts/report.cjs archive /任务/新报告/task.json
+# 实际向用户交付文件后，登记并接收 delivery 记录。
 ```
 
-正文片段的制作仍由作者完成；入口不会根据草稿自动生成业务结论。制作期可用 `compile --preview true` 或 `qa --tier iteration --pages 2,5`，两者都不能作为正式交付依据。路径按调用时工作目录解析，task 内绑定仍相对 task 文件。
+正文片段的制作仍由作者完成；入口不会根据草稿自动生成业务结论。制作期可用 `compile --preview true` 或 `qa --tier iteration --pages 2,5`，两者都不能作为正式交付依据。命令路径按调用时工作目录解析，task 内绑定相对 task 文件；plan-update 请求中的证据/工作输入路径相对计划，观察文件内的文件引用相对观察文件。
 
 ## 产物与恢复
 
 每轮写入任务目录的 `.forge/runs/<唯一ID>/`，路径保持稳定，避免移动后破坏审计中的绝对路径。整个操作成功才原子替换 `.forge/latest-<操作>.json` 指针；它只是便利索引，状态仍由真实记录与摘要校验。未发布运行中可能保留部分产物和 failure.json，不能当作有效验收。上一轮有效产物、task.json、蓝图与作者审查均不覆盖。编译生成的派生 task 与原任务共用同一任务锁。
+
+新工作流以 `execution-plan.json` 的 `productionRefs` 定位当前派生 task、HTML、验收与审查，不能扫描目录取“最新文件”。`resume` 只读展示原目标、决定、阻塞、待接收结果和待核实实例；`ACTION_REQUIRED` 表示仍有工作，不能作为已完成交付。
 
 并发操作遇锁明确失败。进程异常退出留下锁时，`recover-lock task.json` 只在本机确认原 PID 已不存在后移除锁；无法确定身份、仍有活进程、跨主机的锁均不自动解除。重新运行会生成新目录，保留前次失败诊断。所有运行目录应保留到完成快照归档；不要只搬 latest 索引。
 
@@ -40,7 +51,7 @@ node scripts/report.cjs dispositions /任务/task.json --audit /验收/audit.jso
 
 ## 显式策略
 
-新任务默认 semantic-v2、reading-shadow-1、structural-lines-1；研究骨架未有来源清单时保留 single-page-1。正文来源确定后，用下述 referenceBundle 一次派生参考块 HTML、referenceIds 和对应策略，再装配及验收。严格任务可声明以下策略；省略 policyVersions 的已有 task3 保持最初候选行为，不自动变更指纹：
+新任务默认 semantic-v2、reading-shadow-1、structural-lines-1；研究骨架未有来源清单时保留 single-page-1。正文来源确定后，用下述 referenceBundle 一次派生参考块 HTML、referenceIds 和对应策略，再装配及验收。以下是新任务的策略字段片段；保留 init 生成的 executionPlan.id/record，不把片段替换成整份 task。已有四槽 task3 保持原语义，不直接添加 workflow 冒充迁移：
 
 ```json
 {
@@ -48,7 +59,8 @@ node scripts/report.cjs dispositions /任务/task.json --audit /验收/audit.jso
     "analysis": "semantic-v2",
     "reading": "reading-shadow-1",
     "visual": "structural-lines-1",
-    "references": "reference-block-1"
+    "references": "reference-block-1",
+    "workflow": "execution-plan-1"
   },
   "referenceIds": ["S1", "S2", "S3"]
 }
@@ -61,3 +73,19 @@ node scripts/report.cjs dispositions /任务/task.json --audit /验收/audit.jso
 - `bookends.referencesBlock({sources,pageSize,columns,selectedIds,note})` 由完整来源生成连续页面，节选数量按整块计。pageSize 由作者明确选择，不自动缩字；每页 DOM 裁切和实际 PDF 条目提取继续验收。
 - 字体 cmap 诊断读取实际嵌入字体，报告缺字符与未覆盖范围；字体身份仍由 CDP 判断。cmap 并集不能证明每种字重、变体与复杂字形塑形正确。
 - 阅读检测继续只记录，不自动升级为硬失败；固定测试集通过不能外推为真实任务零漏检。
+
+
+## 1.7.0 执行计划
+
+[执行清单协议](../references/execution-checklist.md)定义激活、更新、委派、接收、只读恢复、打包收据和归档。新建默认增加 `workflow: execution-plan-1` 与 `executionPlan: {id,record}`；分析/视觉策略默认不变。旧任务不自动迁移。全册两项多样性审查不能删除或使用 not_applicable，聚合保留每位必要审查者的独立检查。
+
+
+| 操作 | 命令 | 结果 |
+|---|---|---|
+| 保存阶段检查点 | `report.cjs checkpoint task.json --output 新备份目录` | 不要求报告已完成，保留当前工作与证据 |
+| 从归档恢复 | `report.cjs restore-bundle 归档目录 --output 新工作目录` | 保留计划身份和历史，当前产物须重新核实 |
+| 核对中断的打包 | `report.cjs reconcile-package task.json --receipt 收据文件` | 只接收与当前验收、审查一致的收据 |
+| 恢复损坏计划 | `report.cjs plan-restore task.json --history 历史计划文件` | 保留损坏副本，恢复同一计划身份 |
+| 旧 task3 接入 | `report.cjs adopt old-task.json --output 新目录` | 原任务不变，新副本从草稿开始，不补签历史进度 |
+
+表中命令均以 `node scripts/` 为前缀。`snapshot` 保存已审版本，`archive` 在打包后保存完整执行恢复包，两者用途不同。完整记录字段、状态转换和迁移边界见执行清单协议。

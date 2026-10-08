@@ -1,0 +1,257 @@
+{
+  "version": 1,
+  "readOnly": true,
+  "planId": "726257b6-b70b-421c-a10b-496a1c6329b1",
+  "revision": 8,
+  "scopeRevision": 0,
+  "state": "active",
+  "progress": {
+    "total": 16,
+    "done": 1,
+    "remaining": 14
+  },
+  "intake": {
+    "goal": "将用户已批准的两页定性材料重排为便于阅读的报告，保留原意",
+    "scope": "仅现有两页中文材料；不增加研究或业务结论",
+    "deliverables": "自包含HTML与同版PDF",
+    "constraints": "分别落实图表多样性与版式多样性；不得冒充已完成的真实研究或审查",
+    "approach": "完成与本模式匹配的证据工作→整册规划→代表页→制作与双媒介验收",
+    "nextStep": "整理已批准材料的阅读顺序；同时等待已登记内部输入",
+    "openQuestions": [
+      "最终品牌标识文件待提供"
+    ]
+  },
+  "decisions": [
+    {
+      "text": "用户只要求重排已确认内容，不增加研究",
+      "at": "2026-10-08T14:03:43.492Z"
+    }
+  ],
+  "analysisWorkItems": [],
+  "gaps": [],
+  "requirements": [
+    {
+      "id": "chart-diversity",
+      "text": "图表多样性：必须尽可能多地使用不同类型的图表。",
+      "mandatory": true
+    },
+    {
+      "id": "layout-diversity",
+      "text": "版式布局多样性：必须尽可能多地采用不同的版式来组织每一页的内容。",
+      "mandatory": true
+    }
+  ],
+  "items": [
+    {
+      "id": "analysis",
+      "title": "完成问题拆解、证据、分析与缺口处置",
+      "phase": "analysis",
+      "status": "pending",
+      "reason": "synthesis 须有回答主张与依据，未知可作为有边界回答",
+      "requirementRefs": [],
+      "dependsOn": []
+    },
+    {
+      "id": "chart-plan",
+      "title": "图表多样性：必须尽可能多地使用不同类型的图表。 完成整册规划。",
+      "phase": "planning",
+      "status": "pending",
+      "requirementRefs": [
+        "chart-diversity"
+      ],
+      "dependsOn": [
+        "analysis"
+      ]
+    },
+    {
+      "id": "layout-plan",
+      "title": "版式布局多样性：必须尽可能多地采用不同的版式来组织每一页的内容。 完成逐页与整册规划。",
+      "phase": "planning",
+      "status": "pending",
+      "requirementRefs": [
+        "layout-diversity"
+      ],
+      "dependsOn": [
+        "analysis"
+      ]
+    },
+    {
+      "id": "representatives",
+      "title": "查看代表页，分别核实图表表达与版式阅读路径",
+      "phase": "production",
+      "status": "pending",
+      "requirementRefs": [
+        "chart-diversity",
+        "layout-diversity"
+      ],
+      "dependsOn": [
+        "chart-plan",
+        "layout-plan"
+      ]
+    },
+    {
+      "id": "production",
+      "title": "完成当前全部页面制作与整册检查",
+      "phase": "production",
+      "status": "pending",
+      "requirementRefs": [],
+      "dependsOn": [
+        "representatives"
+      ]
+    },
+    {
+      "id": "acceptance",
+      "title": "完成正式工程验收及排印检查",
+      "phase": "acceptance",
+      "status": "pending",
+      "reason": "尚无有效 qa 产物",
+      "requirementRefs": [],
+      "dependsOn": [
+        "production"
+      ]
+    },
+    {
+      "id": "final-review",
+      "title": "完成当前 HTML/PDF 实际审查及问题处置",
+      "phase": "review",
+      "status": "pending",
+      "reason": "尚无有效 qa 产物",
+      "requirementRefs": [],
+      "dependsOn": [
+        "acceptance"
+      ]
+    },
+    {
+      "id": "chart-diversity",
+      "title": "图表多样性：必须尽可能多地使用不同类型的图表。",
+      "phase": "review",
+      "status": "pending",
+      "reason": "尚无有效 qa 产物",
+      "requirementRefs": [
+        "chart-diversity"
+      ],
+      "dependsOn": [
+        "final-review"
+      ]
+    },
+    {
+      "id": "layout-diversity",
+      "title": "版式布局多样性：必须尽可能多地采用不同的版式来组织每一页的内容。",
+      "phase": "review",
+      "status": "pending",
+      "reason": "尚无有效 qa 产物",
+      "requirementRefs": [
+        "layout-diversity"
+      ],
+      "dependsOn": [
+        "final-review"
+      ]
+    },
+    {
+      "id": "package",
+      "title": "核实正式打包结果",
+      "phase": "delivery",
+      "status": "pending",
+      "reason": "尚无有效 package 产物",
+      "requirementRefs": [],
+      "dependsOn": [
+        "final-review",
+        "chart-diversity",
+        "layout-diversity"
+      ]
+    },
+    {
+      "id": "archive",
+      "title": "保存审查与执行恢复归档",
+      "phase": "delivery",
+      "status": "pending",
+      "reason": "尚无有效 archive 产物",
+      "requirementRefs": [],
+      "dependsOn": [
+        "package"
+      ]
+    },
+    {
+      "id": "delivery",
+      "title": "交付文件及验证范围说明，记录实际发送结果",
+      "phase": "delivery",
+      "status": "pending",
+      "requirementRefs": [],
+      "dependsOn": [
+        "package",
+        "archive"
+      ]
+    },
+    {
+      "id": "inventory",
+      "title": "整理现有资料目录",
+      "phase": "analysis",
+      "status": "done",
+      "attempt": {
+        "id": "c3572cb7-45e5-4b69-a3c1-b75d12f4e146",
+        "owner": "main",
+        "scopeRevision": 0,
+        "inputDigest": "9b9a61ac9c036e8dbc3d23239174083f7238eb3027273a60ca75741603c02b52",
+        "state": "accepted",
+        "startedAt": "2026-10-08T14:03:43.506Z",
+        "requirementRefs": [],
+        "completionCriteria": "提交实际文件、依据及未知，由主笔核实后接收"
+      },
+      "requirementRefs": [],
+      "dependsOn": []
+    },
+    {
+      "id": "extra-research",
+      "title": "扩展外部行业研究",
+      "phase": "analysis",
+      "status": "cancelled",
+      "reason": "用户只要求重排已确认内容，不增加研究",
+      "requirementRefs": [],
+      "dependsOn": []
+    },
+    {
+      "id": "brand-asset",
+      "title": "应用品牌标识",
+      "phase": "analysis",
+      "status": "blocked",
+      "reason": "等待用户提供最终品牌标识文件",
+      "requirementRefs": [],
+      "dependsOn": []
+    },
+    {
+      "id": "organize-copy",
+      "title": "整理已批准材料的阅读顺序",
+      "phase": "analysis",
+      "status": "pending",
+      "requirementRefs": [],
+      "dependsOn": []
+    }
+  ],
+  "productionRefs": {},
+  "readyQueue": [
+    "analysis",
+    "organize-copy"
+  ],
+  "submitted": [],
+  "blockers": [
+    {
+      "id": "brand-asset",
+      "title": "应用品牌标识",
+      "phase": "analysis",
+      "status": "blocked",
+      "reason": "等待用户提供最终品牌标识文件",
+      "requirementRefs": [],
+      "dependsOn": []
+    }
+  ],
+  "status": "ACTION_REQUIRED",
+  "next": {
+    "taskId": "analysis",
+    "action": "处理 readyQueue 中的任务；来源任务在权威文件完成后自动反映"
+  },
+  "recovery": {
+    "rootTask": "/Volumes/Out/my_own_skills/consulting-report-forge/renders/execution-behavior-20261008/editorial-short/fixture-task/task.json",
+    "planFile": "/Volumes/Out/my_own_skills/consulting-report-forge/renders/execution-behavior-20261008/editorial-short/fixture-task/execution-plan.json",
+    "rule": "只读取明确引用；缺失证据保持未完成，不自动补签"
+  }
+}

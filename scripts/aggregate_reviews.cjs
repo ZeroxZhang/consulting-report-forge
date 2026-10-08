@@ -34,7 +34,7 @@ function inspectCoverage(review,{htmlSha256,pdfSha256,pages,requireIndependent=f
 }
 function aggregateCurrent(audit,inputs,{baseDir=process.cwd(),auditDir=baseDir,inputDirs=[]}={}){
  baseDir=fs.realpathSync(baseDir);auditDir=fs.realpathSync(auditDir);inputDirs=inputDirs.map(dir=>fs.realpathSync(dir));
- const errors=[],coverage=[],issues=[],dispositions=[],priorReviews=new Map(),values={analysis:[],evidence:[],visual:[]};
+ const errors=[],coverage=[],issues=[],dispositions=[],qualityChecks=[],priorReviews=new Map(),values={analysis:[],evidence:[],visual:[]};
  for(const [i,raw] of inputs.entries()){
   let result=raw;
   if(typeof raw==='string')try{result=JSON.parse(raw.replace(/^```(?:json)?\s*|\s*```$/g,''));}catch{errors.push('结果'+i+'为未解析自然语言，须解析核对或补查');continue;}
@@ -56,6 +56,7 @@ function aggregateCurrent(audit,inputs,{baseDir=process.cwd(),auditDir=baseDir,i
    for(const key of ['audit','review'])if(typeof copy.inheritedFrom?.[key]?.path==='string')copy.inheritedFrom[key].path=path.relative(baseDir,path.resolve(inputDirs[i]||baseDir,copy.inheritedFrom[key].path));
    coverage.push(copy);
   }
+  qualityChecks.push(...(Array.isArray(result.qualityChecks)?result.qualityChecks:[]));
   issues.push(...(Array.isArray(result.issues)?result.issues:[]));
   // 告警处置是逐份输入各自提供的，聚合时并集；覆盖不全会由审查合同点名。
   dispositions.push(...(Array.isArray(result.warningReview)?result.warningReview:[]));
@@ -68,6 +69,7 @@ function aggregateCurrent(audit,inputs,{baseDir=process.cwd(),auditDir=baseDir,i
  }
  const sorted=items=>items.sort((a,b)=>contract.stable(a).localeCompare(contract.stable(b)));
  const review={schemaVersion:require('./contract_capabilities.cjs').capabilities(audit.taskContract).finalReview,status:'complete',reviewer:[...new Set(coverage.map(c=>c.reviewer).filter(v=>typeof v==='string'))].sort().join('; '),independence:coverage.some(c=>c.independence==='independent')?'independent':'author',htmlSha256:audit.htmlArtifact?.sha256,pdfSha256:audit.pdfArtifact?.sha256,auditSha256:contract.hash(contract.stable(audit)),coverage:sorted(coverage),warningReview:sorted([...new Map(dispositions.filter(w=>w&&typeof w.warning==='string').map(w=>[w.warning,w])).values()]),checks,issues:sorted([...new Map(issues.map(issue=>[contract.stable(issue),issue])).values()])};
+ if(require('./execution_requirements.cjs').enabled(audit.taskContract))review.qualityChecks=qualityChecks;
  if(require('./contract_capabilities.cjs').capabilities(audit.taskContract).analysis){const hashes=[...new Set(inputs.map(r=>{try{return (typeof r==='string'?JSON.parse(r):r).analysisSha256;}catch{return undefined;}}))];if(hashes.length===1)review.analysisSha256=hashes[0];else errors.push('分析审查版本不一致');}
  if(require('./contract_capabilities.cjs').capabilities(audit.taskContract).strict)review.analysisAlgorithm='semantic-v2';
  if(priorReviews.size===1)review.priorReview=[...priorReviews.values()][0];

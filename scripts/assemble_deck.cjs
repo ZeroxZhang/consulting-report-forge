@@ -16,7 +16,7 @@ function sectionContract(source){
   if(!close&&['style','script','textarea','title'].includes(name)){const closeAt=source.toLowerCase().indexOf('</'+name,i);if(closeAt<0)throw Error(name+'未闭合');i=closeAt;}
  }if(depth||!count)throw Error('需要至少一个完整闭合的.slide section');
 }
-async function assemble(options={}){
+async function build(options={}){
  let {pagesFile,outputFile,cssFile,title='报告',contractFile}=options;
  if(!pagesFile||!outputFile)throw Error('需要pagesFile与outputFile');
  // 逐页迭代只装到当前页：整册页数必须与 pages 合同逐页对上，收窄必须两边同时做，否则装不出来。
@@ -195,6 +195,7 @@ async function assemble(options={}){
   return {status:'assembled',output,pages:assembled.pages,theme,typography,kind,ratio,sha256:sha(html),route:'static-html-svg',partial:assembled.partial};
  }finally{try{if(browser)await browser.close();}finally{fs.rmSync(tmp,{recursive:true,force:true});}}
 }
+async function assemble(options={},context){if(options.contractFile&&require('./execution_requirements.cjs').enabled(JSON.parse(fs.readFileSync(options.contractFile,'utf8')))){const store=require('./task_store.cjs');return store.lockedAsync(store.rootForTask(options.contractFile),'assemble',()=>build(options),context);}return build(options);}
 function args(argv){const [pagesFile,outputFile,...rest]=argv;if(!pagesFile||!outputFile)throw Error('用法: node assemble_deck.cjs pages.html deck.html [--css page.css] [--title 标题] [--kind fragment|report|collection] [--theme mckinsey] [--typography serif-report-bold] [--ratio 16x9|4x3] [--upto N]');const out={pagesFile,outputFile},names={css:'cssFile',title:'title',kind:'kind',theme:'theme',typography:'typography',ratio:'ratio',contract:'contractFile',upto:'upto'},seen=new Set();for(let i=0;i<rest.length;i+=2){const key=rest[i].replace(/^--/,'');if(!rest[i].startsWith('--')||!names[key]||rest[i+1]===undefined||seen.has(key))throw Error('未知/缺值/重复参数: '+rest[i]);seen.add(key);out[names[key]]=rest[i+1];}return out;}
 if(require.main===module)assemble(args(process.argv.slice(2))).then(r=>console.log(JSON.stringify(r))).catch(e=>{console.error(e.message);process.exitCode=1;});
 module.exports={assemble,sectionContract,args};

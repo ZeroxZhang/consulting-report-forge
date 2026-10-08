@@ -25,6 +25,7 @@ const REFERENCE_POLICIES=Object.freeze({
 });
 const READING_POLICIES=Object.freeze({'reading-shadow-1':Object.freeze({shadow:true})});
 const ANALYSIS_POLICIES=Object.freeze({'semantic-v2':Object.freeze({strictProjection:true}),'legacy-v1':Object.freeze({strictProjection:false})});
+const WORKFLOW_POLICIES=Object.freeze({'execution-plan-1':Object.freeze({persistentChecklist:true})});
 const POLICY_SLOTS=Object.freeze(['analysis','reading','visual','references']);
 const DEFAULT_POLICIES=Object.freeze({analysis:'semantic-v2',reading:'reading-shadow-1',visual:'legacy-1',references:'single-page-1'});
 
@@ -37,7 +38,7 @@ function referencePolicy(name){
   return REFERENCE_POLICIES[name];
 }
 function policy(slot,name){
-  const tables={visual:VISUAL_POLICIES,references:REFERENCE_POLICIES,reading:READING_POLICIES,analysis:ANALYSIS_POLICIES};
+  const tables={workflow:WORKFLOW_POLICIES,visual:VISUAL_POLICIES,references:REFERENCE_POLICIES,reading:READING_POLICIES,analysis:ANALYSIS_POLICIES};
   const table=tables[slot];
   if(!table)throw Error('未知策略槽位：'+slot);
   if(!Object.hasOwn(table,name))throw Error('不支持的'+({visual:'视觉',references:'参考资料',reading:'阅读',analysis:'分析'}[slot])+'策略：'+name);
@@ -54,8 +55,9 @@ function referenceNames(){return Object.keys(REFERENCE_POLICIES);}
 /* 策略组合校验：四项齐全、各槽位在册，其余槽位只接受唯一现行值。 */
 function normalizePolicies(selected){
   if(!selected||typeof selected!=='object'||Array.isArray(selected))throw Error('不支持的严格合同 policyVersions');
-  if(Object.keys(selected).length!==POLICY_SLOTS.length)throw Error('不支持的严格合同 policyVersions');
+  if(Object.keys(selected).some(k=>![...POLICY_SLOTS,'workflow'].includes(k))||Object.keys(selected).length!==(selected.workflow===undefined?4:5))throw Error('不支持的严格合同 policyVersions');
   for(const slot of POLICY_SLOTS)if(!Object.hasOwn(selected,slot)||typeof selected[slot]!=='string')throw Error('不支持的严格合同 policyVersions');
+  if(Object.hasOwn(selected,'workflow')){if(typeof selected.workflow!=='string')throw Error('workflow 须为显式字符串策略');policy('workflow',selected.workflow);}
   policy('analysis',selected.analysis);
   policy('reading',selected.reading);
   policy('visual',selected.visual);
@@ -64,5 +66,5 @@ function normalizePolicies(selected){
   if(selected.reading!=='reading-shadow-1')throw Error('不支持的严格合同 policyVersions');
   return {...selected};
 }
-module.exports={capabilities,VISUAL_POLICIES,REFERENCE_POLICIES,READING_POLICIES,ANALYSIS_POLICIES,POLICY_SLOTS,DEFAULT_POLICIES,
+module.exports={WORKFLOW_POLICIES,capabilities,VISUAL_POLICIES,REFERENCE_POLICIES,READING_POLICIES,ANALYSIS_POLICIES,POLICY_SLOTS,DEFAULT_POLICIES,
   visualPolicy,referencePolicy,policy,can,visualNames,referenceNames,normalizePolicies};

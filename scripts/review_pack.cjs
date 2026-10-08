@@ -53,6 +53,7 @@ function prepare({auditFile,outputDir}){
   const write=(name,value)=>fs.writeFileSync(path.join(outputDir,name),JSON.stringify(value,null,2)+'\n',{flag:'wx'});
   for(const role of roles)write(role+'.json',{schemaVersion:caps.finalReview,status:'incomplete',reviewer:'',independence:role,
     htmlSha256:audit.htmlArtifact.sha256,pdfSha256:audit.pdfArtifact.sha256,auditSha256:grouped.auditSha256,
+    ...(require('./execution_requirements.cjs').enabled(audit.taskContract)?{qualityChecks:require('./execution_quality.cjs').drafts(role)}:{}),
     ...(caps.analysis?{analysisSha256:null}:{}),...(caps.strict?{analysisAlgorithm:caps.algorithm}:{}),coverage:[],
     checks:Object.fromEntries(['analysis','evidence','visual'].map(k=>[k,{status:'not_reviewed',basis:''}])),warningReview:[],issues:[]});
   write('diagnostics.json',diagnostics);write('warning-decisions.json',{auditSha256:grouped.auditSha256,groups:grouped.groups.map(g=>({...g,status:'not_reviewed',note:''}))});
@@ -86,7 +87,7 @@ function prepare({auditFile,outputDir}){
       });
     }catch(error){narrativeChecklist=[{error:'叙事清单派生失败：'+error.message}];}
   }
-  write('review-pack.json',{auditFile:path.resolve(auditFile),auditSha256:grouped.auditSha256,priorityPages:priorityPages,pages:ranked,evidence:entries,
+  write('review-pack.json',{...(require('./execution_requirements.cjs').enabled(audit.taskContract)?{fixedRequirements:require('./execution_requirements.cjs').FIXED}:{}),auditFile:path.resolve(auditFile),auditSha256:grouped.auditSha256,priorityPages:priorityPages,pages:ranked,evidence:entries,
     ...(compositionChecklist.length?{compositionChecklist}:{}),
     ...(narrativeChecklist.length?{narrativeArc,narrativeChecklist,...(narrativeDiagnostics.length?{narrativeDiagnostics}:{})}:{}),
     note:'优先查看风险页，正式验收仍须覆盖全部 HTML/PDF；草稿没有审查身份或通过结论。'

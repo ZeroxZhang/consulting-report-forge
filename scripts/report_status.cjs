@@ -5,6 +5,8 @@ const contract=require('./report_contract.cjs');
 const read=file=>JSON.parse(fs.readFileSync(file,'utf8'));
 function inspect(taskFile,{auditFile,reviewFile}={}){
   taskFile=path.resolve(taskFile);
+  let raw;try{raw=read(taskFile);}catch{}
+  if(require('./execution_requirements.cjs').enabled(raw)){try{return require('./execution_plan.cjs').status(taskFile);}catch(e){return {readOnly:true,status:'ACTION_REQUIRED',stages:[{name:'execution-plan',status:'ACTION_REQUIRED',errors:[e.message]}],next:{action:'保留错误计划与证据，从历史/执行归档恢复同一身份；不得新建空计划冒充原进度'},requirements:require('./execution_requirements.cjs').FIXED};}}
   const baseDir=path.dirname(taskFile),stages=[],limitations=[];
   const stage=(name,fn)=>{try{const errors=fn();stages.push({name,status:errors.length?'ACTION_REQUIRED':'VALID',errors});}catch(e){stages.push({name,status:'ACTION_REQUIRED',errors:[e.message]});}};
   let task,doc,blueprintFile,pages,audit;

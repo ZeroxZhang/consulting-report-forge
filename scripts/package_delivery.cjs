@@ -90,7 +90,7 @@ function validateReview(file,{htmlSha256,pdfSha256,pages,requireCoverage=false,r
   }
   return review;
 }
-function packageDelivery({htmlFile,pdfFile,outputDir,baseName,auditFile,reviewFile,preview=false,force=false}){
+function produce({htmlFile,pdfFile,outputDir,baseName,auditFile,reviewFile,preview=false,force=false}){
   const inputHtml=path.resolve(htmlFile||''),inputPdf=path.resolve(pdfFile||'');
   if(!fs.statSync(inputHtml,{throwIfNoEntry:false})?.isFile())fail('需要定稿 HTML 文件');
   if(!fs.statSync(inputPdf,{throwIfNoEntry:false})?.isFile())fail('需要已验收 PDF 文件');
@@ -118,6 +118,20 @@ function packageDelivery({htmlFile,pdfFile,outputDir,baseName,auditFile,reviewFi
   fs.writeFileSync(outputHtml,deliveredHtml);
   fs.copyFileSync(inputPdf,outputPdf);
   return {status:preview?'preview':'complete',review:preview?null:reviewPath,html:outputHtml,pdf:outputPdf,pages:htmlPages,pdfBytes:pdf.length,pdfSha256,htmlBytes:Buffer.byteLength(deliveredHtml),audit:auditPath};
+}
+
+function packageDelivery(options,context){
+ const task=require('./report_contract.cjs').read(fs.readFileSync(options.htmlFile,'utf8'));
+ if(!require('./execution_requirements.cjs').enabled(task)||options.preview)return produce(options);
+ const E=require('./execution_plan.cjs'),base=path.dirname(path.resolve(options.htmlFile)),ctx=E.locate(task,base);
+ return require('./task_store.cjs').locked(ctx.root,'package',token=>{
+  E.assertGate(task,base,'package');
+  const current=E.currentReview(ctx),auditFile=path.resolve(options.auditFile||path.join(path.dirname(options.pdfFile),'audit.json')),reviewFile=path.resolve(options.reviewFile||path.join(path.dirname(options.pdfFile),'review.json'));
+  if(require('./report_contract.cjs').fileHash(auditFile)!==require('./report_contract.cjs').fileHash(current.auditFile)||require('./report_contract.cjs').fileHash(reviewFile)!==require('./report_contract.cjs').fileHash(current.reviewFile))throw Error('打包输入不是计划当前验收与审查');
+  const receipts=require('./execution_receipt.cjs'),snapshot=receipts.freeze(ctx,path.join(ctx.root,'receipts'));
+  const result=produce(options);result.receipt=receipts.write(ctx,{snapshot,result,auditFile,reviewFile});
+  receipts.reconcile(ctx.taskFile,result.receipt,token);return result;
+ },context);
 }
 
 if(require.main===module){

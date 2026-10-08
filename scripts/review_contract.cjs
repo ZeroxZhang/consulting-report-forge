@@ -75,6 +75,7 @@ function auditErrors(audit, {auditDir = process.cwd()} = {}) {
   if (!audit || typeof audit !== 'object') return ['缺少 audit'];
   if (audit.geometryStatus !== 'PASS' || !Array.isArray(audit.errors) || audit.errors.length) errors.push('工程验收未通过');
   if ((audit.tier ?? 'acceptance') !== 'acceptance' || audit.acceptance?.complete === false) errors.push('只有完整 acceptance audit 可用于审查和继承');
+  if(require('./execution_requirements.cjs').enabled(audit.taskContract)&&(audit.unitsCheck?.status!=='PASS'||audit.unitsCheck.htmlSha256!==audit.htmlArtifact?.sha256||!Array.isArray(audit.unitsCheck.findings)||audit.unitsCheck.findings.length))errors.push('执行合同缺少当前 HTML 的排印通过证据');
   if (!Number.isInteger(audit.pages) || audit.pages < 1) errors.push('audit 页数无效');
   for (const medium of ['html', 'pdf']) {
     const artifact = audit[medium + 'Artifact'];
@@ -189,6 +190,7 @@ function validate(review, audit, {baseDir = process.cwd(), auditDir = baseDir, p
       if(planErrors.length)errors.push(...planErrors);
     }catch(e){errors.push('最终分析绑定失败：'+e.message);}
   }
+  errors.push(...require('./execution_quality.cjs').validate(review,audit,{partial}));
   const engineeringErrors=auditErrors(audit, {auditDir});
   if(engineeringErrors.length)errors.push(...engineeringErrors);
   if (!audit || typeof audit !== 'object') return errors;

@@ -58,7 +58,7 @@ function prepareReuse({auditFile, snapshotDir, outputDir}) {
       const draft = {schemaVersion: require('./contract_capabilities.cjs').capabilities(audit.taskContract).finalReview, status: 'incomplete', reviewer, independence: role,
         htmlSha256: audit.htmlArtifact.sha256, pdfSha256: audit.pdfArtifact.sha256, auditSha256: hash(stable(audit)),
         priorReview: clone(priorReview),
-        ...(index===0&&require('./execution_requirements.cjs').enabled(audit.taskContract)?{qualityChecks:require('./execution_quality.cjs').drafts(role)}:{}),
+        ...(index===0&&require('./execution_requirements.cjs').enabled(audit.taskContract)?{qualityChecks:require('./execution_quality.cjs').drafts(role,audit.taskContract,audit)}:{}),
         ...(require('./contract_capabilities.cjs').capabilities(audit.taskContract).analysis?{analysisSha256: null}:{}),
         ...(require('./contract_capabilities.cjs').capabilities(audit.taskContract).strict?{analysisAlgorithm:'semantic-v2'}:{}),
         coverage, checks: Object.fromEntries(['analysis', 'evidence', 'visual'].map(k => [k, {status: 'not_reviewed', basis: ''}])),

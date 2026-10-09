@@ -25,7 +25,7 @@ const REFERENCE_POLICIES=Object.freeze({
 });
 const READING_POLICIES=Object.freeze({'reading-shadow-1':Object.freeze({shadow:true})});
 const ANALYSIS_POLICIES=Object.freeze({'semantic-v2':Object.freeze({strictProjection:true}),'legacy-v1':Object.freeze({strictProjection:false})});
-const WORKFLOW_POLICIES=Object.freeze({'execution-plan-1':Object.freeze({persistentChecklist:true})});
+const WORKFLOW_POLICIES=Object.freeze({'execution-plan-1':Object.freeze({persistentChecklist:true}), 'execution-plan-2':Object.freeze({persistentChecklist:true,moduleFill:true})});
 const POLICY_SLOTS=Object.freeze(['analysis','reading','visual','references']);
 const DEFAULT_POLICIES=Object.freeze({analysis:'semantic-v2',reading:'reading-shadow-1',visual:'legacy-1',references:'single-page-1'});
 

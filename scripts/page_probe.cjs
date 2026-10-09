@@ -283,6 +283,8 @@ async function collect(page, index, {modern = false, readingShadow = false} = {}
   result.bookends = await slide.evaluate(bookends.inspectPage);
   if(readingShadow)result.readingShadow=await slide.evaluate(require('./browser_reading_audit.cjs').inspectSlide);
   if (modern) {
+    const task=await slide.evaluate(()=>JSON.parse(document.getElementById('deck-task-contract')?.textContent||'null'));
+    if(require('./execution_requirements.cjs').moduleFill(task))result.moduleFill=await slide.evaluate(require('./browser_module_fill.cjs').inspectSlide);
     result.critical = await slide.evaluate(criticalContent.inspectSlide);
     result.visualPolicy = await visualPolicy.inspect(slide,await slide.evaluate(()=>JSON.parse(document.getElementById('deck-task-contract')?.textContent||'null')?.policyVersions?.visual||'legacy-1'));
   }
@@ -350,6 +352,7 @@ function summarize(row) {
   if (row.frame?.ruleVisible && row.frame.doubleBorder.length) warnings.push({code: 'DOUBLE-BORDER', cls: row.frame.doubleBorder[0], message: '标题区隔线与正文首排顶线可能并存'});
   // 需要人工确认的路径原样带出：它们不是通过，也不该在摘要里被压成一句"已检查"。
   const manual = (row.visualPolicy?.findings || []).map(f => ({code: f.code, selector: f.selector, message: f.message}));
+  for(const region of row.moduleFill?.regions||[])for(const finding of region.findings||[])manual.push({code:'MODULE-FILL-'+finding.ruleId,selector:region.selector,message:region.id+' / '+finding.axis+' / '+finding.position+'：须结合实际画面判断填充与裁切，详见 moduleFill 清单'});
   return {errors, warnings, manual};
 }
 

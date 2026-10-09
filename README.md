@@ -6,7 +6,7 @@
 
 深度调研 · 商业分析 · 专家协作 · 数据建模 · Storyline · 视觉报告
 
-[![Version](https://img.shields.io/badge/version-1.7.0-17324D?style=flat-square)](package.json) [![License](https://img.shields.io/badge/license-Apache--2.0-007C91?style=flat-square)](LICENSE) [![Output](https://img.shields.io/badge/output-HTML%20%2B%20PDF-17324D?style=flat-square)](#你会拿到什么) [![Node](https://img.shields.io/badge/Node.js-20%2B-007C91?style=flat-square&logo=nodedotjs&logoColor=white)](#快速开始) [![GitHub Stars](https://img.shields.io/github/stars/ZeroxZhang/consulting-report-forge?style=flat-square&logo=github&label=Stars)](https://github.com/ZeroxZhang/consulting-report-forge/stargazers)
+[![Version](https://img.shields.io/badge/version-1.8.0-17324D?style=flat-square)](package.json) [![License](https://img.shields.io/badge/license-Apache--2.0-007C91?style=flat-square)](LICENSE) [![Output](https://img.shields.io/badge/output-HTML%20%2B%20PDF-17324D?style=flat-square)](#你会拿到什么) [![Node](https://img.shields.io/badge/Node.js-20%2B-007C91?style=flat-square&logo=nodedotjs&logoColor=white)](#快速开始) [![GitHub Stars](https://img.shields.io/github/stars/ZeroxZhang/consulting-report-forge?style=flat-square&logo=github&label=Stars)](https://github.com/ZeroxZhang/consulting-report-forge/stargazers)
 
 <a href="docs/showcase/skill-poster.png"><img src="docs/showcase/skill-poster.png" width="600" alt="Consulting Report Forge 技能介绍海报：研究有来源、分析有方法、表达有主线、交付有复核；真实 AI 生物制药报告选览"></a>
 
@@ -24,9 +24,19 @@
 
 **你希望得到的，是一次有依据的讨论：机会在哪里，判断为什么成立，有哪些选择，下一步怎么验证。**
 
+## 1.8.0：逐模块检查内容填充
+
+新建任务的 Checklist 增加第三项固定要求：逐正文页检查每个模块及每一栏，尤其是文字模块。没有明确设计功能的大块留白必须修复；裁切与溢出必须消除。规划先列模块、内容量和留白安排，代表页及最终 HTML/PDF 审查逐区域留下所见与处置，不能只填写“整页正常”。
+
+探针使用文字实际行框识别透明面板、撑满高度的文字框、栏间差异及上下左右空白；几何结果用于提示检查，仍需实际画面判断。默认字号填充率与成稿实测占用指标分开，禁止放大字号、空行、无功能元素或编造内容来凑满。详见[模块填充检查](references/module-fill.md)与[执行清单协议](references/execution-checklist.md)。
+
+新任务默认使用 `execution-plan-2`；已有 `execution-plan-1` 的双约束清单及旧审查记录保持原解释。不要通过直接改策略名给旧审查补签新增检查。
+
+全量合同测试、新旧 HTML/PDF 生产链与针对留白/裁切的真实浏览器测试通过；范围与限制见 [1.8.0 验证记录](docs/2026-10-09-module-fill-validation.md)。
+
 ## 1.7.0：持久执行清单
 
-新报告在需求与路线明确后必须激活 Checklist，贯穿研究、委派、制作、验收与交付。任务状态、当前产物、提交接收和恢复线索写入独立计划；上下文压缩后先读取计划继续。图表多样性与版式布局多样性始终是两个不可豁免的固定要求，分别在规划、代表页和整册审查中核实。
+新报告在需求与路线明确后必须激活 Checklist，贯穿研究、委派、制作、验收与交付。任务状态、当前产物、提交接收和恢复线索写入独立计划；上下文压缩后先读取计划继续。该版本将图表多样性与版式布局多样性设为两个不可豁免的固定要求，分别在规划、代表页和整册审查中核实。
 
 正式编译、验收、打包检查前置任务；日常更新清单不改变分析摘要或截图身份。打包收据与执行归档支持中断核对和新目录恢复。旧任务及旧审查合同保持原解释；视觉候选策略仍须显式选择。命令与限制见[执行清单协议](references/execution-checklist.md)。
 
@@ -43,7 +53,7 @@
 | **重点感可测量** | 每个正文页恰有一个收束节点，屏幕与打印都在；副标题不复述标题；实测声明的主展品与页面重心是否一致，偏差需结合画面处置 |
 | **旧稿保持原解释** | 旧任务、旧摘要、旧快照沿用原合同；新能力走显式策略，不原地改写历史记录 |
 
-**分析与视觉默认仍沿用 1.5.0 的严格合同；1.7.0 新建入口另外启用执行清单。** 复合证据与叙事视角通过显式策略启用（`report init --visual`，或对已有任务用 `migrate_strict_analysis --to-policy` 生成新目录草稿）；切换策略会使整册视觉复用失效，需要重新完成 HTML/PDF 审查，旧 PASS 不继承。
+**分析与视觉默认仍沿用 1.5.0 的严格合同；当前新建入口另外启用包含模块填充要求的执行清单。** 复合证据与叙事视角通过显式策略启用（`report init --visual`，或对已有任务用 `migrate_strict_analysis --to-policy` 生成新目录草稿）；切换策略会使整册视觉复用失效，需要重新完成 HTML/PDF 审查，旧 PASS 不继承。
 
 **当前状态：候选能力已通过全部工程测试与代表页验收，尚未完成同题同模型的行为对照，因此没有切换新建任务默认。** 六份三组先导成稿已归档评估：两版在定性与单图任务上无显著差异，量化比较任务上旧版更易读。据此的判断是：复合证据与表达规则补上了工程能力，但"比较目标是否真的落到跨页编码"仍需复测确认。
 

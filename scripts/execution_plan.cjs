@@ -4,13 +4,13 @@ const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypt
 const C=require('./report_contract.cjs'),R=require('./execution_requirements.cjs'),store=require('./task_store.cjs');
 const read=f=>JSON.parse(fs.readFileSync(f,'utf8')),bytes=v=>JSON.stringify(v,null,2)+'\n';
 const fail=m=>{throw Error(m);},nonempty=v=>typeof v==='string'&&!!v.trim();
-function create(task,rootTask='task.json') {return {schemaVersion:1,id:task.executionPlan.id,revision:0,scopeRevision:0,state:'draft',rootTask,requirements:R.FIXED.map(r=>({...r,mandatory:true})),items:R.items(task),productionRefs:{},decisions:[],appliedOperations:[],updatedAt:new Date().toISOString()};}
+function create(task,rootTask='task.json') {return {schemaVersion:1,id:task.executionPlan.id,revision:0,scopeRevision:0,state:'draft',rootTask,requirements:R.fixed(task).map(r=>({...r,mandatory:true})),items:R.items(task),productionRefs:{},decisions:[],appliedOperations:[],updatedAt:new Date().toISOString()};}
 function validate(plan,task){
  if(plan.schemaVersion!==1||plan.id!==task.executionPlan?.id||!Number.isInteger(plan.revision)||plan.revision<0||!Number.isInteger(plan.scopeRevision)||!['draft','active'].includes(plan.state)||!nonempty(plan.rootTask))fail('执行计划身份、版本或状态无效');
  if(plan.state==='active'&&(!plan.intake||['goal','scope','deliverables','constraints','approach','nextStep'].some(k=>!nonempty(plan.intake[k]))||!Array.isArray(plan.intake.openQuestions)))fail('激活计划缺少完整需求与路线记录');
  if(!Array.isArray(plan.requirements)||!Array.isArray(plan.items)||!Array.isArray(plan.appliedOperations)||!Array.isArray(plan.decisions)||!plan.productionRefs)fail('执行计划结构缺失');
  if(new Set(plan.requirements.map(r=>r.id)).size!==plan.requirements.length||plan.requirements.some(r=>!nonempty(r.id)||!nonempty(r.text)||r.mandatory!==true))fail('要求目录缺少唯一身份或强制声明');
- for(const r of R.FIXED){const hits=plan.requirements.filter(x=>x.id===r.id);if(hits.length!==1||hits[0].text!==r.text||hits[0].mandatory!==true)fail('固定要求不可删除、改写或豁免：'+r.id);}
+ for(const r of R.fixed(task)){const hits=plan.requirements.filter(x=>x.id===r.id);if(hits.length!==1||hits[0].text!==r.text||hits[0].mandatory!==true)fail('固定要求不可删除、改写或豁免：'+r.id);}
  const ids=new Set();for(const i of plan.items){if(!/^[\w-]+$/.test(i.id||'')||ids.has(i.id)||!nonempty(i.title)||!Array.isArray(i.dependsOn)||!Array.isArray(i.requirementRefs))fail('任务身份/依赖无效');ids.add(i.id);
   if(i.source){if(i.state!==undefined||i.evidenceRefs!==undefined||i.attempt!==undefined)fail('来源任务不能有第二份可写状态：'+i.id);}
   else if(!['pending','in_progress','submitted','done','blocked','cancelled'].includes(i.state)||!Array.isArray(i.evidenceRefs)||!['planning','visual','production','delivery','files'].includes(i.criterion))fail('人工任务状态或验收标准无效：'+i.id);
@@ -20,7 +20,7 @@ function validate(plan,task){
  const active=new Set(),seen=new Set();function visit(i){if(active.has(i.id))fail('任务依赖循环：'+i.id);if(seen.has(i.id))return;active.add(i.id);for(const d of i.dependsOn){const dep=plan.items.find(x=>x.id===d);if(!dep)fail('缺失依赖：'+d);visit(dep);}active.delete(i.id);seen.add(i.id);}plan.items.forEach(visit);
  return plan;
 }
-function locate(task,base){if(!R.enabled(task))fail('任务尚未启用 execution-plan-1');C.normalize(task);const file=fs.realpathSync(path.resolve(base,task.executionPlan.record)),plan=validate(read(file),task),dir=path.dirname(file),rootFile=fs.realpathSync(path.resolve(dir,plan.rootTask)),rootTask=C.normalize(read(rootFile));if(rootTask.executionPlan?.id!==plan.id||store.canonical(path.resolve(path.dirname(rootFile),rootTask.executionPlan.record))!==store.canonical(file))fail('计划与根任务绑定不一致');return {task:rootTask,taskFile:rootFile,file,dir,plan,root:path.join(dir,'.forge')};}
+function locate(task,base){if(!R.enabled(task))fail('任务尚未启用执行计划');C.normalize(task);const file=fs.realpathSync(path.resolve(base,task.executionPlan.record)),plan=validate(read(file),task),dir=path.dirname(file),rootFile=fs.realpathSync(path.resolve(dir,plan.rootTask)),rootTask=C.normalize(read(rootFile));if(rootTask.executionPlan?.id!==plan.id||store.canonical(path.resolve(path.dirname(rootFile),rootTask.executionPlan.record))!==store.canonical(file))fail('计划与根任务绑定不一致');return {task:rootTask,taskFile:rootFile,file,dir,plan,root:path.join(dir,'.forge')};}
 function load(taskFile){return locate(C.normalize(read(taskFile)),path.dirname(path.resolve(taskFile)));}
 function ref(ctx,file){file=path.resolve(file);return {record:path.relative(ctx.dir,file),sha256:C.fileHash(file)};}
 function resolve(ctx,r){if(!r?.record||!r.sha256)fail('缺少产物引用及摘要');const f=path.resolve(ctx.dir,r.record);if(C.fileHash(f)!==r.sha256)fail('引用字节已变化：'+r.record);return f;}
@@ -39,7 +39,7 @@ function sourceState(ctx,item){
  else if(item.source==='analysis-review'){const b=blueprint(ctx),errors=require('./analysis_review_contract.cjs').check(b.doc,b);if(errors.length)fail(errors.join('；'));}
  else if(item.source.startsWith('workItem:')){const b=blueprint(ctx),id=item.source.slice(9),w=(b.doc.analysis?.workItems||[]).find(x=>x.id===id);if(!w||!['complete','bounded'].includes(w.status))fail('分析工作项未完成：'+id);}
  else if(item.source==='acceptance'){const qa=production(ctx,'qa'),f=resolve(ctx,qa.files.audit),a=read(f),e=require('./review_contract.cjs').auditErrors(a,{auditDir:path.dirname(f)});if(e.length)fail(e.join('；'));if(a.unitsCheck?.status!=='PASS')fail('尚无通过的排印检查');}
- else if(['final-review',...R.FIXED.map(r=>r.id)].includes(item.source))currentReview(ctx);
+ else if(['final-review',...R.fixed(ctx.task).map(r=>r.id)].includes(item.source))currentReview(ctx);
  else if(item.source==='package'){const p=production(ctx,'package');require('./execution_receipt.cjs').validate(ctx,resolve(ctx,p.files.receipt));}
  else if(item.source==='archive'){const a=production(ctx,'archive');require('./execution_archive.cjs').verify(path.dirname(resolve(ctx,a.files.manifest)));}
  else fail('未知任务来源：'+item.source);
@@ -54,6 +54,10 @@ function verifyEvidence(ctx,item,e){
  if(item.criterion==='planning'){
   const bp=path.resolve(path.dirname(ctx.taskFile),ctx.task.blueprint.record),ids=read(bp).slides.map(s=>s.id);
   if(!v.files.some(r=>store.canonical(path.resolve(local,r.record))===store.canonical(bp))||ids.some(id=>!v.alternatives.some(a=>a.pageId===id)))fail('规划观察须引用当前蓝图并逐页说明候选与取舍');
+  if(R.moduleFill(ctx.task)&&item.requirementRefs.includes('module-fill')){
+   const pages=read(bp).slides.filter(s=>require('./content_contract.cjs').CONTENT_ROLES.has(s.pageRole)).map(s=>s.id),plans=v.modulePlans;
+   if(!Array.isArray(plans)||plans.length!==pages.length||new Set(plans.map(p=>p?.pageId)).size!==plans.length||plans.some(p=>!pages.includes(p?.pageId)||!Array.isArray(p.regions)||!p.regions.length||new Set(p.regions.map(r=>r?.id)).size!==p.regions.length||p.regions.some(r=>!r||['id','content','layout','whitespace'].some(k=>!nonempty(r[k])))))fail('模块填充规划须逐正文页列出每个模块/栏的身份、内容量、布局及留白用途');
+  }
  }
  if(item.criterion==='visual'){
   if(!v.audit?.record||C.fileHash(path.resolve(local,v.audit.record))!==v.audit.sha256)fail('代表页观察须绑定本次渲染 audit');
@@ -61,6 +65,15 @@ function verifyEvidence(ctx,item,e){
   if(a.geometryStatus!=='PASS'||a.htmlArtifact?.sha256!==assembled.files.html.sha256||C.fileHash(path.resolve(ab,a.htmlArtifact.path))!==a.htmlArtifact.sha256)fail('代表页不是当前装配产物');
   const images=[...(a.rows||[]).map(r=>r.screenshot),...(a.evidenceManifest?.entries||[]).map(r=>r.path)].filter(Boolean).map(f=>store.canonical(path.resolve(ab,f)));
   if(!v.files.some(r=>images.includes(store.canonical(path.resolve(local,r.record)))))fail('代表页图像未出现在所绑定的渲染 audit');
+  if(R.moduleFill(ctx.task)){
+   const fileRefs=new Set(v.files.map(r=>store.canonical(path.resolve(local,r.record)))),rows=(a.rows||[]).filter(r=>!['cover','references','back-cover','divider'].includes(r.bookends?.role)&&r.screenshot&&fileRefs.has(store.canonical(path.resolve(ab,r.screenshot)))),observations=v.moduleObservations;
+   const expected=rows.flatMap(r=>(r.moduleFill?.regions||[]).map(g=>({pageId:r.pageId||('page-'+r.page),regionId:g.id})));
+   if(!rows.length||rows.some(r=>r.moduleFill?.version!==1||!r.moduleFill.regions?.length)||!Array.isArray(observations)||new Set(observations.map(o=>o?.pageId+'\0'+o?.regionId)).size!==observations.length||expected.some(e=>!observations.some(o=>o?.pageId===e.pageId&&o.regionId===e.regionId))||observations.some(o=>{
+    if(!o||!nonempty(o.regionId)||!nonempty(o.observed)||!nonempty(o.decision))return true;
+    const known=expected.some(e=>e.pageId===o.pageId&&e.regionId===o.regionId);
+    return known?o.manual===true:!(o.manual===true&&nonempty(o.selector)&&rows.some(r=>(r.pageId||('page-'+r.page))===o.pageId));
+   }))fail('代表页填充检查须引用实际正文截图，并逐一记录所看页每个模块/栏的所见和处置；补录区域须有 manual:true 与 selector');
+  }
  }
  if(item.criterion==='visual'&&!v.files.some(r=>/\.(png|jpg|jpeg|webp|pdf)$/i.test(r.record)))fail('代表页验收须引用实际图像或 PDF');
  if(item.criterion==='production'&&!v.files.some(r=>/\.html?$/i.test(r.record)))fail('制作验收须引用实际 HTML');
@@ -95,7 +108,7 @@ function update(taskFile,request,context){const initial=load(taskFile);return st
  }
  return commit(ctx,plan,{id:request.operationId,digest,revision:plan.revision+1});
  },context);}
-function assertGate(task,base,stage){if(!R.enabled(task))return;const ctx=locate(task,base);if(ctx.plan.state!=='active')fail('执行计划尚未激活');const all=effective(ctx);if(stage==='package')for(const r of ctx.plan.requirements)if(!ctx.plan.items.some(i=>i.requirementRefs.includes(r.id)))fail('用户要求尚未分配任务：'+r.id);const required=stage==='ready'?['analysis','chart-plan','layout-plan']:stage==='acceptance'?['analysis','chart-plan','layout-plan','representatives','production']:stage==='package'?all.filter(i=>!['package','archive','delivery'].includes(i.id)).map(i=>i.id):[];const bad=all.filter(i=>required.includes(i.id)&&!['done','cancelled'].includes(i.status));if(bad.length)fail('执行门禁 '+stage+' 未通过：'+bad.map(i=>i.id+' ('+i.status+')').join('、'));}
+function assertGate(task,base,stage){if(!R.enabled(task))return;const ctx=locate(task,base);if(ctx.plan.state!=='active')fail('执行计划尚未激活');const all=effective(ctx);if(stage==='package')for(const r of ctx.plan.requirements)if(!ctx.plan.items.some(i=>i.requirementRefs.includes(r.id)))fail('用户要求尚未分配任务：'+r.id);const required=stage==='ready'?R.planning(task):stage==='acceptance'?[...R.planning(task),'representatives','production']:stage==='package'?all.filter(i=>!['package','archive','delivery'].includes(i.id)).map(i=>i.id):[];const bad=all.filter(i=>required.includes(i.id)&&!['done','cancelled'].includes(i.status));if(bad.length)fail('执行门禁 '+stage+' 未通过：'+bad.map(i=>i.id+' ('+i.status+')').join('、'));}
 /* 记录接收不是对任意路径重新盖章：逐一核对生产者、输入与已登记依赖。 */
 function validateProduction(ctx,record){
  if(record.status!=='published'||!record.taskFile||record.inputDigest!==inputs(ctx))fail('生产记录未成功发布或输入摘要已变化');

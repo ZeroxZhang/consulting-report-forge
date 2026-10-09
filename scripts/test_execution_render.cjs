@@ -4,6 +4,7 @@ const fs=require('node:fs'),path=require('node:path'),assert=require('node:asser
 const contract=require('./report_contract.cjs'),analysis=require('./analysis_contract.cjs'),projection=require('./analysis_projection.cjs');
 const E=require('./execution_plan.cjs'),api=require('./report.cjs'),R=require('./execution_requirements.cjs');
 async function main(){
+ const moduleFill=!!process.env.MODULE_FILL_TEST;
  const out=path.resolve(__dirname,'../renders/execution-integration-'+Date.now());fs.mkdirSync(out,{recursive:true});
  const file=n=>path.join(out,n),write=(n,v)=>fs.writeFileSync(file(n),typeof v==='string'?v:JSON.stringify(v,null,2)+'\n');
  const doc=JSON.parse(fs.readFileSync(path.resolve(__dirname,'../tests/fixtures/upgrade-blueprint.json')));
@@ -21,15 +22,25 @@ async function main(){
  const record={schemaVersion:2,status:'complete',analysisAlgorithm:'semantic-v2',analysisSha256:analysis.digest(doc,task),analysisProjection:projection.project(doc).projection,reviews:[{role:'author',reviewer:'synthetic-contract-fixture',instanceId:'synthetic-contract-fixture',basis:'合成校验器夹具，非真实分析审查',conclusion:'ready',coverage:{claimRefs:doc.claims.map(c=>c.id),issueRefs:['revenue-issue'],optionRefs:[],slideRefs:doc.slides.map(s=>s.id)}}],issues:[]};
  write('analysis-review.json',record);task.analysisReview={record:'analysis-review.json',sha256:contract.fileHash(file('analysis-review.json'))};write('task.json',task);write('blueprint.json',doc);
 
- task.policyVersions={...contract.normalize(task).policyVersions,workflow:'execution-plan-1'};task.executionPlan={id:require('node:crypto').randomUUID(),record:'execution-plan.json'};
+ task.policyVersions={...contract.normalize(task).policyVersions,workflow:moduleFill?'execution-plan-2':'execution-plan-1'};task.executionPlan={id:require('node:crypto').randomUUID(),record:'execution-plan.json'};
  write('task.json',task);write('execution-plan.json',E.create(task));
  let seq=0;const plan=()=>JSON.parse(fs.readFileSync(file('execution-plan.json'))),update=ops=>E.update(file('task.json'),{expectedRevision:plan().revision,operationId:'fixture-'+(++seq),ops});
  const complete=(id,files,auditFile)=>{const item=plan().items.find(i=>i.id===id);update([{action:'start',id}]);const attempt=plan().items.find(i=>i.id===id).attempt;
-  const record={...(auditFile?{audit:{record:path.relative(out,auditFile),sha256:contract.fileHash(auditFile)}}:{}),kind:item.criterion,reviewer:'synthetic-contract-fixture',basis:'合成状态合同，不是真实人工审查',requirementRefs:item.requirementRefs,alternatives:doc.slides.map(s=>({pageId:s.id,considered:'合成候选',decision:'测试取舍'})),files:files.map(f=>({record:path.relative(out,f),sha256:contract.fileHash(f)}))};write(id+'-evidence.json',record);
+  const record={...(auditFile?{audit:{record:path.relative(out,auditFile),sha256:contract.fileHash(auditFile)}}:{}),kind:item.criterion,reviewer:'synthetic-contract-fixture',basis:'合成状态合同，不是真实人工审查',requirementRefs:item.requirementRefs,alternatives:doc.slides.map(s=>({pageId:s.id,considered:'合成候选',decision:'测试取舍'})),files:files.map(f=>({record:path.relative(out,f),sha256:contract.fileHash(f)}))};
+  if(moduleFill&&id==='module-fill-plan')record.modulePlans=body.map(s=>({pageId:s.id,regions:[{id:'body',content:'合成已绑定内容',layout:'合成当前蓝图版位',whitespace:'测试布局的阅读分组与来源安全区'}]}));
+  if(moduleFill&&id==='representatives'){const a=JSON.parse(fs.readFileSync(auditFile));record.moduleObservations=a.rows.filter(r=>files.includes(path.resolve(path.dirname(auditFile),r.screenshot))).flatMap(r=>r.moduleFill.regions.map(g=>({pageId:r.pageId||('page-'+r.page),regionId:g.id,observed:'合成逐区域观察',decision:'合成验收数据，并非实际审美判断'})));}
+  write(id+'-evidence.json',record);
+  if(moduleFill&&['module-fill-plan','representatives'].includes(id)){const key=id==='module-fill-plan'?'modulePlans':'moduleObservations',saved=record[key];delete record[key];write(id+'-evidence.json',record);assert.throws(()=>update([{action:'submit',id,attemptId:attempt.id,evidence:id+'-evidence.json'}]),/模块|填充/);record[key]=saved;write(id+'-evidence.json',record);}
+  if(moduleFill&&id==='representatives'){
+   const first=record.moduleObservations[0],manual={pageId:first.pageId,regionId:'manual-fixture',selector:'.slide__body .fixture-unmarked',observed:'合成补录子区域',decision:'验证补录协议，不代表真实区域已审'};
+   record.moduleObservations.push(manual);write(id+'-evidence.json',record);assert.throws(()=>update([{action:'submit',id,attemptId:attempt.id,evidence:id+'-evidence.json'}]),/manual/);
+   manual.manual=true;write(id+'-evidence.json',record);
+  }
   update([{action:'submit',id,attemptId:attempt.id,evidence:id+'-evidence.json'},{action:'accept',id,reviewer:'synthetic-contract-main',basis:'合成主笔接收'}]);};
  assert.throws(()=>require('./compile_blueprint.cjs').run([file('blueprint.json'),file('pages.json'),'--task',file('task.json')]),/未激活/);
  update([{action:'activate',intake:{goal:'测试工作流',scope:'合成三页',deliverables:'HTML/PDF',constraints:'多样性必须存在',approach:'真实渲染合成审查',nextStep:'规划',openQuestions:[]}}]);
  complete('chart-plan',[file('blueprint.json')]);complete('layout-plan',[file('blueprint.json')]);
+ if(moduleFill){assert.throws(()=>require('./compile_blueprint.cjs').run([file('blueprint.json'),file('pages.json'),'--task',file('task.json')]),/module-fill-plan/);complete('module-fill-plan',[file('blueprint.json')]);}
  const compiled=await api.run(['compile',file('task.json')]);const derived=compiled.result.taskFile,pages=JSON.parse(fs.readFileSync(compiled.result.output));
  assert.ok(!fs.existsSync(file('pages.json')),'原始 task 可保留尚不存在的 pages 位置');
  const fixture=require('./test_upgrade_render.cjs');write('pages.html',fixture.authorPages(pages.pages));write('pages.css',fixture.css);
@@ -39,9 +50,18 @@ async function main(){
  complete('representatives',[path.resolve(path.dirname(smoke.result.auditFile),smokeAudit.rows[0].screenshot)],smoke.result.auditFile);complete('production',[html]);
  const qa=await api.run(['qa',derived,'--html',html,'--tier','acceptance']),auditFile=qa.result.auditFile,audit=JSON.parse(fs.readFileSync(auditFile)),reviews=require('./review_contract.cjs');
  assert.equal(audit.unitsCheck.status,'PASS');assert.equal(E.status(file('task.json')).items.find(i=>i.id==='acceptance').status,'done');
+ if(moduleFill){
+  const pack=await api.run(['review-pack',derived,'--audit',auditFile]),readPack=name=>JSON.parse(fs.readFileSync(path.join(pack.result.directory,name)));
+  const template=readPack('author.json').qualityChecks.find(c=>c.id==='module-fill');assert.equal(template.status,'not_reviewed');assert.ok(template.observations.every(o=>!o.observed&&!o.decision));
+  assert.equal(readPack('review-pack.json').moduleFillChecklist.length,template.observations.length);
+ }
  const final={schemaVersion:5,status:'complete',analysisAlgorithm:'semantic-v2',analysisSha256:analysis.digest(doc,task),reviewer:'synthetic-contract-fixture',independence:'author',htmlSha256:audit.htmlArtifact.sha256,pdfSha256:audit.pdfArtifact.sha256,auditSha256:contract.hash(contract.stable(audit)),coverage:[{reviewer:'synthetic-contract-fixture',independence:'author',layers:reviews.layers,htmlPages:audit.rows.map(r=>r.page),pdfPages:audit.rows.map(r=>r.page),evidence:audit.evidenceManifest.entries.map(e=>({id:e.id}))}],checks:Object.fromEntries(['analysis','evidence','visual'].map(k=>[k,{status:'pass',basis:'合成合同测试，非实际审查'}])),warningReview:(audit.warnings||[]).map(warning=>({warning,status:'accepted',note:'合成测试处置'})),issues:[]};
  assert.ok(reviews.validate(final,audit,{baseDir:out,auditDir:path.dirname(auditFile)}).some(e=>e.includes('qualityChecks')));
- final.qualityChecks=R.FIXED.map(r=>({id:r.id,status:'pass',reviewer:final.reviewer,independence:'author',basis:'合成全册审查合同，非真实判断',evidenceIds:audit.evidenceManifest.entries.map(e=>e.id),observations:audit.rows.map(s=>({pageId:s.pageId||('page-'+s.page),observed:'合成内容',considered:'合成其他形式',decision:'合成取舍'})),repetitions:[]}));write('review-fixture.json',final);
+ final.qualityChecks=R.FIXED.map(r=>({id:r.id,status:'pass',reviewer:final.reviewer,independence:'author',basis:'合成全册审查合同，非真实判断',evidenceIds:audit.evidenceManifest.entries.map(e=>e.id),observations:audit.rows.map(s=>({pageId:s.pageId||('page-'+s.page),observed:'合成内容',considered:'合成其他形式',decision:'合成取舍'})),repetitions:[]}));
+ if(moduleFill){const fill=require('./module_fill_review.cjs'),draft=fill.draft(audit);final.qualityChecks.push({id:'module-fill',status:'pass',reviewer:final.reviewer,independence:'author',basis:'合成模块审查合同，非真实判断',evidenceIds:final.qualityChecks[0].evidenceIds,...draft,inventoryChecks:draft.inventoryChecks.map(p=>({...p,basis:'合成测试已核对区域清单'})),observations:draft.observations.map(o=>({...o,observed:'合成模块观察',decision:'仅验证字段与当前证据关联',diagnostics:o.diagnostics.map(d=>({...d,disposition:'measurement-artifact',basis:'合成测试处置，不是实际视觉判断'}))}))});
+ const saved=final.qualityChecks[2].observations.pop();assert.ok(reviews.validate(final,audit,{baseDir:out,auditDir:path.dirname(auditFile)}).length);final.qualityChecks[2].observations.push(saved);assert.equal(audit.rows[0].moduleFill.version,1);assert.equal(audit.rows[0].printModuleFill.version,1);
+ }
+ write('review-fixture.json',final);
  const aggregated=await api.run(['aggregate',derived,'--audit',auditFile,'--reviews',JSON.stringify([file('review-fixture.json')])]);const reviewFile=aggregated.result.reviewFile;
  assert.equal(E.status(file('task.json')).items.find(i=>i.id==='chart-diversity').status,'done');
  const contentBefore=fs.readFileSync(file('pages.css'));fs.appendFileSync(file('pages.css'),'/* changed input */');assert.equal(E.status(file('task.json')).items.find(i=>i.id==='acceptance').status,'pending');fs.writeFileSync(file('pages.css'),contentBefore);

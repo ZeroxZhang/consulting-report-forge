@@ -73,6 +73,7 @@ function reuseDifferences(current, previous) {
 function auditErrors(audit, {auditDir = process.cwd()} = {}) {
   const errors = [];
   if (!audit || typeof audit !== 'object') return ['缺少 audit'];
+  errors.push(...require('./module_fill_review.cjs').auditErrors(audit));
   if (audit.geometryStatus !== 'PASS' || !Array.isArray(audit.errors) || audit.errors.length) errors.push('工程验收未通过');
   if ((audit.tier ?? 'acceptance') !== 'acceptance' || audit.acceptance?.complete === false) errors.push('只有完整 acceptance audit 可用于审查和继承');
   if(require('./execution_requirements.cjs').enabled(audit.taskContract)&&(audit.unitsCheck?.status!=='PASS'||audit.unitsCheck.htmlSha256!==audit.htmlArtifact?.sha256||!Array.isArray(audit.unitsCheck.findings)||audit.unitsCheck.findings.length))errors.push('执行合同缺少当前 HTML 的排印通过证据');

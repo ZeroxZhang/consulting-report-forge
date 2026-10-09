@@ -61,6 +61,7 @@ async function preview(options = {}) {
     return {
       file: input, out, total, partial: await page.evaluate(() => Number(document.documentElement.dataset.assemblyPartial) || null),
       pages: rows.map(r => r.page), shots: rows.map(r => r.screenshot),
+      ...(rows.some(r=>r.moduleFill)?{moduleFill:rows.map(r=>({page:r.page,pageId:r.pageId,...r.moduleFill}))}:{}),
       uncovered: critical.uncovered,
       errors: [...flatten('errors').map(e => ({page: e.page, code: e.code, detail: e.message || e.text || e.error || ''})), ...criticalErrors.map(c => ({page: 0, code: 'CRITICAL', detail: c.message})), ...problems.map(p => ({page: 0, code: 'RUNTIME', detail: p}))],
       warnings: flatten('warnings').map(w => ({page: w.page, code: w.code, detail: w.message || w.text || ''})),

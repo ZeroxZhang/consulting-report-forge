@@ -8,7 +8,7 @@
 
 ## 实际合同组合与维护入口
 
-当前运行时为 1.7.0；新任务使用严格合同，旧任务保持原合同。以下是代码实际存在的路径，不表示任意版本可自由混搭。
+当前运行时为 1.8.0；新任务使用严格合同，旧任务保持原合同。以下是代码实际存在的路径，不表示任意版本可自由混搭。
 
 | 路径 | 合同组合 | 产生与校验 |
 |---|---|---|
@@ -43,12 +43,22 @@
 审查复用中的“上一轮”“历史记录”表示同一报告的修订证据，不是技能产品版本。独立审查是否必需由任务风险决定；简单且无重大结论的任务可只保留作者审查。
 
 
-## execution-plan-1：进度与报告语义分离
+## execution-plan-1 / execution-plan-2：进度与报告语义分离
 
 新建入口增加可选第五槽 `policyVersions.workflow` 与仅含 `id/record` 的 executionPlan；全局四槽 DEFAULT_POLICIES 不改。新增计划 schema1、执行归档 schema1、打包收据 schema1，均独立于 blueprint3、task3、pages4、analysis-review2、final-review5 和 review-snapshot1。固定要求目录为 `execution_requirements.cjs`，所有正式入口复用 `execution_plan.assertGate`。
 
-计划动态字段不进入 analysis_projection，也不加入 review_contract.taskRecords。audit_evidence 仅纳入 plan ID，不纳入 locator/revision；首次启用 workflow 仍会改变公共依赖，不能复用旧全册判断。qualityChecks 按 workflow 条件校验且经 aggregate 原样收集，两项各自覆盖所有必要角色与该审查者本人的当前双媒介证据。
+计划动态字段不进入 analysis_projection，也不加入 review_contract.taskRecords。audit_evidence 仅纳入 plan ID，不纳入 locator/revision；首次启用 workflow 仍会改变公共依赖，不能复用旧全册判断。qualityChecks 按 workflow 条件校验且经 aggregate 原样收集，各项分别覆盖所有必要角色与该审查者本人的当前双媒介证据。
 
 根任务与派生任务、QA 和打包共享 task_store 锁；内部上下文由进程内 WeakSet 识别，不提供 CLI 绕锁参数。QA 被统一入口直接调用，避免父进程占锁后子进程再次抢锁。生产记录核对 published、开始时输入摘要、生产者计划身份和当前依赖，不能把任意旧文件在接收时盖成当前版本。
 
 当前失效采用保守范围：输入文件/蓝图/公共分析变更会要求重新核实相关计划任务；不宣称已实现精确到单页的执行调度。现有视觉证据逐页复用机制保持独立。移动恢复保留历史快照，但重建当前生产链，不自动继承已完成状态。运行 `npm run test:execution` 验证状态与真实渲染流程；审查夹具均明确为合成数据。
+
+### 模块填充增量与冻结边界
+
+`execution-plan-1` 继续使用原双约束和原固定任务定义；`execution-plan-2` 通过 `execution_requirements.fixed(task)` 增加 `module-fill`、`module-fill-plan` 及代表页依赖。`report init` 和无计划 task3 的 `report adopt` 使用新策略。既有活动计划不原地改版本，归档、恢复和旧审查依旧按原策略读取；要在旧任务采用新能力，保留旧档案并在新任务目录重新规划、制作、审查。本次不提供旧计划自动升级或补签。
+
+`browser_module_fill.inspectSlide` 由共享 `page_probe.collect` 在单页预览与 QA 屏幕阶段调用，QA 打印阶段再采集一份。测量用实际文字行框与媒体整体矩形，避免满高父框或脚注把中部空洞掩盖；不把 SVG 内坐标域当成文字模块空洞。`measuredVerticalCoverage` 等是成稿投影指标，`baselineFillRatio` 不可从它们推算。探针不生成通过结论，也不能证明所有未标记自定义子模块都被识别。
+
+`module_fill_review` 检查当前审查中每个正文页、每个自动枚举区域及 HTML/PDF 两种媒介的观察和诊断处置。打印 DOM 只提供 PDF 审查定位线索，实际 PDF 页面仍须由同一审查者查看。审查者另须确认枚举完整并补录遗漏区域。D3 裁切诊断不能作为设计留白放行；误报须写明实际证据，真缺陷须修复并重跑当前验收。细则见 [模块填充检查](../references/module-fill.md)。
+
+`npm run test:module-fill` 覆盖审查缺项拒绝、真实浏览器留白/裁切定位和新策略 HTML/PDF 生产链；`npm run test:execution` 保留旧策略生产链。生产链的人工审查记录为明确标记的合成测试数据，不证明实际美学质量提升。

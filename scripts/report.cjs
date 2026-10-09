@@ -21,7 +21,7 @@ function initialize(directory,{strict=true,visual=null,workMode='analytical'}={}
       require('./contract_capabilities.cjs').visualPolicy(visual);
       task.policyVersions={...task.policyVersions,visual};
     }
-    if(strict){task.policyVersions.workflow='execution-plan-1';task.executionPlan={id:crypto.randomUUID(),record:'execution-plan.json'};write(path.join(staging,'execution-plan.json'),require('./execution_plan.cjs').create(task));}
+    if(strict){task.policyVersions.workflow='execution-plan-2';task.executionPlan={id:crypto.randomUUID(),record:'execution-plan.json'};write(path.join(staging,'execution-plan.json'),require('./execution_plan.cjs').create(task));}
     write(path.join(staging,'task.json'),contract.normalize(task));
     const blueprint=read(path.join(__dirname,'../templates/research-blueprint.json'));
     if(strict)blueprint.analysisAlgorithm='semantic-v2';

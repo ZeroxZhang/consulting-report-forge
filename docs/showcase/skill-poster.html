@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=1080">
   <title>Consulting Report Forge · 产品介绍海报</title>
   <!-- design intent: 字体驱动；黑白平行光栅折成书页，微光仅强调线条形变。
-       用户指定的单色与微光覆盖 B8 的霓虹色默认值。178px : 14px = 12.7:1。
-       画布：1440 = 上48 + 行(44+352+418+288+132+38) + 间隔80 + 下40。
+       用户指定的单色与微光覆盖 B8 的霓虹色默认值。144px : 14px = 10.3:1。
+       画布：1440 = 上40 + 行(36+272+292+498+56+90+28) + 间隔96 + 下32。
        文案由 skill-poster.ir.json 维护，build-poster.cjs 同步 data-copy 叶节点。 -->
   <style>
     @font-face{font-family:'Poster Sans';font-weight:400;src:url('../../assets/fonts/noto-sans-sc-400.woff2') format('woff2');font-display:block}
@@ -16,28 +16,30 @@
     *{box-sizing:border-box}
     :root{--paper:#080808;--ink:#f4f4f4;--muted:#b4b4b4;--line:#484848;--mono:'JetBrains Mono','SFMono-Regular',Consolas,monospace}
     body{margin:0;background:var(--paper);color:var(--ink);font-family:'Poster Sans','PingFang SC','Microsoft YaHei',sans-serif}
-    main{width:1080px;height:1440px;padding:48px 64px 40px;display:grid;grid-template-rows:44px 352px 418px 288px 132px 38px;gap:16px;align-content:start;overflow:hidden}
+    main{width:1080px;height:1440px;padding:40px 64px 32px;display:grid;grid-template-rows:36px 272px 292px 498px 56px 90px 28px;gap:16px;align-content:start;overflow:hidden}
     h1,h2,p,figure{margin:0}
     header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:16px;letter-spacing:.03em}
     .edition{color:var(--muted);font-size:14px}
-    .intro{display:grid;grid-template-columns:1fr 160px;grid-template-rows:220px 68px 64px;align-content:start}
-    h1{font:600 178px/1.22 'Poster Display','Arial Black',sans-serif;letter-spacing:-10px;align-self:start}
-    .signal{font-family:var(--mono);font-size:14px;line-height:1.8;color:var(--muted);padding:24px 0 0 8px}
+    .intro{display:grid;grid-template-columns:1fr 160px;grid-template-rows:176px 64px 32px;align-content:start}
+    h1{font:600 144px/1.22 'Poster Display','Arial Black',sans-serif;letter-spacing:-8px;align-self:start}
+    .signal{font-family:var(--mono);font-size:14px;line-height:1.8;color:var(--muted);padding:8px 0 0 8px}
     .signal svg{display:block;width:92px;height:70px;margin-top:4px;stroke:var(--ink);fill:none;stroke-width:1;pointer-events:none}
-    .intro h2{grid-column:1/-1;font-size:48px;line-height:1.4;font-weight:600;letter-spacing:-1.5px}
+    .intro h2{grid-column:1/-1;font-size:44px;line-height:1.45;font-weight:600;letter-spacing:-1.5px}
     .intro p{grid-column:1/-1;font-size:21px;line-height:1.5;color:var(--muted);white-space:pre-line}
-    .hero{position:relative;isolation:isolate;overflow:hidden;margin:0 -64px;display:grid;grid-template-rows:32px 350px 36px;align-content:start}
-    .hero-art{position:absolute;width:1080px;height:720px;left:0;top:-128px;z-index:-1;pointer-events:none;object-fit:contain;mask-image:linear-gradient(to bottom,transparent,#000 14%,#000 85%,transparent)}
+    .hero{position:relative;isolation:isolate;overflow:hidden;margin:0 -64px;display:grid;grid-template-rows:28px 232px 32px;align-content:start}
+    .hero-art{position:absolute;width:800px;height:533.333px;left:140px;top:-98px;z-index:-1;pointer-events:none;object-fit:contain;mask-image:linear-gradient(to right,transparent,#000 10%,#000 90%,transparent)}
     .hero-label,.hero-caption{margin:0 64px;display:flex;justify-content:space-between;align-items:center;font:14px/1.5 var(--mono);letter-spacing:.05em;color:var(--muted);z-index:1}
-    .hero-caption{grid-row:3;font-family:'Poster Sans',sans-serif;font-size:17px;letter-spacing:.15em}
+    .hero-caption{grid-row:3;font-family:'Poster Sans',sans-serif;font-size:17px;letter-spacing:.08em}
     .hero-caption .code{font:14px/1.5 var(--mono);letter-spacing:0}
-    .geometry{position:absolute;inset:0;width:1080px;height:418px;pointer-events:none;z-index:0;fill:none;stroke:#8e8e8e;stroke-width:.8}
-    .capabilities{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:132px 132px;gap:24px 48px;align-content:start}
-    .cap{border-top:1px solid var(--line);padding-top:16px;display:grid;grid-template-columns:42px 1fr;grid-template-rows:114px;align-content:start;gap:8px}
+    .geometry{position:absolute;inset:0;width:1080px;height:292px;pointer-events:none;z-index:0;fill:none;stroke:#8e8e8e;stroke-width:.8}
+    .capabilities{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:150px 150px 150px;gap:24px 40px;align-content:start}
+    .cap{border-top:1px solid var(--line);padding-top:12px;display:grid;grid-template-columns:32px 1fr;grid-template-rows:137px;align-content:start;gap:8px}
     .num{font:14px/2 var(--mono);color:var(--muted);padding-top:3px}
-    .cap h2{font-size:30px;line-height:1.5;font-weight:600;letter-spacing:1px;margin-bottom:4px}
-    .cap p{font-size:21px;line-height:1.5;color:var(--muted);white-space:pre-line}
-    .delivery{border-top:1px solid var(--line);padding-top:24px;display:grid;grid-template-columns:1fr 232px;grid-template-rows:84px;gap:32px;align-content:start}
+    .cap h2{font-size:28px;line-height:1.5;font-weight:600;letter-spacing:.5px;margin-bottom:3px}
+    .cap p{font-size:20px;line-height:1.5;color:var(--muted);white-space:pre-line}
+    .workflow{border-top:1px solid var(--line);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;font-size:19px;color:var(--ink)}
+    .workflow span+span{border-left:1px solid var(--line);padding-left:24px}
+    .delivery{padding-top:4px;display:grid;grid-template-columns:1fr 232px;grid-template-rows:84px;gap:32px;align-content:start}
     .delivery h2{font:600 32px/1.3 'Poster Display','Poster Sans',sans-serif;letter-spacing:-.5px;margin-bottom:10px}
     .delivery p{font-size:19px;line-height:1.7;color:var(--muted)}
     .cta{display:flex;justify-content:space-between;align-items:center;align-self:start;height:60px;border:1px solid #b4b4b4;padding:0 20px;color:var(--ink);text-decoration:none;font-size:23px}
@@ -54,24 +56,38 @@
     <h1>FORGE</h1>
     <div class="signal" aria-hidden="true">EVIDENCE<br>↓ DECISION<svg viewBox="0 0 92 70"><path d="M2 52 39 15 83 15 46 52Z M2 60 46 60 83 23 M39 15V6 M46 52v14 M83 15h8"/><circle cx="39" cy="15" r="3"/></svg></div>
     <h2 data-copy="hero.title">把复杂问题，锻造成清晰判断</h2>
-    <p data-copy="hero.body">面向 AI Agent 的咨询研究与报告交付技能
-从深度调研、商业分析，到有依据的视觉报告。</p>
+    <p data-copy="hero.body">面向 AI Agent，把调研、分析、建模与成稿串成完整工作流。</p>
   </section>
   <figure class="hero" aria-label="连续平行光栅折叠成层叠书页，象征证据被组织为清晰报告">
     <img class="hero-art" src="skill-poster-art.png" alt="">
     <div class="hero-label" aria-hidden="true"><span>∑ / EVIDENCE FIELD</span><span>STRUCTURE → INSIGHT</span></div>
-    <svg class="geometry" viewBox="0 0 1080 438" aria-hidden="true"><path d="M60 53h10m-5-5v10 M1010 350h10m-5-5v10 M65 379v-16m0 16h82 M1015 62v16m0-16h-58"/><circle cx="986" cy="365" r="17"/><path d="m974 377 24-24"/></svg>
+    <svg class="geometry" viewBox="0 0 1080 292" aria-hidden="true"><path d="M60 53h10m-5-5v10 M1010 235h10m-5-5v10 M65 243v-16m0 16h62 M1015 62v16m0-16h-58"/><circle cx="986" cy="210" r="17"/><path d="m974 222 24-24"/></svg>
     <figcaption class="hero-caption"><span data-copy="scenarios.body">战略研究 / 经营复盘 / 投资分析</span><span class="code" aria-hidden="true">[ x → f(x) ]</span></figcaption>
   </figure>
-  <section class="capabilities" aria-label="四项核心价值">
-    <article class="cap"><span class="num">01</span><div><h2 data-copy="research.title">研究有据</h2><p data-copy="research.body">追溯来源，核对方法与计算，
-让判断经得起追问。</p></div></article>
-    <article class="cap"><span class="num">02</span><div><h2 data-copy="story.title">判断成线</h2><p data-copy="story.body">串起问题、证据与结论，
-让整册读来有主线。</p></div></article>
-    <article class="cap"><span class="num">03</span><div><h2 data-copy="visual.title">图文有序</h2><p data-copy="visual.body">图表与版式随内容变化，
-逐栏细查密度与留白。</p></div></article>
-    <article class="cap"><span class="num">04</span><div><h2 data-copy="workflow.title">稳步交付</h2><p data-copy="workflow.body">保留进度，中断后接续，
-逐页复核再交付。</p></div></article>
+  <section class="capabilities" aria-label="六项核心能力">
+    <article class="cap"><span class="num">01</span><div><h2 data-copy="research.title">深度调研</h2><p data-copy="research.body">整合文档、公开资料与已有访谈记录，
+追溯关键来源，核对冲突与统计口径，
+找出真正影响判断的证据。</p></div></article>
+    <article class="cap"><span class="num">02</span><div><h2 data-copy="analysis.title">商业分析</h2><p data-copy="analysis.body">围绕业务问题选择分析方法：
+市场规模测算、盈利驱动、单位经济，
+把行业机会与经营约束变成取舍依据。</p></div></article>
+    <article class="cap"><span class="num">03</span><div><h2 data-copy="modeling.title">数据建模</h2><p data-copy="modeling.body">拆解增长贡献与结构差异，
+开展情景推演与敏感性分析，
+保留输入、公式与假设，计算可复算。</p></div></article>
+    <article class="cap"><span class="num">04</span><div><h2 data-copy="collaboration.title">AI 专家协作</h2><p data-copy="collaboration.body">主笔统筹，研究、建模与行业 AI
+按需补位；复杂或重大材料
+由独立 AI 实例复核推理与成稿。</p></div></article>
+    <article class="cap"><span class="num">05</span><div><h2 data-copy="story.title">决策叙事</h2><p data-copy="story.body">提炼总判断，用标题链串起论证；
+每页说清结论、证据与适用边界，
+明确备选方案、代价和下一步验证。</p></div></article>
+    <article class="cap"><span class="num">06</span><div><h2 data-copy="visual.title">视觉报告</h2><p data-copy="visual.body">30 套正文布局 + 自定义阅读区域，
+按证据关系选图，统筹整册阅读节奏，
+逐栏检查信息密度、留白与裁切。</p></div></article>
+  </section>
+  <section class="workflow" aria-label="交付与持续更新">
+    <span data-copy="continuity.title">进度保留 · 中断后接续</span>
+    <span data-copy="revision.title">修订可追溯</span>
+    <span data-copy="review.title">HTML / PDF 双媒介复核</span>
   </section>
   <section class="delivery">
     <div><h2 data-copy="delivery.title">HTML + PDF</h2><p data-copy="delivery.body">自包含 HTML · 同版 PDF · 离线阅读与分享</p></div>

@@ -7,7 +7,7 @@
   },
   "blueprint": {
     "schema_version": 1,
-    "goal": "在 README 中以中等信息密度介绍当前技能价值，吸引读者了解和使用",
+    "goal": "保留已认可的黑白光栅风格，以六项具体能力和交付机制完整介绍技能亮点",
     "audience": "需要研究深度与专业表达的战略团队、咨询顾问、行业研究人员和经营管理者",
     "core_claim": "把复杂问题，锻造成清晰判断",
     "logic": "narrative",
@@ -16,7 +16,7 @@
         "id": "hero",
         "role": "answer",
         "title": "把复杂问题，锻造成清晰判断",
-        "summary": "面向 AI Agent 的咨询研究与报告交付技能\n从深度调研、商业分析，到有依据的视觉报告。",
+        "summary": "面向 AI Agent，把调研、分析、建模与成稿串成完整工作流。",
         "source_refs": [
           "README.md#consulting-report-forge"
         ]
@@ -24,41 +24,60 @@
       {
         "id": "research",
         "role": "evidence",
-        "title": "研究有据",
-        "summary": "追溯来源，核对方法与计算，\n让判断经得起追问。",
+        "title": "深度调研",
+        "summary": "整合文档、公开资料与已有访谈记录，\n追溯关键来源，核对冲突与统计口径，\n找出真正影响判断的证据。",
         "source_refs": [
-          "README.md#核心能力",
-          "SKILL.md#1-确定问题与证据边界",
-          "SKILL.md#2-选方法完成分析"
+          "README.md#01--深度调研找到能够改变判断的证据"
+        ]
+      },
+      {
+        "id": "analysis",
+        "role": "evidence",
+        "title": "商业分析",
+        "summary": "围绕业务问题选择分析方法：\n市场规模测算、盈利驱动、单位经济，\n把行业机会与经营约束变成取舍依据。",
+        "source_refs": [
+          "README.md#02--商业分析框架让方法帮助回答问题"
+        ]
+      },
+      {
+        "id": "modeling",
+        "role": "evidence",
+        "title": "数据建模",
+        "summary": "拆解增长贡献与结构差异，\n开展情景推演与敏感性分析，\n保留输入、公式与假设，计算可复算。",
+        "source_refs": [
+          "README.md#03--数据分析与建模让结论经得起追问",
+          "references/analysis-methods.md"
+        ]
+      },
+      {
+        "id": "collaboration",
+        "role": "evidence",
+        "title": "AI 专家协作",
+        "summary": "主笔统筹，研究、建模与行业 AI\n按需补位；复杂或重大材料\n由独立 AI 实例复核推理与成稿。",
+        "source_refs": [
+          "README.md#04--咨询专家协作把研究模型与行业判断接起来",
+          "SKILL.md#工作方式"
         ]
       },
       {
         "id": "story",
         "role": "evidence",
-        "title": "判断成线",
-        "summary": "串起问题、证据与结论，\n让整册读来有主线。",
+        "title": "决策叙事",
+        "summary": "提炼总判断，用标题链串起论证；\n每页说清结论、证据与适用边界，\n明确备选方案、代价和下一步验证。",
         "source_refs": [
+          "README.md#05--storyline把研究发现组织成决策叙事",
           "SKILL.md#3-形成标题链与统一蓝图"
         ]
       },
       {
         "id": "visual",
         "role": "evidence",
-        "title": "图文有序",
-        "summary": "图表与版式随内容变化，\n逐栏细查密度与留白。",
+        "title": "视觉报告",
+        "summary": "30 套正文布局 + 自定义阅读区域，\n按证据关系选图，统筹整册阅读节奏，\n逐栏检查信息密度、留白与裁切。",
         "source_refs": [
-          "SKILL.md#固定前置约束",
-          "README.md#180逐模块检查内容填充"
-        ]
-      },
-      {
-        "id": "workflow",
-        "role": "evidence",
-        "title": "稳步交付",
-        "summary": "保留进度，中断后接续，\n逐页复核再交付。",
-        "source_refs": [
-          "SKILL.md#强制执行清单",
-          "SKILL.md#6-验收和修订"
+          "README.md#06--视觉表达让分析成为可阅读的报告",
+          "assets/layout-atlas/catalog.json",
+          "SKILL.md#固定前置约束"
         ]
       }
     ],
@@ -78,7 +97,7 @@
       "role": "answer",
       "content": {
         "title": "把复杂问题，锻造成清晰判断",
-        "body": "面向 AI Agent 的咨询研究与报告交付技能\n从深度调研、商业分析，到有依据的视觉报告。"
+        "body": "面向 AI Agent，把调研、分析、建模与成稿串成完整工作流。"
       },
       "source_refs": [
         "README.md#consulting-report-forge"
@@ -87,79 +106,165 @@
       "diagram": null,
       "locked": {
         "content": false,
-        "layout": false
+        "layout": true
       }
     },
     {
       "id": "research",
       "role": "evidence",
       "content": {
-        "title": "研究有据",
-        "body": "追溯来源，核对方法与计算，\n让判断经得起追问。"
+        "title": "深度调研",
+        "body": "整合文档、公开资料与已有访谈记录，\n追溯关键来源，核对冲突与统计口径，\n找出真正影响判断的证据。"
       },
       "source_refs": [
-        "README.md#核心能力",
-        "SKILL.md#1-确定问题与证据边界",
-        "SKILL.md#2-选方法完成分析"
+        "README.md#01--深度调研找到能够改变判断的证据"
       ],
       "visual_priority": 2,
       "diagram": null,
       "locked": {
         "content": false,
-        "layout": false
+        "layout": true
+      }
+    },
+    {
+      "id": "analysis",
+      "role": "evidence",
+      "content": {
+        "title": "商业分析",
+        "body": "围绕业务问题选择分析方法：\n市场规模测算、盈利驱动、单位经济，\n把行业机会与经营约束变成取舍依据。"
+      },
+      "source_refs": [
+        "README.md#02--商业分析框架让方法帮助回答问题"
+      ],
+      "visual_priority": 2,
+      "diagram": null,
+      "locked": {
+        "content": false,
+        "layout": true
+      }
+    },
+    {
+      "id": "modeling",
+      "role": "evidence",
+      "content": {
+        "title": "数据建模",
+        "body": "拆解增长贡献与结构差异，\n开展情景推演与敏感性分析，\n保留输入、公式与假设，计算可复算。"
+      },
+      "source_refs": [
+        "README.md#03--数据分析与建模让结论经得起追问",
+        "references/analysis-methods.md"
+      ],
+      "visual_priority": 2,
+      "diagram": null,
+      "locked": {
+        "content": false,
+        "layout": true
+      }
+    },
+    {
+      "id": "collaboration",
+      "role": "evidence",
+      "content": {
+        "title": "AI 专家协作",
+        "body": "主笔统筹，研究、建模与行业 AI\n按需补位；复杂或重大材料\n由独立 AI 实例复核推理与成稿。"
+      },
+      "source_refs": [
+        "README.md#04--咨询专家协作把研究模型与行业判断接起来",
+        "SKILL.md#工作方式"
+      ],
+      "visual_priority": 2,
+      "diagram": null,
+      "locked": {
+        "content": false,
+        "layout": true
       }
     },
     {
       "id": "story",
       "role": "evidence",
       "content": {
-        "title": "判断成线",
-        "body": "串起问题、证据与结论，\n让整册读来有主线。"
+        "title": "决策叙事",
+        "body": "提炼总判断，用标题链串起论证；\n每页说清结论、证据与适用边界，\n明确备选方案、代价和下一步验证。"
       },
       "source_refs": [
+        "README.md#05--storyline把研究发现组织成决策叙事",
         "SKILL.md#3-形成标题链与统一蓝图"
       ],
       "visual_priority": 2,
       "diagram": null,
       "locked": {
         "content": false,
-        "layout": false
+        "layout": true
       }
     },
     {
       "id": "visual",
       "role": "evidence",
       "content": {
-        "title": "图文有序",
-        "body": "图表与版式随内容变化，\n逐栏细查密度与留白。"
+        "title": "视觉报告",
+        "body": "30 套正文布局 + 自定义阅读区域，\n按证据关系选图，统筹整册阅读节奏，\n逐栏检查信息密度、留白与裁切。"
       },
       "source_refs": [
-        "SKILL.md#固定前置约束",
-        "README.md#180逐模块检查内容填充"
+        "README.md#06--视觉表达让分析成为可阅读的报告",
+        "assets/layout-atlas/catalog.json",
+        "SKILL.md#固定前置约束"
       ],
       "visual_priority": 2,
       "diagram": null,
       "locked": {
         "content": false,
-        "layout": false
+        "layout": true
       }
     },
     {
-      "id": "workflow",
+      "id": "continuity",
       "role": "evidence",
       "content": {
-        "title": "稳步交付",
-        "body": "保留进度，中断后接续，\n逐页复核再交付。"
+        "title": "进度保留 · 中断后接续",
+        "body": ""
       },
       "source_refs": [
-        "SKILL.md#强制执行清单",
+        "SKILL.md#强制执行清单"
+      ],
+      "visual_priority": 2,
+      "diagram": null,
+      "locked": {
+        "content": false,
+        "layout": true
+      }
+    },
+    {
+      "id": "revision",
+      "role": "evidence",
+      "content": {
+        "title": "修订可追溯",
+        "body": ""
+      },
+      "source_refs": [
+        "README.md#07--交付与复核便于分享也便于继续更新"
+      ],
+      "visual_priority": 2,
+      "diagram": null,
+      "locked": {
+        "content": false,
+        "layout": true
+      }
+    },
+    {
+      "id": "review",
+      "role": "evidence",
+      "content": {
+        "title": "HTML / PDF 双媒介复核",
+        "body": ""
+      },
+      "source_refs": [
         "SKILL.md#6-验收和修订"
       ],
       "visual_priority": 2,
       "diagram": null,
       "locked": {
         "content": false,
-        "layout": false
+        "layout": true
       }
     },
     {
@@ -217,7 +322,7 @@
   "design_intent": {
     "visual_language": "typography-driven",
     "color_role": "spice",
-    "type_ratio": 12.7
+    "type_ratio": 10.3
   },
   "brand_ref": null
 }

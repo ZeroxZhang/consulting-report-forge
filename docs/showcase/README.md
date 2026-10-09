@@ -4,7 +4,7 @@
 
 ## Skill 介绍海报（README 头图）
 
-[skill-poster.png](skill-poster.png) 是独立的 **3:4 产品海报，2160 × 2880 像素**。当前介绍 1.8.0，以“把复杂问题，锻造成清晰判断”为主题，呈现研究有据、判断成线、图文有序与稳步交付。新版的图表与版式多样性、逐栏阅读检查、进度接续融入四项价值介绍；复合证据等可选策略没有写成默认能力。
+[skill-poster.png](skill-poster.png) 是独立的 **3:4 产品海报，2160 × 2880 像素**。当前介绍 1.8.0，以“把复杂问题，锻造成清晰判断”为主题，展开深度调研、商业分析、数据建模、按需 AI 专家协作、决策叙事与视觉报告六项能力。文案呈现市场规模测算、盈利驱动、单位经济、情景与敏感性分析、30 套正文布局等具体亮点，补充进度接续、修订追溯和双媒介复核；README 以 720 像素宽展示，点击可查看高清原图。
 
 视觉采用黑白微光、连续平行光栅与局部书页形变，辅以少量数学符号和几何构造。光栅是抽象产品主视觉，不代表实际报告截图；下方的历史报告选页保持独立展示。
 
@@ -26,7 +26,7 @@ node docs/showcase/build-poster.cjs
 |---|---|---|
 | [ai-biopharma-market.png](ai-biopharma-market.png) | 4 | 市场规模估计与统计边界 |
 | [ai-biopharma-landscape.png](ai-biopharma-landscape.png) | 7 | 参与者证据矩阵 |
-| [ai-biopharma-deals.png](ai-biopharma-deals.png) | 14 | 首付与条件里程碑散点；海报主图 |
+| [ai-biopharma-deals.png](ai-biopharma-deals.png) | 14 | 首付与条件里程碑散点 |
 | [ai-biopharma-finance.png](ai-biopharma-finance.png) | 16 | 收入、亏损与现金的财务比较 |
 | [ai-biopharma-cash.png](ai-biopharma-cash.png) | 17 | 现金变动桥 |
 | [ai-biopharma-valuation.png](ai-biopharma-valuation.png) | 22 | 条件估值敏感性 |
@@ -34,7 +34,7 @@ node docs/showcase/build-poster.cjs
 
 本次已核对新版 `audit.json` 的 acceptance 完成状态与空错误列表，以及 `review.json` 的 complete 状态、作者与独立实例对 31 页 HTML/PDF 的覆盖记录。七张公开图片的 SHA-256 均与审查 evidence 中的 HTML 截图一致；[截图清单](ai-biopharma-screenshots.json) 保留原页映射、图片校验值和审查文件校验值。
 
-本版本已完成实际逐页双媒介审查；截图校验用于证明展示的是该版本，不能替代外部事实核验，本次未刷新历史研究来源。完整报告、数据附件与内部审查底稿未复制入仓库；截图保留原始来源、期间与限制，不代表有关公司背书，不作为当前投资或医疗建议。海报只缩放展示原页，不修改其内容。
+本版本已完成实际逐页双媒介审查；截图校验用于证明展示的是该版本，不能替代外部事实核验，本次未刷新历史研究来源。完整报告、数据附件与内部审查底稿未复制入仓库；截图保留原始来源、期间与限制，不代表有关公司背书，不作为当前投资或医疗建议。历史成稿选页不随产品海报文案更新。
 
 ## 1.3.0 最新报告选页：MES
 

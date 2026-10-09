@@ -379,11 +379,20 @@ node scripts/report.cjs resume /任务/新报告/task.json
 <details>
 <summary><strong>维护者：运行检查</strong></summary>
 
-准备好制作依赖后执行：
+准备好制作依赖后，正式发布前运行完整入口：
+
+```sh
+npm run test:release
+```
+
+它自动纳入 `scripts/test_*.cjs`，另跑 6 个显式浏览器／策略变体、生成资产一致性和 Python 字体缓存检查，避免新增测试或模块填充专项被遗漏。单项失败会停止发布检查；通过仍不替代具体报告的实际审查。
+
+修改范围明确时可使用以下局部验证命令：
 
 ```sh
 npm test                     # 计算、合同、兼容性与审查复用
 npm run test:execution       # 执行清单、强制约束与真实 HTML/PDF 生产链
+npm run test:module-fill     # 模块填充审查、浏览器定位与新策略生产链
 npm run test:render          # 浏览器布局及瀑布绑定回归
 npm run test:upgrade-r1      # 只读状态、字体分类、旧缺口复现与候选规则
 npm run test:upgrade-r2      # 严格签名、迁移、影子测量与合成生产链

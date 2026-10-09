@@ -124,6 +124,44 @@ function auditErrors(audit, {auditDir = process.cwd()} = {}) {
   return errors;
 }
 
+/* 从已绑定 pages 文件派生组合审查对象；audit.rows 只有实测事实，不重复保存计划。 */
+function compositionChecklist(audit, {auditDir = process.cwd()} = {}) {
+  const composition = require('./composition_contract.cjs');
+  if (!composition.supportsComposition(audit?.taskContract)) return [];
+  const record = taskRecords(audit, {auditDir}).find(r => r.key === 'pages');
+  if (!record || fileHash(record.path) !== record.sha256) throw Error('组合审查缺少当前 pages 记录');
+  const doc = JSON.parse(fs.readFileSync(record.path, 'utf8'));
+  if (!Array.isArray(doc.pages)) throw Error('组合审查 pages 记录缺少逐页声明');
+  const entries = audit.evidenceManifest?.entries || [], result = [];
+  for (const page of doc.pages) {
+    if (!page.composition) continue;
+    const id = page.id;
+    if (!id || !entries.some(e => e.pageId === id)) throw Error('组合审查页面与当前渲染证据不一致：' + id);
+    const slide = {exhibit: {contract: 'semantic-exhibit-v1', semantics: {composition: page.composition}}};
+    for (const panelId of composition.panelIds(slide)) result.push({slideId: id, panelRef: id + ':' + panelId,
+      reason: '逐 panel 核对实际形式、数据绑定、容量、来源与打印存在性'});
+    for (const relId of composition.relationRefs(slide)) result.push({slideId: id, relationRef: id + ':' + relId,
+      reason: '核对组合关系能否直接读出，是否共同支持页结论'});
+  }
+  return result;
+}
+function evidencePageIds(coverage, manifest) {
+  const ids = new Set((Array.isArray(coverage?.evidence) ? coverage.evidence : []).map(e => e?.id));
+  return new Set(manifest.filter(e => ids.has(e.id)).map(e => e.pageId));
+}
+function compositionCoverageErrors(coverage, checklist, manifest) {
+  const coveredPages = evidencePageIds(coverage, manifest);
+  const errors = [];
+  for (const item of checklist) {
+    if (!coveredPages.has(item.slideId)) continue;
+    for (const [key, field, label] of [['panelRef', 'panelRefs', '组合'], ['relationRef', 'relationRefs', '关系']]) {
+      if (item[key] && (!Array.isArray(coverage?.[field]) || !coverage[field].includes(item[key])))
+        errors.push('coverage 缺少' + label + '覆盖 ' + item[key] + '；清单由合同派生，审查者填写实际所见');
+    }
+  }
+  return errors;
+}
+
 /* 审查层集合随策略能力扩展：narrative-focus-1 多了"整册连读"这一层。
    旧策略的审查记录没有这一层，要求的层集合因此不能全局写死，否则旧稿会被新规则追溯作废。 */
 function requiredLayers(taskContract){
@@ -132,13 +170,13 @@ function requiredLayers(taskContract){
 }
 /* 叙事覆盖：逐页记录实际读到的收束句，且与该页 DOM 上的收束句对得上。
    只列 slideId 是签名不是读过；抄蓝图声明也一样会被相似度拦下。 */
-function narrativeCoverageErrors(coverage,bodyRows){
+function narrativeCoverageErrors(coverage,bodyRows,{repetitionRows=bodyRows,allowRepeatedPages=false}={}){
   const errors=[],narrative=require('./narrative_contract.cjs');
   const readings=Array.isArray(coverage?.narrativeReadings)?coverage.narrativeReadings:[];
   const byId=new Map();
   for(const item of readings){
     if(!item||typeof item.slideId!=='string'||!item.slideId.trim()){errors.push('coverage 的 narrativeReadings 每项须有 slideId');continue;}
-    if(byId.has(item.slideId))errors.push('coverage 的叙事覆盖重复：'+item.slideId);
+    if(byId.has(item.slideId)&&!allowRepeatedPages)errors.push('coverage 的叙事覆盖重复：'+item.slideId);
     byId.set(item.slideId,item);
   }
   for(const row of bodyRows){
@@ -156,11 +194,18 @@ function narrativeCoverageErrors(coverage,bodyRows){
      同义改写（"名义额不是现金" 与 "名义金额不等于现金流入"）在字面上几乎不相干。
      但审查者逐页写下的 observedTakeaway 是同一套词汇——两页写出来一样，说明读者读到的就是同一件事。
      这是这条判据唯一可靠的落点，也是"审查者填实际所见"这个要求的用处所在。 */
-  const recorded=[...byId.values()].filter(item=>typeof item.observedTakeaway==='string'&&item.observedTakeaway.trim().length>=6);
-  const explained=new Set((Array.isArray(coverage?.repetitionBasis)?coverage.repetitionBasis:[])
-    .map(item=>item&&[item[0],item[1]].sort().join('|')).filter(Boolean));
+  const recorded=(allowRepeatedPages?readings.filter(item=>item&&typeof item.slideId==='string'):[...byId.values()]).filter(item=>typeof item.observedTakeaway==='string'&&item.observedTakeaway.trim().length>=6);
+  const explained=new Set(),knownPages=new Set(repetitionRows.map(r=>r.pageId||('page-'+r.page)));
+  if(coverage?.repetitionBasis!==undefined&&!Array.isArray(coverage.repetitionBasis))errors.push('coverage 的 repetitionBasis 须为数组');
+  for(const item of Array.isArray(coverage?.repetitionBasis)?coverage.repetitionBasis:[]){
+    if(!Array.isArray(item)||item.length!==3||!knownPages.has(item[0])||!knownPages.has(item[1])||item[0]===item[1]||typeof item[2]!=='string'||!item[2].trim()){
+      errors.push('coverage 的 repetitionBasis 须引用两个不同的已看正文页，并填写非空重复理由：[slideId,slideId,reason]');continue;
+    }
+    explained.add([item[0],item[1]].sort().join('|'));
+  }
   for(let i=0;i<recorded.length;i++)for(let j=i+1;j<recorded.length;j++){
     const left=recorded[i],right=recorded[j],pair=[left.slideId,right.slideId].sort().join('|');
+    if(left.slideId===right.slideId)continue;
     const score=narrative.overlapRatio(left.observedTakeaway,right.observedTakeaway);
     if(score<narrative.REVIEW_TAKEAWAY_OVERLAP)continue;
     if(explained.has(pair))continue;
@@ -169,6 +214,28 @@ function narrativeCoverageErrors(coverage,bodyRows){
       +'或确实要并排强调时在 coverage.repetitionBasis 写 ['+left.slideId+','+right.slideId+'] 与理由');
   }
   return errors;
+}
+/* 分段覆盖按本人实际证据校验，再合并同一身份的记录检查跨段重复；拆段不能绕过连读诊断。 */
+function narrativeReviewErrors(coverages, bodyRows, manifest) {
+  const errors=[],groups=new Map();
+  const identity=coverage=>JSON.stringify([typeof coverage?.reviewer==='string'?coverage.reviewer.trim():coverage?.reviewer,coverage?.independence]);
+  const scoped=coverage=>{const ids=evidencePageIds(coverage,manifest);return bodyRows.filter(row=>ids.has(row.pageId||('page-'+row.page)));};
+  for(const coverage of coverages){
+    const key=identity(coverage);
+    if(!groups.has(key))groups.set(key,{evidence:[],narrativeReadings:[],repetitionBasis:[]});
+    const group=groups.get(key);
+    for(const field of ['evidence','narrativeReadings','repetitionBasis'])group[field].push(...(Array.isArray(coverage?.[field])?coverage[field]:[]));
+  }
+  for(const coverage of coverages){
+    const group=groups.get(identity(coverage));
+    errors.push(...narrativeCoverageErrors(coverage,scoped(coverage),{repetitionRows:scoped(group)}));
+  }
+  for(const group of groups.values()){
+    for(const field of ['evidence','narrativeReadings','repetitionBasis'])group[field]=[...new Map(group[field].map(value=>[stable(value),value])).values()];
+    // 同页双媒介可有措辞不同的合法所见；跨页仍比较每一种所见，不能挑一个代表掩盖重复。
+    errors.push(...narrativeCoverageErrors(group,scoped(group),{allowRepeatedPages:true}));
+  }
+  return [...new Set(errors)];
 }
 function bodyRowsOf(audit){
   return (audit?.rows||[]).filter(r=>!['cover','back-cover','references','divider'].includes(r.bookends?.role));
@@ -259,35 +326,14 @@ function validate(review, audit, {baseDir = process.cwd(), auditDir = baseDir, p
   /* 新策略（narrative-focus-1）：整册故事线要真的被读过一遍。
      只签"看过这些页"证明不了故事线——要求逐页记录实际读到的收束句，且与该页 DOM 上的收束句对得上。
      清单由合同派生、草稿预填待查对象，工具不生成 PASS；审查者填的是所见，不是声明的复述。 */
-  if(visualCaps&&visualCaps.narrative&&!partial){
-    const bodyRows=bodyRowsOf(audit);
-    for(const c of review.coverage){const found=narrativeCoverageErrors(c,bodyRows);if(found.length)fail(...found);}
-  }
+  if(visualCaps&&visualCaps.narrative)errors.push(...narrativeReviewErrors(review.coverage,bodyRowsOf(audit),manifest));
   // 支持复合证据的策略：组合关系、密度与结构取舍的可审记录。能力查询而非策略名相等。
   // 页面内部多图检查由 audit 与组合审查清单连接，不能只签「看到该页」。
-  const composition=require('./composition_contract.cjs');
-  if(visualCaps&&visualCaps.composition&&!partial){
-    const expectedBySlide=new Map();
-    for(const entry of manifest){
-      const pid=entry.pageId||('page-'+entry.page);
-      if(!expectedBySlide.has(pid))expectedBySlide.set(pid,{panelRefs:new Set(),relationRefs:new Set()});
-    }
-    // 从 audit 的页面记录派生 panel/relation 清单
-    if(Array.isArray(audit.pagesCheck?.pages))for(const page of audit.pagesCheck.pages){
-      const pid=page.id||('page-'+page.page);
-      if(!expectedBySlide.has(pid))expectedBySlide.set(pid,{panelRefs:new Set(),relationRefs:new Set()});
-      const exp=expectedBySlide.get(pid);
-      for(const panelId of composition.panelIds({exhibit:page.composition?{contract:'semantic-exhibit-v1',semantics:{composition:page.composition}}:undefined}))exp.panelRefs.add(pid+':'+panelId);
-      for(const relId of composition.relationRefs({exhibit:page.composition?{contract:'semantic-exhibit-v1',semantics:{composition:page.composition}}:undefined}))exp.relationRefs.add(pid+':'+relId);
-    }
-    for(const c of review.coverage){
-      const coveredPanels=Array.isArray(c.panelRefs)?c.panelRefs:[];
-      const coveredRelations=Array.isArray(c.relationRefs)?c.relationRefs:[];
-      for(const [pid,exp] of expectedBySlide){
-        for(const ref of exp.panelRefs)if(!coveredPanels.includes(ref))fail('coverage 缺少组合覆盖 '+ref+'；清单由合同派生，审查者填写实际所见');
-        for(const ref of exp.relationRefs)if(!coveredRelations.includes(ref))fail('coverage 缺少关系覆盖 '+ref);
-      }
-    }
+  if(visualCaps&&visualCaps.composition){
+    try{
+      const checklist=compositionChecklist(audit,{auditDir});
+      for(const c of review.coverage)errors.push(...compositionCoverageErrors(c,checklist,manifest));
+    }catch(error){fail('组合审查清单不可核对：'+error.message);}
   }
   if(!partial){
     const names=[...new Set([...reviewers.author,...reviewers.independent])].sort().join('; ');
@@ -296,4 +342,4 @@ function validate(review, audit, {baseDir = process.cwd(), auditDir = baseDir, p
   if (!partial) for (const role of requiresIndependent(audit) ? ['author', 'independent'] : ['author']) for (const medium of ['html', 'pdf']) for (let n = 1; n <= audit.pages; n++) if (!sets[role][medium].has(n)) fail(role + ' ' + medium + '缺页：' + n);
   return errors;
 }
-module.exports = {validate, layers, auditErrors, reuseDifferences, taskRecords, issueIdentity, requiredLayers, narrativeCoverageErrors, bodyRowsOf};
+module.exports = {validate, layers, auditErrors, reuseDifferences, taskRecords, issueIdentity, requiredLayers, narrativeCoverageErrors, bodyRowsOf, compositionChecklist, compositionCoverageErrors, narrativeReviewErrors};

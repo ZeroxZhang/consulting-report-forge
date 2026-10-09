@@ -52,8 +52,7 @@ async function probe(out) {
     catch (error) { report.checks.push({name, status: 'fail', error: String(error.message || error)}); return null; }
   };
   await record('node', () => ({version: process.version, executable: process.execPath}));
-  const bundledPython = path.resolve(__dirname, '../.font-venv/bin/python');
-  const python = process.env.FONT_PYTHON || (fs.existsSync(bundledPython) ? bundledPython : 'python3');
+  const python = require('./pack_fonts.cjs').fontPython();
   await record('fontTools', () => JSON.parse(execFileSync(python, ['-c', 'import sys,fontTools,json;print(json.dumps({"python":sys.version.split()[0],"fontTools":fontTools.__version__}))'], {encoding: 'utf8', timeout: 15000})));
   let pw;
   await record('playwright', () => {
@@ -155,7 +154,8 @@ async function main(argv) {
     report.status = report.checks.some(c => c.status === 'fail') ? 'environment-failed' : check.status === 'pass' ? 'ready' : 'image-probe-failed';
     writeJSON(path.join(out, 'capabilities.json'), report);
     console.log(JSON.stringify({status: report.status, imageProbe: check}, null, 2));
-    if (check.status !== 'pass') process.exitCode = 3;
+    if (report.status === 'environment-failed') process.exitCode = 2;
+    else if (check.status !== 'pass') process.exitCode = 3;
   } else {
     const report = await probe(out);
     console.log(JSON.stringify(report, null, 2));

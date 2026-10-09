@@ -104,7 +104,8 @@ function validate(doc, options = {}) {
     }
   });
   const first = doc.slides[0], body = doc.slides.filter(s => CONTENT_ROLES.has(s?.pageRole));
-  if (first?.pageRole !== 'cover') bad('第1页须为 cover；从读者要解决的决策问题建立叙事，而非直接堆数据');
+  const needsCover = !(options.task?.version === 3 && ['fragment', 'collection'].includes(options.task.kind));
+  if (needsCover && first?.pageRole !== 'cover') bad('第1页须为 cover；从读者要解决的决策问题建立叙事，而非直接堆数据');
   if (doc.schemaVersion === 1 && body.length >= 3 && ![...beats].some(beat => ['diagnosis', 'insight'].includes(beat))) bad('至少三页正文时须有 diagnosis 或 insight，不能只有背景与行动口号');
   if (doc.schemaVersion === 1 && body.length >= 3 && ![...beats].some(beat => ['choice', 'action'].includes(beat))) bad('至少三页正文时须有 choice 或 action，把分析收束为判断、取舍或下一步');
   if (doc.schemaVersion === 2) errors.push(...require('./content_contract.cjs').validate(doc));

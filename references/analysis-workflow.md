@@ -6,7 +6,7 @@
 
 先读全部已提供材料。把读者要做的判断、期间、业务范围、基准、限制、成功标准写进 `analysis.brief`。`purpose` 为 diagnosis / decision / research；它与 task 的工作模式是两个维度。新 task3（及历史 task2）必须显式写 `workMode/complexity/majorConclusion`，拿不准风险用 complex。分析对象、指标与时间口径不清时先解决最可能改变方向的一项；已有答案不重复问。
 
-新任务用 `templates/research-blueprint.json` 起草，可先没有页面、主张与答案。不要为通过检查填虚假结论。
+新任务先由 `report.cjs init` 建立，再用 `templates/research-blueprint.json` 的结构起草蓝图；保留初始化生成的 task 与执行计划身份。研究可以先没有页面、主张与答案。不要为通过检查填虚假结论。
 
 ## 2. 分解和优先级
 

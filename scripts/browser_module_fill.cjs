@@ -16,11 +16,12 @@ function inspectSlide(slide) {
     }
     return ':scope' + (parts.length ? ' > ' + parts.join(' > ') : '');
   };
-  const shown = el => {
-    if (!el?.getClientRects().length) return false;
+  const shown = (el, needsBox = true) => {
+    if (!el || needsBox && !el.getClientRects().length || getComputedStyle(el).visibility !== 'visible') return false;
     for (let n = el; n && n !== slide.parentElement; n = n.parentElement) {
       const s = getComputedStyle(n);
-      if (s.display === 'none' || s.visibility !== 'visible' || +s.opacity === 0 || s.contentVisibility === 'hidden') return false;
+      // contents 不生成盒；盒级 opacity/filter/裁切不会作用于其实际可见的子节点。
+      if (s.display === 'none' || s.display !== 'contents' && (+s.opacity === 0 || s.contentVisibility === 'hidden' || /opacity\(\s*0(?:\.0+)?%?\s*\)/.test(s.filter || ''))) return false;
     }
     return true;
   };
@@ -60,7 +61,8 @@ function inspectSlide(slide) {
   let node;
   while ((node = walker.nextNode())) {
     const el = node.parentElement;
-    if (!node.textContent.trim() || !shown(el) || el.closest(mediaSelector + ',script,style,[data-decorative="true"]')) continue;
+    if (!node.textContent.trim() || !shown(el, false) || el.closest(mediaSelector + ',script,style,[data-decorative="true"]')) continue;
+    // display:contents 没有父元素矩形，但直接文字仍有真实行框；不能据父框消失把文字漏掉。
     const cs = getComputedStyle(el), color = cs.webkitTextFillColor || cs.color;
     if (color === 'transparent' || /^rgba\([^)]*,\s*0(?:\.0+)?\s*\)$/.test(color) || /\/\s*0(?:\.0+)?%?\s*\)$/.test(color)) continue;
     const range = document.createRange();
@@ -72,7 +74,9 @@ function inspectSlide(slide) {
   const clipping = el => {
     const out = [];
     for (let n = el; n && n !== slide.parentElement; n = n.parentElement) {
-      const s = getComputedStyle(n), x = /^(hidden|clip|scroll|auto)$/.test(s.overflowX), y = /^(hidden|clip|scroll|auto)$/.test(s.overflowY);
+      const s = getComputedStyle(n);
+      if (s.display === 'contents') continue;
+      const x = /^(hidden|clip|scroll|auto)$/.test(s.overflowX), y = /^(hidden|clip|scroll|auto)$/.test(s.overflowY);
       if (s.clipPath !== 'none' || s.maskImage && s.maskImage !== 'none') unsupported.add(selector(n) + ':复杂裁切/遮罩');
       if (s.transform !== 'none') {
         const m = new DOMMatrix(s.transform);

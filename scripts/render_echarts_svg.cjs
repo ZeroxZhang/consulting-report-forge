@@ -143,7 +143,7 @@ function render(payload){
       // 满版图四周让出空白：图整体挪进内嵌坐标系，让出的空白就是旁解读的落点。
       const inner=chartSvg.replace(/^\s*<svg\b[^>]*>/,'').replace(/<\/svg>\s*$/,'');
       svg=`${head}width="${outer.width}" height="${outer.height}" viewBox="0 0 ${outer.width} ${outer.height}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><rect width="${outer.width}" height="${outer.height}" fill="${settings.tokens['page-bg']}"/><g transform="translate(${padding},${padding})">${inner}</g>${leaders}</svg>`;
-    }else svg=chartSvg.replace('<svg ',head).replace(/<\/svg>\s*$/,(leaders||'')+'</svg>');
+    }else svg=chartSvg.replace('<svg ',head).replace(/<\/svg>\s*$/,()=>leaders+'</svg>');
     if(plan.recipe){const form='recipe.'+plan.recipe;svg=svg.replace(/^<svg\b/,`<svg data-form="${form}" data-capacity="${Capacity.encoded(form,payload.spec||{})}"`);}
     svg=namespaceIds(svg,(plan.recipe||'option')+'|'+settings.width+'x'+settings.height+'|'+JSON.stringify(plan.pages[0].option));
     if(/(?:translate|matrix|[MLCQ])[^<>]*\b(?:NaN|Infinity)\b/.test(svg))throw Error('SVG出现非有限坐标');

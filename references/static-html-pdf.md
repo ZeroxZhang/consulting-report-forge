@@ -24,7 +24,7 @@ node scripts/probe_capabilities.cjs /任务/probe --verify /任务/probe/respons
 
 ## 任务和内容
 
-从 [蓝图模板](../templates/deck-blueprint.json) 与 [任务模板](../templates/task.json) 开始。改写全部合成示例，不把示例当研究证据。
+新任务先用 `node scripts/report.cjs init /任务/新报告 --work-mode analytical` 生成 task、蓝图和执行清单（模式按任务选择 editorial、analytical 或 exploratory），再按 [执行清单协议](execution-checklist.md) 激活计划。[蓝图模板](../templates/deck-blueprint.json) 与 [任务模板](../templates/task.json) 用于查看字段；不要复制任务模板覆盖 init 生成的工作流与计划身份。改写全部合成示例，不把示例当研究证据。
 
 ```json
 {
@@ -51,7 +51,7 @@ node scripts/probe_capabilities.cjs /任务/probe --verify /任务/probe/respons
 - `blueprint` 与 `pages`：相对 task 路径，装配后自动换算为相对 HTML 路径并绑定文件摘要。改变蓝图后重新编译；不要手改 pages 或摘要蒙混通过。
 - `critical`：可额外登记未由内容绑定覆盖的关键限定，使用 `{id,text,target?}` 与 DOM `data-critical-id` 对应。
 
-新稿先按 [前置分析审查](analysis-review.md) 绑定 `task.analysisReview.record/sha256`；它相对 task 文件。研究阶段不需要生成 pages。完成审查后执行：
+analytical / exploratory 新稿先按 [前置分析审查](analysis-review.md) 绑定 `task.analysisReview.record/sha256`；它相对 task 文件。editorial 免前置分析审查，但仍须激活执行清单、完成三项规划与最终风险审查。研究阶段不需要生成 pages。完成适用的审查后执行：
 
 ```sh
 node scripts/deck_blueprint.cjs /任务/deck-blueprint.json --task /任务/task.json --ready
@@ -111,6 +111,6 @@ node scripts/package_delivery.cjs /任务/deck.html /任务/renders/deck.pdf /�
 字体缓存按源摘要、实际工具版本和字符集验证，损坏项重建；`FONT_CACHE_DIR` 可指定目录，缓存不免除缺字检查。字体改动用 `.font-venv/bin/python scripts/test_font_cache.py`。`npm test` 是合同与计算回归；`npm run test:render` 做浏览器回归；`npm run test:upgrade-render` 验证内容蓝图、自由/目录布局、实际 HTML/PDF 与内容篡改防护。
 
 
-## execution-plan-1 的制作前置条件
+## 新任务的制作前置条件（execution-plan-2）
 
-新建任务默认带持久清单，具体命令和记录格式见[执行清单协议](execution-checklist.md)。正式 compile 前完成两项多样性规划；先做代表页取图观察，再记录制作完成，之后运行 acceptance。新验收同时检查单位/排印。smoke 不覆盖正式验收记录。原始 task 的产物定位由 productionRefs 提供，使用 compile 返回的派生 task 装配与验收。最终质量审查保留独立的 chart-diversity/layout-diversity，打包后生成执行归档。
+新建任务默认带持久清单，具体命令和记录格式见[执行清单协议](execution-checklist.md)。正式 compile 前完成 `chart-plan`、`layout-plan`、`module-fill-plan`；先做代表页取图观察，再记录制作完成，之后运行 acceptance。新验收同时检查单位/排印。smoke 不覆盖正式验收记录。原始 task 的产物定位由 productionRefs 提供，使用 compile 返回的派生 task 装配与验收。最终质量审查保留独立的 `chart-diversity`、`layout-diversity`、`module-fill`，打包后生成执行归档。历史 `execution-plan-1` 继续按原双约束与任务集核验，不补签新要求。

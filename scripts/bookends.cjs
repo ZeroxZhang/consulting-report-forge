@@ -101,7 +101,7 @@ function referencesBlock({sources,selectedIds,pageSize=12,columns=1,note='',page
       .replace(/data-reference-total="\d+"/,'data-reference-total="'+all.length+'"')
       .replace('<h1 class="slide__title">参考资料</h1>','<h1 class="slide__title">'+title+(count>1?'（'+(i+1)+' / '+count+'）':'')+'</h1>');
     const selection=[excerpt?'本资料块列示 '+selected.length+' 项主要来源（共 '+all.length+' 项）。':'',clean(note)].filter(Boolean).join(' ');
-    if(selection)html=html.replace('</div></div>','</div><p class="reference-selection">'+escape(selection)+'</p></div>');
+    if(selection)html=html.replace('</div></div>',()=>'</div><p class="reference-selection">'+escape(selection)+'</p></div>');
     pages.push(html);
   }
   return pages.join('\n');

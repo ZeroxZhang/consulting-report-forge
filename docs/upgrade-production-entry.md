@@ -1,6 +1,6 @@
 # 生产入口
 
-`node scripts/report.cjs` 统一调用既有编译、装配、QA、聚合、快照、复用及打包器。所有旧 CLI 保留。新建任务默认 task3 / semantic-v2 / execution-plan-1；历史维护可显式 `init --contract legacy` 创建 task2。现有任务按自身版本读取，不自动迁移。
+`node scripts/report.cjs` 统一调用既有编译、装配、QA、聚合、快照、复用及打包器。所有旧 CLI 保留。新建任务默认 task3 / semantic-v2 / execution-plan-2；历史维护可显式 `init --contract legacy` 创建 task2。现有任务按自身版本读取，不自动迁移。
 
 ```sh
 node scripts/report.cjs init /任务/新报告 --work-mode analytical
@@ -9,7 +9,7 @@ node scripts/report.cjs next /任务/新报告/task.json
 node scripts/report.cjs resume /任务/新报告/task.json
 # 需求与路线明确后激活清单；请求文件格式见执行清单协议。
 node scripts/report.cjs plan-update /任务/新报告/task.json --request /任务/activate.json
-# 完成分析、适用的前置审查，并提交接收 chart-plan/layout-plan 后再正式编译。
+# 完成分析、适用的前置审查，并提交接收 chart-plan/layout-plan/module-fill-plan 后再正式编译。
 node scripts/report.cjs compile /任务/新报告/task.json
 # compile 返回派生 taskFile：原配置不变，派生任务绑定本轮 pages。
 node scripts/report.cjs assemble /编译结果/task.json --pages /任务/pages.html --css /任务/page.css
@@ -60,7 +60,7 @@ node scripts/report.cjs dispositions /任务/task.json --audit /验收/audit.jso
     "reading": "reading-shadow-1",
     "visual": "structural-lines-1",
     "references": "reference-block-1",
-    "workflow": "execution-plan-1"
+    "workflow": "execution-plan-2"
   },
   "referenceIds": ["S1", "S2", "S3"]
 }
@@ -75,9 +75,9 @@ node scripts/report.cjs dispositions /任务/task.json --audit /验收/audit.jso
 - 阅读检测继续只记录，不自动升级为硬失败；固定测试集通过不能外推为真实任务零漏检。
 
 
-## 1.7.0 执行计划
+## 当前执行计划与历史兼容
 
-[执行清单协议](../references/execution-checklist.md)定义激活、更新、委派、接收、只读恢复、打包收据和归档。新建默认增加 `workflow: execution-plan-1` 与 `executionPlan: {id,record}`；分析/视觉策略默认不变。旧任务不自动迁移。全册两项多样性审查不能删除或使用 not_applicable，聚合保留每位必要审查者的独立检查。
+[执行清单协议](../references/execution-checklist.md)定义激活、更新、委派、接收、只读恢复、打包收据和归档。新建默认增加 `workflow: execution-plan-2` 与 `executionPlan: {id,record}`；分析/视觉策略默认不变。三项固定要求 `chart-diversity`、`layout-diversity`、`module-fill` 不能删除或使用 not_applicable，聚合保留每位必要审查者的独立检查。1.7.0 的历史 `execution-plan-1` 保留原双约束合同与旧审查解释，不自动迁移或补签。
 
 
 | 操作 | 命令 | 结果 |

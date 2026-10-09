@@ -79,6 +79,10 @@ function inspectSlide(slide){
    自包含，供 Playwright 序列化。 */
 function inspectModules(slide,expected){
   const sr=slide.getBoundingClientRect(),sx=sr.width/slide.offsetWidth,sy=sr.height/slide.offsetHeight,tolerance=.35,errors=[],modules=[];
+  // 隐藏页的 0/0 不是零偏差；无实际尺寸时必须停止，避免 NaN 比较静默通过。
+  if(![sr.width,sr.height,sx,sy].every(n=>Number.isFinite(n)&&n>0))return {
+    status:'FAIL',toleranceLogicalPx:tolerance,modules,errors:[{code:'M-UNMEASURABLE',detail:'页面未显示或尺寸无效，须激活后测量实际模块网格'}]
+  };
   const logical=r=>({x:(r.left-sr.left)/sx,y:(r.top-sr.top)/sy,width:r.width/sx,height:r.height/sy});
   const nodes=[...slide.querySelectorAll('[data-module]')];
   if(nodes.length!==expected.length){

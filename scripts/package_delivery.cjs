@@ -30,7 +30,7 @@ function injectPdf(html,pdf,filename,sha256){
   html=removeExistingPayload(html);
   if(!html.includes('</body>'))fail('HTML 缺少 </body>，无法写入 PDF');
   const tag=`<script id="deck-pdf-payload" type="application/pdf" data-filename="${escapeAttr(filename)}" data-sha256="${sha256}" data-bytes="${pdf.length}">\n${pdf.toString('base64')}\n</script>\n`;
-  return html.replace('</body>',tag+'</body>');
+  return html.replace('</body>',()=>tag+'</body>');
 }
 function markDelivery(html,preview){
   if(!/<head\b[^>]*>/i.test(html))fail('HTML 缺少 <head>，无法写入交付状态');
@@ -57,10 +57,11 @@ function validateAudit(file,{inputHtml,inputPdf,html,pdf,htmlPages,pdfPages,pdfS
     const contract=require('./report_contract.cjs'),task=contract.read(html);
     if(!task||!audit.taskContract||contract.stable(task)!==contract.stable(contract.normalize(audit.taskContract)))fail('audit任务合同与当前HTML不一致');
   }
-  if(path.resolve(audit.input||'')!==inputHtml)fail('audit.json 对应另一份 HTML，拒绝打包');
+  const auditDir=path.dirname(path.resolve(file));
+  if(path.resolve(auditDir,audit.input||'')!==inputHtml)fail('audit.json 对应另一份 HTML，拒绝打包');
   if(audit.pages!==htmlPages||audit.pdfPages!==pdfPages)fail('audit.json 页数与当前 HTML/PDF 不一致');
   if(audit.htmlArtifact?.sha256!==sha256(html))fail('HTML 在 S7 验收后已修改，请重新生成 PDF 并复验');
-  if(path.resolve(audit.pdfArtifact?.path||'')!==inputPdf||audit.pdfArtifact?.sha256!==pdfSha256||audit.pdfArtifact?.sha256!==sha256(pdf))fail('PDF 不是 S7 验收产物或验收后已修改');
+  if(path.resolve(auditDir,audit.pdfArtifact?.path||'')!==inputPdf||audit.pdfArtifact?.sha256!==pdfSha256||audit.pdfArtifact?.sha256!==sha256(pdf))fail('PDF 不是 S7 验收产物或验收后已修改');
   return audit;
 }
 function validateReview(file,{htmlSha256,pdfSha256,pages,requireCoverage=false,requireIndependent=false,audit,auditDir}){

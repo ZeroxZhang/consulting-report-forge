@@ -31,12 +31,25 @@ async function main(){
  write('review-fixture.json',final);
  assert.deepEqual(reviews.validate(final,audit,{baseDir:out,auditDir:file('qa')}),[]);
  const aggregated=require('./aggregate_reviews.cjs').aggregate(audit,[final],{baseDir:out,auditDir:file('qa')});assert.equal(aggregated.status,'complete',JSON.stringify(aggregated.aggregationErrors));
+ const fenced=require('./aggregate_reviews.cjs').aggregate(audit,['```json\n'+JSON.stringify(final)+'\n```'],{baseDir:out,auditDir:file('qa')});
+ assert.equal(fenced.status,'complete',JSON.stringify(fenced.aggregationErrors));assert.equal(fenced.analysisSha256,final.analysisSha256,'代码围栏解析后须保留同一分析身份');
  const packageArgs={htmlFile:file('deck.html'),pdfFile:audit.pdfArtifact.path,outputDir:file('fixture-delivery'),baseName:'synthetic-contract-test',auditFile:file('qa/audit.json'),reviewFile:file('review-fixture.json'),force:true};
  require('./package_delivery.cjs').packageDelivery(packageArgs);
  write('review-fixture.json',{...final,status:'incomplete'});assert.throws(()=>require('./package_delivery.cjs').packageDelivery(packageArgs),/未完成|complete|审查/);write('review-fixture.json',final);
  const snap=file('snapshot');if(fs.existsSync(snap))fs.rmSync(snap,{recursive:true,force:true});
  require('./snapshot_review.cjs').snapshotReview({auditFile:file('qa/audit.json'),reviewFile:file('review-fixture.json'),outputDir:snap});assert.equal(require('./snapshot_review.cjs').loadSnapshot(snap).review.schemaVersion,5);
  if(referenceBlock){
+   // 网格页后面还有参考资料页：QA 不能只量最后一个 active 页面，也不能漏掉打印专属偏移。
+   for(const medium of ['screen','print']){
+     const rule='[data-page-id="conditions"] [data-module="table"]{transform:translateX(8px)}';
+     const css=medium==='print'?'@media print{'+rule+'}':'@media screen{'+rule+'}';
+     const deck='negative-grid-'+medium+'.html',dest='negative-grid-'+medium;
+     write(deck,fs.readFileSync(file('deck.html'),'utf8').replace('</head>','<style>'+css+'</style></head>'));
+     const negative=spawnSync(process.execPath,[path.join(__dirname,'qa_deck.cjs'),file(deck),file(dest),'--tier','smoke'],{encoding:'utf8'});
+     assert.notEqual(negative.status,0);
+     const found=JSON.parse(fs.readFileSync(file(dest+'/audit.json'))).errors;
+     assert.ok(found.some(e=>medium==='print'?e.includes('打印布局'):e.includes('布局 L19')),medium+' 非末页网格偏移须由真实 QA 定位：'+JSON.stringify(found));
+   }
    assert.equal(audit.pages,5);assert.equal(audit.bookendsCheck.policy,'reference-block-1');assert.ok(audit.rows.filter(r=>r.bookends.role==='references').every(r=>r.referencesPrint.expected===2&&!r.referencesPrint.missing.length));
    write('print-missing-reference.html',fs.readFileSync(file('deck.html'),'utf8').replace('</head>','<style>@media print{[data-page-role="references"] .reference-item:last-child{visibility:hidden}}</style></head>'));
    const negative=spawnSync(process.execPath,[path.join(__dirname,'qa_deck.cjs'),file('print-missing-reference.html'),file('negative-reference-qa'),'--tier','acceptance'],{encoding:'utf8'});

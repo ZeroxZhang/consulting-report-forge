@@ -56,9 +56,13 @@ function read(html) {
 function install(html, contract) {
   const c = normalize(contract);
   html = html.replace(/<script\b[^>]*\bid=["']deck-task-contract["'][^>]*>[\s\S]*?<\/script>\s*/gi, '');
+  // 装配与换主题都会安装合同；只保留当前状态的一份预览标记，兼容已有无 id 的标记。
+  const previewBadge = '<div style="position:fixed;top:4px;right:12px;z-index:9999;font-size:12px;background:white;color:#8b351e">分析预览 · 尚未完成分析验收</div>';
+  html = html.replace(/<meta\b[^>]*\bname=["']deck-analysis-status["'][^>]*>\s*/gi, '').split(previewBadge).join('');
   html = html.replace(/<html\b[^>]*>/i, tag => tag.replace(/\sdata-reliability-version\s*=\s*(["']).*?\1/i, '').replace(/\sdata-deck-kind\s*=\s*(["']).*?\1/i, '').replace(/>$/, ' data-reliability-version="2" data-deck-kind="' + c.kind + '">'));
-  if(c.analysisPreview)html=html.replace(/<\/head>/i,'<meta name="deck-analysis-status" content="preview">\n</head>').replace(/<body([^>]*)>/i,'<body$1><div style="position:fixed;top:4px;right:12px;z-index:9999;font-size:12px;background:white;color:#8b351e">分析预览 · 尚未完成分析验收</div>');
-  return html.replace(/<\/head>/i, '<script id="deck-task-contract" type="application/json">' + stable(c).replace(/</g, '\\u003c') + '</script>\n</head>');
+  if(c.analysisPreview)html=html.replace(/<\/head>/i,'<meta name="deck-analysis-status" content="preview">\n</head>').replace(/<body([^>]*)>/i,(_,attrs)=>'<body'+attrs+'>'+previewBadge);
+  // replacement string 会展开 $&、$$、$` 等合法正文字符；数据必须经回调原样注入。
+  return html.replace(/<\/head>/i, () => '<script id="deck-task-contract" type="application/json">' + stable(c).replace(/</g, '\\u003c') + '</script>\n</head>');
 }
 function load(file, output, defaults = {}) {
   const raw = JSON.parse(fs.readFileSync(file, 'utf8'));

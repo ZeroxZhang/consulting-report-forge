@@ -3,6 +3,14 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('nod
 const {fixture,task:legacyTask}=require('../tests/fixtures/analysis_fixture.cjs');
 const analysis=require('./analysis_contract.cjs'),projection=require('./analysis_projection.cjs'),review=require('./analysis_review_contract.cjs'),contract=require('./report_contract.cjs');
 const task={...legacyTask,version:3,analysisAlgorithm:'semantic-v2'},doc={...fixture(),analysisAlgorithm:'semantic-v2'};
+// 当前 fragment/collection 允许仅含正文；报告封面及旧合同的要求保持不变。
+const fragment=structuredClone(doc);fragment.slides=fragment.slides.filter(s=>s.pageRole!=='cover');fragment.slides.forEach((s,i)=>s.sequence=i+1);
+for(const kind of ['fragment','collection'])assert.doesNotThrow(()=>require('./content_contract.cjs').compile(fragment,{task:{...task,kind},preview:true}));
+const defaultKind={...task};delete defaultKind.kind;
+assert.doesNotThrow(()=>require('./content_contract.cjs').compile(fragment,{task:defaultKind,preview:true}),'API 默认 kind 与 CLI 归一化的 fragment 一致');
+assert.ok(analysis.validate(fragment,{task:{...task,kind:'report'},stage:'ready',preview:true}).some(e=>e.includes('第1页须为 cover')));
+const oldFragment=structuredClone(fragment);delete oldFragment.analysisAlgorithm;
+assert.ok(analysis.validate(oldFragment,{task:legacyTask,stage:'ready',preview:true}).some(e=>e.includes('第1页须为 cover')));
 const metric=doc.claims[0].metrics[0];
 doc.slides[1].exhibit={contract:'semantic-exhibit-v1',semantics:{value:{$metric:metric.id},unit:metric.unit,denominator:'同口径',encoding:{one:'已核实'},lowerBound:false},style:{fontSize:18,x:1}};
 doc.slides[1].aside=[{text:'有限结论'}];

@@ -25,7 +25,7 @@ function pack(html,{profile,extraText='',assetDir}={}){
   const runtime=fs.readFileSync(path.join(__dirname,'../assets/deck-typography.js'),'utf8');
   const tags=`<style id="deck-fonts">${fontCSS}</style>\n<style id="deck-typography-style">${type.css(p.id)}</style>\n<script id="deck-font-manifest" type="application/json">${safeJSON(manifest)}</script>\n<script id="deck-font-license" type="application/json">${safeJSON(bundle.licenses)}</script>\n`;
   html=html.replace(/<html\b[^>]*>/,m=>m.replace(/ data-typography(?:-version)?="[^"]*"/g,'').replace('>',' data-typography="'+p.id+'" data-typography-version="'+p.version+'">'));
-  return html.replace('<head>','<head>\n<script id="deck-typography-runtime">'+runtime+'</script>').replace('</head>',tags+'</head>');
+  return html.replace('<head>',()=>'<head>\n<script id="deck-typography-runtime">'+runtime+'</script>').replace('</head>',()=>tags+'</head>');
 }
 if(require.main===module){const [input,output,profile]=process.argv.slice(2);if(!input||!output)throw Error('用法: node scripts/pack_fonts.cjs input.html output.html [profile]');if(path.resolve(input)===path.resolve(output))throw Error('请使用新的输出路径，保留输入');fs.writeFileSync(output,pack(fs.readFileSync(input,'utf8'),{profile}));}
-module.exports={pack,collect};
+module.exports={pack,collect,fontPython};

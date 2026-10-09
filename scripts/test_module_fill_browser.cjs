@@ -25,6 +25,25 @@ async function main() {
     assert.ok(first.regions.some(r => r.kind === 'body'));
     assert.deepEqual((await inspect()).regions.map(r => r.id), first.regions.map(r => r.id), '重复读取 ID 稳定');
 
+    // 可见性以文字实际排版为准：contents 父框没有矩形，透明滤镜却有矩形。
+    await render('<div class="module"><span style="display:contents">真实可见的直接文字</span></div>');
+    const contents = (await inspect()).regions.find(r => r.kind === 'module');
+    assert.equal(contents.measurements.textFragments, 1, 'display:contents 中的直接文字不能漏测');
+    assert.ok(contents.measurements.measuredVerticalCoverage > 0);
+    for (const css of ['filter:opacity(0)', 'opacity:0', 'overflow:hidden']) {
+      await render('<div class="module"><span style="display:contents;' + css + '"><span>无盒祖先中的可见正文</span></span></div>');
+      const unboxed = (await inspect()).regions.find(r => r.kind === 'module');
+      assert.equal(unboxed.measurements.textFragments, 1, 'display:contents 的盒级样式不应隐藏实际文字：' + css);
+      assert.ok(!unboxed.findings.some(f => f.ruleId === 'D3'), '无盒祖先不能提供虚假的零尺寸裁切边界');
+    }
+
+    await render('<div class="module"><p style="filter:opacity(0);height:500px">不可见文字<br>不可见第二行</p></div>');
+    const transparent = (await inspect()).regions.find(r => r.kind === 'module');
+    assert.equal(transparent.measurements.textFragments, 0, '透明滤镜不可冒充内容占用');
+    assert.equal(transparent.measurements.measuredVerticalCoverage, 0);
+    await render('<div class="module" style="visibility:hidden"><p style="visibility:visible">显式恢复可见的正文</p></div>');
+    assert.equal((await inspect()).regions.find(r => r.kind === 'body').measurements.textFragments, 1, 'visibility 可由子元素显式恢复，不能只看祖先');
+
     // 每栏单独测横向空洞；预留声明不消除候选。
     await render(`<div class="module card" data-fill-region><p style="width:160px">只有左侧文字</p><div data-fill-reserve="突出单一判断的阅读停顿" style="position:absolute;top:80px;left:200px;width:600px;height:300px"></div></div>`);
     const horizontal = await inspect(), module = horizontal.regions.find(r => r.kind === 'module');

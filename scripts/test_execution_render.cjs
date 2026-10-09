@@ -18,7 +18,6 @@ async function main(){
    s.visual.selection={relationship:'exact',reason:'合成对照用同一数值与具名条件检验内容绑定，不用于真实业务判断。'};
  }
  const task={version:3,analysisAlgorithm:'semantic-v2',workMode:'analytical',complexity:'simple',majorConclusion:false,kind:'fragment',mode:'reading',theme:'mckinsey',typography:'serif-report-bold',ratio:'16x9',blueprint:{record:'blueprint.json'},pages:{record:'pages.json'}};
- if(false){task.policyVersions={...contract.normalize(task).policyVersions,references:'reference-block-1',visual:'structural-lines-1'};task.referenceIds=['S1','S2','S3','S4'];}
  const record={schemaVersion:2,status:'complete',analysisAlgorithm:'semantic-v2',analysisSha256:analysis.digest(doc,task),analysisProjection:projection.project(doc).projection,reviews:[{role:'author',reviewer:'synthetic-contract-fixture',instanceId:'synthetic-contract-fixture',basis:'合成校验器夹具，非真实分析审查',conclusion:'ready',coverage:{claimRefs:doc.claims.map(c=>c.id),issueRefs:['revenue-issue'],optionRefs:[],slideRefs:doc.slides.map(s=>s.id)}}],issues:[]};
  write('analysis-review.json',record);task.analysisReview={record:'analysis-review.json',sha256:contract.fileHash(file('analysis-review.json'))};write('task.json',task);write('blueprint.json',doc);
 

@@ -58,7 +58,7 @@ function validate(doc,{task,stage='research',baseDir,preview=false}={}){
   const errors=[],bad=m=>errors.push(m),a=doc.analysis;
   if(!['research','synthesis','ready'].includes(stage))bad('analysis stage 须为 research/synthesis/ready');
   if(!task||!require('./contract_capabilities.cjs').capabilities(task).analysis)bad('schema 3 须提供 task version 2 或 3');
-  else{try{require('./report_contract.cjs').normalize(task);}catch(e){bad(e.message);}}
+  else{try{task=require('./report_contract.cjs').normalize(task);}catch(e){bad(e.message);}}
   const strict=task?.version===3;
   if(strict&&doc.analysisAlgorithm!=='semantic-v2')bad('task3 蓝图须声明 analysisAlgorithm: semantic-v2');
   if(!strict&&doc.analysisAlgorithm!==undefined)bad('严格蓝图不能降级到旧任务合同');
@@ -136,7 +136,7 @@ function validate(doc,{task,stage='research',baseDir,preview=false}={}){
   // 叙事主线：一册一条推进的论证。旧策略不检查，读旧稿的解释因此不变。
   errors.push(...require('./narrative_contract.cjs').validate(doc,{task,stage}));
   if(stage==='ready'&&!errors.length){
-    try{errors.push(...require('./deck_blueprint.cjs').validate(materialize(doc),{ready:false}).errors);}catch(e){bad(e.message);}
+    try{errors.push(...require('./deck_blueprint.cjs').validate(materialize(doc),{ready:false,task}).errors);}catch(e){bad(e.message);}
     if(!preview&&task?.workMode!=='editorial')errors.push(...require('./analysis_review_contract.cjs').check(doc,{task,baseDir}));
   }
   return [...new Set(errors)];

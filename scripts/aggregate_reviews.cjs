@@ -34,7 +34,7 @@ function inspectCoverage(review,{htmlSha256,pdfSha256,pages,requireIndependent=f
 }
 function aggregateCurrent(audit,inputs,{baseDir=process.cwd(),auditDir=baseDir,inputDirs=[]}={}){
  baseDir=fs.realpathSync(baseDir);auditDir=fs.realpathSync(auditDir);inputDirs=inputDirs.map(dir=>fs.realpathSync(dir));
- const errors=[],coverage=[],issues=[],dispositions=[],qualityChecks=[],priorReviews=new Map(),values={analysis:[],evidence:[],visual:[]};
+ const errors=[],coverage=[],issues=[],dispositions=[],qualityChecks=[],priorReviews=new Map(),parsedInputs=[],values={analysis:[],evidence:[],visual:[]};
  for(const [i,raw] of inputs.entries()){
   let result=raw;
   if(typeof raw==='string')try{result=JSON.parse(raw.replace(/^```(?:json)?\s*|\s*```$/g,''));}catch{errors.push('结果'+i+'为未解析自然语言，须解析核对或补查');continue;}
@@ -43,6 +43,7 @@ function aggregateCurrent(audit,inputs,{baseDir=process.cwd(),auditDir=baseDir,i
   catch(e){found=['审查合同无效：'+e.message];}
   errors.push(...found.map(e=>'结果'+i+'：'+e));
   if(!result||typeof result!=='object')continue;
+  parsedInputs.push(result);
   if(result.priorReview&&typeof result.priorReview==='object'){
    const prior=JSON.parse(JSON.stringify(result.priorReview));
    for(const key of ['audit','review'])if(typeof prior[key]?.path==='string')prior[key].path=path.relative(baseDir,path.resolve(inputDirs[i]||baseDir,prior[key].path));
@@ -70,7 +71,7 @@ function aggregateCurrent(audit,inputs,{baseDir=process.cwd(),auditDir=baseDir,i
  const sorted=items=>items.sort((a,b)=>contract.stable(a).localeCompare(contract.stable(b)));
  const review={schemaVersion:require('./contract_capabilities.cjs').capabilities(audit.taskContract).finalReview,status:'complete',reviewer:[...new Set(coverage.map(c=>c.reviewer).filter(v=>typeof v==='string'))].sort().join('; '),independence:coverage.some(c=>c.independence==='independent')?'independent':'author',htmlSha256:audit.htmlArtifact?.sha256,pdfSha256:audit.pdfArtifact?.sha256,auditSha256:contract.hash(contract.stable(audit)),coverage:sorted(coverage),warningReview:sorted([...new Map(dispositions.filter(w=>w&&typeof w.warning==='string').map(w=>[w.warning,w])).values()]),checks,issues:sorted([...new Map(issues.map(issue=>[contract.stable(issue),issue])).values()])};
  if(require('./execution_requirements.cjs').enabled(audit.taskContract))review.qualityChecks=qualityChecks;
- if(require('./contract_capabilities.cjs').capabilities(audit.taskContract).analysis){const hashes=[...new Set(inputs.map(r=>{try{return (typeof r==='string'?JSON.parse(r):r).analysisSha256;}catch{return undefined;}}))];if(hashes.length===1)review.analysisSha256=hashes[0];else errors.push('分析审查版本不一致');}
+ if(require('./contract_capabilities.cjs').capabilities(audit.taskContract).analysis){const hashes=[...new Set(parsedInputs.map(r=>r.analysisSha256))];if(hashes.length===1)review.analysisSha256=hashes[0];else errors.push('分析审查版本不一致');}
  if(require('./contract_capabilities.cjs').capabilities(audit.taskContract).strict)review.analysisAlgorithm='semantic-v2';
  if(priorReviews.size===1)review.priorReview=[...priorReviews.values()][0];
  else if(priorReviews.size>1)errors.push('同轮审查的 priorReview 来源不一致，须明确同一前序审查后再聚合');

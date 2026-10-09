@@ -4,6 +4,29 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 const lc=require('./layout_contract.cjs'),bp=require('./deck_blueprint.cjs'),pages=require('./check_pages.cjs'),probe=require('./probe_capabilities.cjs'),kit=require('../assets/exhibit-kit.js');
 const root=path.resolve(__dirname,'..'),clone=x=>JSON.parse(JSON.stringify(x));
 const template=JSON.parse(fs.readFileSync(path.join(root,'tests/fixtures/legacy-deck-blueprint.json')));
+// 金额/正则说明中的 $ 不得触发 String.replace 的替换语法；重复装配只保留当前预览身份。
+{
+ const contract=require('./report_contract.cjs'),bookends=require('./bookends.cjs');
+ const html='<html><head></head><body><p>原正文</p></body></html>';
+ const text="$& $$ $` $' </script>";
+ const task=contract.normalize({critical:[{id:'literal',text}]});
+ assert.deepEqual(contract.read(contract.install(html,task)),task,'任务合同须原样往返');
+ const preview={version:2,workMode:'editorial',complexity:'simple',majorConclusion:false,analysisPreview:true};
+ const installed=contract.install(contract.install(html,preview),preview);
+ assert.equal((installed.match(/name="deck-analysis-status"/g)||[]).length,1);
+ assert.equal((installed.match(/分析预览/g)||[]).length,1);
+ const final=contract.install(installed,{...preview,analysisPreview:false});
+ assert.ok(!final.includes('分析预览')&&!final.includes('name="deck-analysis-status"'));
+ assert.ok(final.includes('<p>原正文</p>'));
+ const note="$& $$ $` $'";
+ const block=bookends.referencesBlock({sources:[{id:'S1',title:'原来源'}],note});
+ assert.ok(block.includes('<p class="reference-selection">$&amp; $$ $` $&#39;</p>'));
+ assert.equal((block.match(/<section/g)||[]).length,1);
+ const chart=require('./render_echarts_svg.cjs').render({recipe:'rankedBar',spec:{items:[{label:'A',value:10},{label:'B',value:20}]},
+   annotations:[{kind:'note',on:'bar:B',text:note,side:'top'}]}).pages[0].svg;
+ assert.ok(chart.includes('>$&amp; $$ $` $&#39;</text>'),'SVG 旁解读须保留原始美元与替换字符');
+ assert.equal((chart.match(/<\/svg>/g)||[]).length,1);
+}
 assert.throws(()=>probe.parseArgs(['out','--verify']),/答案文件/);
 assert.throws(()=>probe.parseArgs(['out','--verify','--help']),/答案文件/);
 assert.throws(()=>probe.parseArgs(['out','--verify','a.json','--verify','b.json']),/只能/);
@@ -11,6 +34,18 @@ assert.throws(()=>probe.parseArgs(['--unknown']),/未知参数/);
 assert.equal(probe.parseArgs(['out','--verify','response.json']).verify,'response.json');
 assert.equal(probe.verifyImageResponse({code:'ABC123',shape_left_to_right:['red square']},{code:'ABC123',shape_left_to_right:['红色方块']}).status,'pass');
 assert.equal(probe.verifyImageResponse({code:'ABC123',shape_left_to_right:['red square']},{code:'ABC124',shape_left_to_right:['red square']}).status,'fail');
+{
+ const dir=fs.mkdtempSync(path.join(require('node:os').tmpdir(),'probe-failed-env-'));
+ try{
+  const image=path.join(dir,'challenge.png'),response=path.join(dir,'response.json'),answer={code:'ABC123',shape_left_to_right:['red square']};
+  fs.writeFileSync(image,'synthetic image bytes for CLI status only');fs.writeFileSync(response,JSON.stringify(answer));
+  fs.writeFileSync(path.join(dir,'vision-challenge-key.json'),JSON.stringify(answer));
+  fs.writeFileSync(path.join(dir,'capabilities.json'),JSON.stringify({checks:[{name:'chrome',status:'fail'}],imageProbe:{imageFile:image,imageSha256:require('./report_contract.cjs').fileHash(image)}}));
+  const result=require('node:child_process').spawnSync(process.execPath,[path.join(__dirname,'probe_capabilities.cjs'),dir,'--verify',response],{encoding:'utf8'});
+  assert.equal(result.status,2,'视觉答案匹配不能把环境失败返回成成功');
+  assert.equal(JSON.parse(result.stdout).status,'environment-failed');
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+}
 const module10=lc.get('L10').modules[0];
 assert.equal(lc.formFit('kit.processFlow',module10,'16x9').fits,false);
 assert.equal(lc.formFit('kit.processFlow',module10,'4x3').fits,true);

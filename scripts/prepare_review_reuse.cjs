@@ -2,7 +2,7 @@
 'use strict';
 const fs = require('node:fs'), path = require('node:path');
 const {hash, fileHash, stable, requiresIndependent} = require('./report_contract.cjs');
-const {auditErrors, reuseDifferences, layers} = require('./review_contract.cjs');
+const {auditErrors, reuseDifferences, compositionChecklist} = require('./review_contract.cjs');
 const {loadSnapshot, resolveOutput} = require('./snapshot_review.cjs');
 const clone = value => JSON.parse(JSON.stringify(value));
 
@@ -21,6 +21,7 @@ function prepareReuse({auditFile, snapshotDir, outputDir}) {
     reviewScope: 'complete', basis: '沿用本轮修订的上一完整审查，只追踪未决问题；不增加任何页面覆盖。'
   };
   const currentEvidence = audit.evidenceManifest.entries;
+  const compositions = compositionChecklist(audit, {auditDir: path.dirname(auditFile)});
   const reusableIds = new Set(), pages = [];
   for (let page = 1; page <= audit.pages; page++) {
     const entries = currentEvidence.filter(e => e.page === page), differences = [];
@@ -38,11 +39,23 @@ function prepareReuse({auditFile, snapshotDir, outputDir}) {
     const names = [...new Set(previous.review.coverage.filter(c => c.independence === role).map(c => c.reviewer))].sort();
     for (const [index, reviewer] of (names.length ? names : ['']).entries()) {
       const coverage = [];
-      for (const old of previous.review.coverage.filter(c => c.independence === role && c.reviewer === reviewer)) {
+      const priorCoverage = previous.review.coverage.filter(c => c.independence === role && c.reviewer === reviewer);
+      const reviewerEvidence = new Set(priorCoverage.flatMap(c => c.evidence.filter(e => reusableIds.has(e.id)).map(e => e.id)));
+      const reviewerPages = new Set(currentEvidence.filter(e => reviewerEvidence.has(e.id)).map(e => e.pageId));
+      for (const old of priorCoverage) {
         const evidence = old.evidence.filter(e => reusableIds.has(e.id)).map(e => ({id: e.id}));
         if (!evidence.length) continue;
         const selected = new Set(evidence.map(e => e.id));
-        coverage.push({reviewer, independence: role, layers: [...layers],
+        const selectedPages = new Set(currentEvidence.filter(e => selected.has(e.id)).map(e => e.pageId));
+        const selectedCompositions = compositions.filter(item => selectedPages.has(item.slideId));
+        const inherited = {};
+        for (const [key, ref] of [['panelRefs', 'panelRef'], ['relationRefs', 'relationRef']]) if (Array.isArray(old[key])) {
+          const allowed = new Set(selectedCompositions.map(item => item[ref]).filter(Boolean));
+          inherited[key] = old[key].filter(id => allowed.has(id));
+        }
+        if (Array.isArray(old.narrativeReadings)) inherited.narrativeReadings = clone(old.narrativeReadings.filter(item => selectedPages.has(item.slideId)));
+        if (Array.isArray(old.repetitionBasis)) inherited.repetitionBasis = clone(old.repetitionBasis.filter(pair => reviewerPages.has(pair[0]) && reviewerPages.has(pair[1])));
+        coverage.push({reviewer, independence: role, layers: [...old.layers], ...inherited,
           htmlPages: currentEvidence.filter(e => e.medium === 'html' && selected.has(e.id)).map(e => e.page),
           pdfPages: currentEvidence.filter(e => e.medium === 'pdf' && selected.has(e.id)).map(e => e.page), evidence,
           inheritedFrom: {

@@ -33,9 +33,10 @@ function prepare({auditFile,outputDir}){
   const audit=JSON.parse(fs.readFileSync(auditFile,'utf8')),base=path.dirname(path.resolve(auditFile));
   const errors=require('./review_contract.cjs').auditErrors(audit,{auditDir:base});
   if(errors.length)throw Error('验收未通过，不能准备正式审查：'+errors.join('；'));
+  const compositionChecklist=require('./review_contract.cjs').compositionChecklist(audit,{auditDir:base});
   const grouped=warningGroups(audit),diagnostics=require('./diagnostic_summary.cjs').summarize(audit);
   const entries=audit.evidenceManifest.entries.map(e=>({...e,path:path.resolve(base,e.path)}));
-  const bodyRows=(audit.rows||[]).filter(row=>!['cover','back-cover','references'].includes(row.bookends?.role));
+  const bodyRows=require('./review_contract.cjs').bodyRowsOf(audit);
   const dense=[...bodyRows].sort((a,b)=>(b.textLength||0)-(a.textLength||0))[0];
   const detailed=[...bodyRows].sort((a,b)=>(b.exhibits||[]).reduce((n,e)=>n+(e.labels?.length||0),0)-(a.exhibits||[]).reduce((n,e)=>n+(e.labels?.length||0),0))[0];
   const ranked=(audit.rows||[]).map(row=>({page:row.page,reasons:[
@@ -59,17 +60,6 @@ function prepare({auditFile,outputDir}){
     checks:Object.fromEntries(['analysis','evidence','visual'].map(k=>[k,{status:'not_reviewed',basis:''}])),warningReview:[],issues:[]});
   write('diagnostics.json',diagnostics);write('warning-decisions.json',{auditSha256:grouped.auditSha256,groups:grouped.groups.map(g=>({...g,status:'not_reviewed',note:''}))});
   // 新策略：组合覆盖清单由合同派生，审查者填写实际所见，工具不生成 PASS。
-  const composition=require('./composition_contract.cjs');
-  const isComposition=composition.supportsComposition(audit.taskContract);
-  const compositionChecklist=isComposition?(()=>{
-    const list=[];
-    for(const row of (audit.rows||[])){
-      const pid=row.pageId||('page-'+row.page);
-      for(const panelId of composition.panelIds({exhibit:row.composition?{contract:'semantic-exhibit-v1',semantics:{composition:row.composition}}:undefined}))list.push({slideId:pid,panelRef:pid+':'+panelId,reason:'逐 panel 核对实际形式、数据绑定、容量、来源与打印存在性'});
-      for(const relId of composition.relationRefs({exhibit:row.composition?{contract:'semantic-exhibit-v1',semantics:{composition:row.composition}}:undefined}))list.push({slideId:pid,relationRef:pid+':'+relId,reason:'核对组合关系能否直接读出，是否共同支持页结论'});
-    }
-    return list;
-  })():[];
   /* 新策略：叙事覆盖清单逐页预填"这一页声明了什么"，把"你看到的收束句是什么"留空给审查者。
      预填的只有待查对象，没有通过结论，也没有把蓝图声明当成已核实的页面事实。 */
   const narrativeCaps=(()=>{try{return require('./contract_capabilities.cjs').visualPolicy(audit.taskContract?.policyVersions?.visual);}catch(_){return null;}})();

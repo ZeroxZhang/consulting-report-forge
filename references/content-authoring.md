@@ -66,6 +66,12 @@ node scripts/compile_blueprint.cjs /任务/deck-blueprint.json /任务/pages.jso
 
 schema 3 还需 `visual.selection.relationship/reason`；存在已登记容量规则时填写 `visual.capacity`，计数是单个主展品的计划上界。形式与关系的允许组合由 `scripts/form_contract.cjs` 检查，形式专项容量维度与数值只在 `assets/form-capacity.js` 维护。已登记 SVG 渲染器输出 `data-form`；有结构化容量规则的同时输出 `data-capacity`，最终 QA 对照蓝图计划。作者自绘部分仍需人工看图核对。
 
+`selection.relationship` 与 `semanticType` 不是同一套枚举。例如表格的关系应按任务选择 `exact`、`comparison` 或 `decision`，不能直接填 `table`。在技能根目录查询所选形式的允许值，避免靠报错试填：
+
+```sh
+node -e 'const f=require("./assets/deck-forms.js"),c=require("./scripts/form_contract.cjs"),e=f.get(process.argv[1]);console.log(c.OVERRIDES[e.form]||c.RELATIONSHIPS[e.family]||[])' html.table
+```
+
 正文容器声明 `data-page-id`，值与蓝图 slide.id一致。标题使用 `.slide__title` 和 `data-content-key="title"`。把绑定放在**不含子元素的叶节点**；不要在包裹图表或整页的容器上绑定，以免填充文字时清掉展品。关键文字不得处于 clip/clip-path/mask 裁切层或使用透明文字；图形需要裁切时，把关键标签放在未裁切的文字层。
 
 ```html

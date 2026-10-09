@@ -97,7 +97,7 @@ async function inspect(options){
  }
  // 逐页形式声明：独立于装配器重新对账一次，并给出全篇形式清单供审查者判断节奏。
  const pagesApi=require('./check_pages.cjs');
- let boundPages=null;
+ let boundPages=null;const plannedModules=new Map();
  let pagesCheck={status:'NOT_PROVIDED',reason:partial?'只检查了部分页面，不能对账逐页形式':'任务合同未绑定 pages.json；S3 未产出逐页形式声明，不能正式交付'};
  if(modern&&taskContract?.pages&&!partial){
   try{
@@ -127,6 +127,8 @@ async function inspect(options){
        而"这一格用什么形式"写在 pages.json 的 regions 里；两者混用会让这条检查永远不触发。 */
     if((page.regions||[]).some(g=>g&&g.form==='html.finding')&&!((row.finding||[]).length))
       all.push('page '+page.page+' 的 regions 声明了 html.finding（判断／依据／限定），成稿这一页却没有 .finding 组件：三级骨架不是可选装饰');
+    plannedModules.set(row.page,expected);
+    await pageProbe.activate(p,row.page-1);
     const measured=await p.locator('.slide').nth(row.page-1).evaluate(geometry.inspectModules,expected.map((m,i)=>({index:i,slot:m.slot,title:m.title,box:m.box})));
     row.layoutCheck={layout:page.layout,name:layoutApi.get(page.layout).name,...measured};
     measured.errors.forEach(e=>all.push('page '+page.page+' 布局 '+page.layout+'：'+e.detail+'（'+(e.code==='M-GRID'?'期望 '+JSON.stringify(e.want)+'，实际 '+JSON.stringify(e.got):e.code)+'）'));
@@ -179,6 +181,12 @@ async function inspect(options){
     for(const row of rows){const printedCount=printed.find(x=>x.page===row.page)?.focus?.takeaways;
      const screenCount=row.focus?.takeaways;
      if(Number.isInteger(printedCount)&&Number.isInteger(screenCount)&&printedCount!==screenCount)errors.push('第'+row.page+'页打印媒介的 takeaway 节点数（'+printedCount+'）与屏幕（'+screenCount+'）不一致：收束节点必须在两种媒介都真实存在');}
+   }
+   // 打印样式可能改变模块网格；屏幕上的正确尺寸不代表 PDF 仍符合布局声明。
+   for(const row of rows)if(row.layoutCheck){
+    const expected=plannedModules.get(row.page);
+    row.printLayoutCheck=await p.locator('.slide').nth(row.page-1).evaluate(geometry.inspectModules,expected);
+    errors.push(...row.printLayoutCheck.errors.map(e=>'第'+row.page+'页打印布局：'+e.detail));
    }
    const printFormWarnings=[];
    errors.push(...pagesApi.verifyDeck(boundPages,printed,{warnings:printFormWarnings}).map(e=>'打印内容：'+e));

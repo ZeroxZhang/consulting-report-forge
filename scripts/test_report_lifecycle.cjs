@@ -25,6 +25,15 @@ async function main(){
   const dead=require('node:child_process').spawnSync(process.execPath,['-e','process.stdout.write(String(process.pid))'],{encoding:'utf8'});
   fs.mkdirSync(lock);fs.writeFileSync(path.join(lock,'owner.json'),JSON.stringify({pid:Number(dead.stdout),host:os.hostname()}));
   assert.equal(api.recover(task).status,'recovered');
+  // 快照把 artifact/input 改为相对 audit 的路径；读取不能依赖调用者 cwd。
+  const auditDir=path.join(root,'portable-review'),html=Buffer.from('<html><body></body></html>'),pdf=Buffer.from('%PDF-synthetic'),C=require('./report_contract.cjs');
+  fs.mkdirSync(auditDir);const auditFile=path.join(auditDir,'audit.json'),inputHtml=path.join(auditDir,'deck.html'),inputPdf=path.join(auditDir,'deck.pdf');
+  const portableAudit={geometryStatus:'PASS',errors:[],input:'deck.html',pages:1,pdfPages:1,htmlArtifact:{sha256:C.hash(html)},pdfArtifact:{path:'deck.pdf',sha256:C.hash(pdf)}};
+  fs.writeFileSync(auditFile,JSON.stringify(portableAudit));const inputs={inputHtml,inputPdf,html:html.toString(),pdf,htmlPages:1,pdfPages:1,pdfSha256:C.hash(pdf)};
+  assert.deepEqual(require('./package_delivery.cjs').validateAudit(auditFile,inputs),portableAudit);
+  assert.throws(()=>require('./package_delivery.cjs').validateAudit(auditFile,{...inputs,inputPdf:path.join(root,'deck.pdf')}),/PDF 不是/);
+  const filename="report-$&-$$-$`-$'.pdf",embedded=require('./package_delivery.cjs').injectPdf(html.toString(),pdf,filename,C.hash(pdf));
+  assert.ok(embedded.includes('data-filename="report-$&amp;-$$-$`-$\'.pdf"'),'交付文件名中的 $ 不得按 replace 模板展开');
   const child=require('node:child_process').spawn(process.execPath,['-e',`const fs=require('fs');require(${JSON.stringify(require.resolve('./report.cjs'))}).transaction(process.argv[1],'test',async dir=>{fs.writeFileSync(require('path').join(dir,'partial.txt'),'unfinished');process.stdout.write('ready');await new Promise(()=>setInterval(()=>{},1000));});`,task],{stdio:['ignore','pipe','pipe']});
   await new Promise((resolve,reject)=>{const timer=setTimeout(()=>{child.kill('SIGKILL');reject(Error('模拟中断进程未启动'));},5000);child.stdout.once('data',()=>{clearTimeout(timer);resolve();});child.once('error',reject);});
   const ended=new Promise(resolve=>child.once('close',resolve));child.kill('SIGKILL');await ended;
@@ -36,7 +45,7 @@ async function main(){
   assert.equal(pack.expandDispositions(audit,decisions).length,3);
   assert.throws(()=>pack.expandDispositions({...audit,warnings:[]},decisions),/旧版/);
   assert.throws(()=>pack.expandDispositions(audit,{...decisions,groups:[{...decisions.groups[0],note:''}]}),/具体依据/);
-  console.log('PASS lifecycle: no reset, atomic publication, failed output retention, lock exclusion, live-lock recovery rejection, grouped signed dispositions');
+  console.log('PASS lifecycle: no reset, atomic publication, failed output retention, lock exclusion, live-lock recovery rejection, portable audit paths, grouped signed dispositions');
  }finally{fs.rmSync(root,{recursive:true,force:true});}
 }
 main().catch(e=>{console.error(e);process.exitCode=1;});

@@ -76,7 +76,10 @@ function verifyEvidence(ctx,item,e){
   }
  }
  if(item.criterion==='visual'&&!v.files.some(r=>/\.(png|jpg|jpeg|webp|pdf)$/i.test(r.record)))fail('代表页验收须引用实际图像或 PDF');
- if(item.criterion==='production'&&!v.files.some(r=>/\.html?$/i.test(r.record)))fail('制作验收须引用实际 HTML');
+ if(item.criterion==='production'){
+  const assembled=production(ctx,'assemble');
+  if(!v.files.some(r=>/\.html?$/i.test(r.record)&&r.sha256===assembled.files.html.sha256))fail('制作验收须引用当前装配的实际 HTML');
+ }
  if(item.criterion==='delivery'&&(!nonempty(v.destination)||!nonempty(v.deliveredAt)))fail('交付须记录实际目标与时间');
  return v;
 }

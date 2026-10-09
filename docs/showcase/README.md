@@ -4,15 +4,19 @@
 
 ## Skill 介绍海报（README 头图）
 
-[skill-poster.png](skill-poster.png) 是独立的 **3:4 海报，2160 × 2880 像素**。当前介绍 1.5.0：四项能力结合内容改动追踪、多页来源、阅读检查与局部修订复核；配真实报告原页缩略图；原页用于展示，不应在缩略尺寸下读取具体数据。
+[skill-poster.png](skill-poster.png) 是独立的 **3:4 产品海报，2160 × 2880 像素**。当前介绍 1.8.0，以“把复杂问题，锻造成清晰判断”为主题，呈现研究有据、判断成线、图文有序与稳步交付。新版的图表与版式多样性、逐栏阅读检查、进度接续融入四项价值介绍；复合证据等可选策略没有写成默认能力。
 
-可编辑源为 [skill-poster.html](skill-poster.html)，复用仓库随包字体及下方三张案例图。安装项目依赖并准备 Chrome 后，在仓库根目录运行：
+视觉采用黑白微光、连续平行光栅与局部书页形变，辅以少量数学符号和几何构造。光栅是抽象产品主视觉，不代表实际报告截图；下方的历史报告选页保持独立展示。
+
+可编辑版式为 [skill-poster.html](skill-poster.html)，文案、来源和设计配置维护在 [skill-poster.ir.json](skill-poster.ir.json)。主视觉 [skill-poster-art.png](skill-poster-art.png) 使用内置图像生成工具制作，完整[提示词](skill-poster-art-prompt.txt)随源保留；本地构建直接复用该图片，无需调用生成服务。A4 / B8 / C2 / T4 / E2 配置采用用户指定的黑白微光覆盖 B8 默认霓虹色，不放未经测量的效果数字。
+
+安装项目依赖并准备 Chrome 后，在仓库根目录运行：
 
 ```sh
 node docs/showcase/build-poster.cjs
 ```
 
-已安装 Playwright Chromium 时可设置 `CHROME_CHANNEL=chromium`。脚本检查画布尺寸、元素越界、图片和字体加载，再导出双倍像素 PNG。HTML 需与仓库相对目录一起使用，PNG 可单独分享。
+已安装 Playwright Chromium 时可设置 `CHROME_CHANNEL=chromium`。脚本从 IR 同步文案、从 `package.json` 同步版本号，检查画布尺寸、元素越界、文字裁切、区块重叠、图片和字体加载，再导出双倍像素 PNG。正文与标题复用随包字体，等宽标签优先使用本地 JetBrains Mono / Menlo，缺失时回退到系统等宽字体。HTML 需与仓库相对目录一起使用，PNG 可单独分享。
 
 ## 1.5.0 实际报告选页：全球 AI 生物制药前沿研究
 

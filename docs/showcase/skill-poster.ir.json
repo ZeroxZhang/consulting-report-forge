@@ -1,0 +1,223 @@
+{
+  "schema_version": 1,
+  "project": {
+    "slug": "forge-poster",
+    "title": "Consulting Report Forge 产品介绍",
+    "created_at": "2026-10-09T15:43:10+00:00"
+  },
+  "blueprint": {
+    "schema_version": 1,
+    "goal": "在 README 中以中等信息密度介绍当前技能价值，吸引读者了解和使用",
+    "audience": "需要研究深度与专业表达的战略团队、咨询顾问、行业研究人员和经营管理者",
+    "core_claim": "把复杂问题，锻造成清晰判断",
+    "logic": "narrative",
+    "modules": [
+      {
+        "id": "hero",
+        "role": "answer",
+        "title": "把复杂问题，锻造成清晰判断",
+        "summary": "面向 AI Agent 的咨询研究与报告交付技能\n从深度调研、商业分析，到有依据的视觉报告。",
+        "source_refs": [
+          "README.md#consulting-report-forge"
+        ]
+      },
+      {
+        "id": "research",
+        "role": "evidence",
+        "title": "研究有据",
+        "summary": "追溯来源，核对方法与计算，\n让判断经得起追问。",
+        "source_refs": [
+          "README.md#核心能力",
+          "SKILL.md#1-确定问题与证据边界",
+          "SKILL.md#2-选方法完成分析"
+        ]
+      },
+      {
+        "id": "story",
+        "role": "evidence",
+        "title": "判断成线",
+        "summary": "串起问题、证据与结论，\n让整册读来有主线。",
+        "source_refs": [
+          "SKILL.md#3-形成标题链与统一蓝图"
+        ]
+      },
+      {
+        "id": "visual",
+        "role": "evidence",
+        "title": "图文有序",
+        "summary": "图表与版式随内容变化，\n逐栏细查密度与留白。",
+        "source_refs": [
+          "SKILL.md#固定前置约束",
+          "README.md#180逐模块检查内容填充"
+        ]
+      },
+      {
+        "id": "workflow",
+        "role": "evidence",
+        "title": "稳步交付",
+        "summary": "保留进度，中断后接续，\n逐页复核再交付。",
+        "source_refs": [
+          "SKILL.md#强制执行清单",
+          "SKILL.md#6-验收和修订"
+        ]
+      }
+    ],
+    "missing": []
+  },
+  "configuration": {
+    "A": "A4",
+    "B": "B8",
+    "C": "C2",
+    "T": "T4",
+    "E": "E2",
+    "F": "Zerox Zhang"
+  },
+  "modules": [
+    {
+      "id": "hero",
+      "role": "answer",
+      "content": {
+        "title": "把复杂问题，锻造成清晰判断",
+        "body": "面向 AI Agent 的咨询研究与报告交付技能\n从深度调研、商业分析，到有依据的视觉报告。"
+      },
+      "source_refs": [
+        "README.md#consulting-report-forge"
+      ],
+      "visual_priority": 1,
+      "diagram": null,
+      "locked": {
+        "content": false,
+        "layout": false
+      }
+    },
+    {
+      "id": "research",
+      "role": "evidence",
+      "content": {
+        "title": "研究有据",
+        "body": "追溯来源，核对方法与计算，\n让判断经得起追问。"
+      },
+      "source_refs": [
+        "README.md#核心能力",
+        "SKILL.md#1-确定问题与证据边界",
+        "SKILL.md#2-选方法完成分析"
+      ],
+      "visual_priority": 2,
+      "diagram": null,
+      "locked": {
+        "content": false,
+        "layout": false
+      }
+    },
+    {
+      "id": "story",
+      "role": "evidence",
+      "content": {
+        "title": "判断成线",
+        "body": "串起问题、证据与结论，\n让整册读来有主线。"
+      },
+      "source_refs": [
+        "SKILL.md#3-形成标题链与统一蓝图"
+      ],
+      "visual_priority": 2,
+      "diagram": null,
+      "locked": {
+        "content": false,
+        "layout": false
+      }
+    },
+    {
+      "id": "visual",
+      "role": "evidence",
+      "content": {
+        "title": "图文有序",
+        "body": "图表与版式随内容变化，\n逐栏细查密度与留白。"
+      },
+      "source_refs": [
+        "SKILL.md#固定前置约束",
+        "README.md#180逐模块检查内容填充"
+      ],
+      "visual_priority": 2,
+      "diagram": null,
+      "locked": {
+        "content": false,
+        "layout": false
+      }
+    },
+    {
+      "id": "workflow",
+      "role": "evidence",
+      "content": {
+        "title": "稳步交付",
+        "body": "保留进度，中断后接续，\n逐页复核再交付。"
+      },
+      "source_refs": [
+        "SKILL.md#强制执行清单",
+        "SKILL.md#6-验收和修订"
+      ],
+      "visual_priority": 2,
+      "diagram": null,
+      "locked": {
+        "content": false,
+        "layout": false
+      }
+    },
+    {
+      "id": "scenarios",
+      "role": "context",
+      "content": {
+        "title": "适用场景",
+        "body": "战略研究 / 经营复盘 / 投资分析"
+      },
+      "source_refs": [
+        "README.md#从一个业务问题开始"
+      ],
+      "visual_priority": 2,
+      "diagram": null,
+      "locked": {
+        "content": false,
+        "layout": false
+      }
+    },
+    {
+      "id": "delivery",
+      "role": "answer",
+      "content": {
+        "title": "HTML + PDF",
+        "body": "自包含 HTML · 同版 PDF · 离线阅读与分享"
+      },
+      "source_refs": [
+        "SKILL.md#咨询报告制作"
+      ],
+      "visual_priority": 2,
+      "diagram": null,
+      "locked": {
+        "content": false,
+        "layout": false
+      }
+    },
+    {
+      "id": "cta",
+      "role": "cta",
+      "content": {
+        "title": "开始使用",
+        "body": "https://github.com/ZeroxZhang/consulting-report-forge"
+      },
+      "source_refs": [
+        "README.md#快速开始"
+      ],
+      "visual_priority": 2,
+      "diagram": null,
+      "locked": {
+        "content": false,
+        "layout": false
+      }
+    }
+  ],
+  "design_intent": {
+    "visual_language": "typography-driven",
+    "color_role": "spice",
+    "type_ratio": 12.7
+  },
+  "brand_ref": null
+}

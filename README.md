@@ -1,3 +1,13 @@
+<!-- zerox-skills-migration -->
+> **已迁移 / Moved · 2026-10-14**
+>
+> 本 Skill 已迁移并更名为 **`zerox-consulting-report-forge`**。本仓库停止功能更新与修复，保留历史版本；后续维护请前往 **[zerox-consulting-report-forge](https://github.com/ZeroxZhang/zerox-skills/tree/main/zerox-consulting-report-forge)**。
+>
+> 新仓库：[ZeroxZhang/zerox-skills](https://github.com/ZeroxZhang/zerox-skills) · 技能目录：`zerox-skills/zerox-consulting-report-forge/` · 新调用名称：`/zerox-consulting-report-forge`。
+>
+> This skill has moved and is now named **`zerox-consulting-report-forge`**. This repository is retained for historical reference and will no longer receive feature updates or fixes. Continue at **[zerox-consulting-report-forge](https://github.com/ZeroxZhang/zerox-skills/tree/main/zerox-consulting-report-forge)** in [ZeroxZhang/zerox-skills](https://github.com/ZeroxZhang/zerox-skills), under `zerox-consulting-report-forge/`, and invoke `/zerox-consulting-report-forge`. The original content below describes the legacy version.
+<!-- /zerox-skills-migration -->
+
 <div align="center">
 
 # Consulting Report Forge
